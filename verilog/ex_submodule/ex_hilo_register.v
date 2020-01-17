@@ -1,6 +1,6 @@
 `include "../defines.v"
 
-module ex_hilo_register(//½â¾öhiloÒÀÀµ¹ØÏµ
+module ex_hilo_register(//è§£å†³hiloä¾èµ–å…³ç³»
     input wire rst,
     input wire[31:0] mem_hi_i,
     input wire[31:0] mem_lo_i,
@@ -20,10 +20,10 @@ module ex_hilo_register(//½â¾öhiloÒÀÀµ¹ØÏµ
         if (rst == 1'b1) begin
             hi <= 32'h00000000;
             lo <= 32'h00000000;
-        end else if (mem_write_hilo_i == 1'b1) begin//½â¾öºÍmem½×¶ÎµÄÊı¾İÒÀÀµ
+        end else if (mem_write_hilo_i == 1'b1) begin//è§£å†³å’Œmemé˜¶æ®µçš„æ•°æ®ä¾èµ–
             hi <= mem_hi_i;
             lo <= mem_lo_i;
-        end else if (wb_write_hilo_i == 1'b1)begin//½â¾öºÍ»ØĞ´½×¶ÎµÄÊı¾İÒÀÀµ
+        end else if (wb_write_hilo_i == 1'b1)begin//è§£å†³å’Œå›å†™é˜¶æ®µçš„æ•°æ®ä¾èµ–
             hi <= wb_hi_i;
             lo <= wb_lo_i;
         end else begin

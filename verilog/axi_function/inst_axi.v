@@ -13,25 +13,25 @@ module inst_axi(
     output wire[31:0]    inst,
     output wire          inst_valid,
 
-    //·¢ËÍµØÖ·
-    output wire[3:0]    i_arid,     // ¶ÁÖ¸Áî·¢ËÍµÄid
-    output wire[31:0]   i_araddr,   // ¶ÁÖ¸Áî·¢ËÍµÄµØÖ·
-    output wire[3:0]    i_arlen,    // ¶ÁÖ¸Áî·¢ËÍµÄÇëÇó´«Êä³¤¶È£¨Êı¾İ´«ÊäÅÄÊı£©£¬¹Ì¶¨Îª0
-    output wire[2:0]    i_arsize,   // ¶ÁÖ¸Áî·¢ËÍµÄÇëÇó´«Êä´óĞ¡£¨Ã¿ÅÄ´«ÊäµÄ×Ö½ÚÊı£©
-    output wire[1:0]    i_arburst,  // ¶ÁÖ¸Áî·¢ËÍµÄÇëÇó´«ÊäÀàĞÍ£¬¹Ì¶¨Îª2'b01
-    output wire[1:0]    i_arlock,   // ¶ÁÖ¸Áî·¢ËÍµÄÔ­×ÓËø£¬¹Ì¶¨Îª2'b00
-    output wire[3:0]    i_arcache,  // ¶ÁÖ¸Áî·¢ËÍµÄcacheÊôĞÔ£¬¹Ì¶¨Îª4'b0000
-    output wire[2:0]    i_arprot,   // ¶ÁÖ¸Áî·¢ËÍµÄ±£»¤ÊôĞÔ£¬¹Ì¶¨Îª3'b000
-    output wire         i_arvalid,  // ¶ÁÖ¸Áî·¢ËÍµÄÇëÇóµØÖ·ÓĞĞ§ĞÅºÅ
-    //input  wire         i_arready,  // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë×¼±¸ºÃ½ÓÊÜµØÖ·µÄĞÅºÅ
+    //å‘é€åœ°å€
+    output wire[3:0]    i_arid,     // è¯»æŒ‡ä»¤å‘é€çš„id
+    output wire[31:0]   i_araddr,   // è¯»æŒ‡ä»¤å‘é€çš„åœ°å€
+    output wire[3:0]    i_arlen,    // è¯»æŒ‡ä»¤å‘é€çš„è¯·æ±‚ä¼ è¾“é•¿åº¦ï¼ˆæ•°æ®ä¼ è¾“æ‹æ•°ï¼‰ï¼Œå›ºå®šä¸º0
+    output wire[2:0]    i_arsize,   // è¯»æŒ‡ä»¤å‘é€çš„è¯·æ±‚ä¼ è¾“å¤§å°ï¼ˆæ¯æ‹ä¼ è¾“çš„å­—èŠ‚æ•°ï¼‰
+    output wire[1:0]    i_arburst,  // è¯»æŒ‡ä»¤å‘é€çš„è¯·æ±‚ä¼ è¾“ç±»å‹ï¼Œå›ºå®šä¸º2'b01
+    output wire[1:0]    i_arlock,   // è¯»æŒ‡ä»¤å‘é€çš„åŸå­é”ï¼Œå›ºå®šä¸º2'b00
+    output wire[3:0]    i_arcache,  // è¯»æŒ‡ä»¤å‘é€çš„cacheå±æ€§ï¼Œå›ºå®šä¸º4'b0000
+    output wire[2:0]    i_arprot,   // è¯»æŒ‡ä»¤å‘é€çš„ä¿æŠ¤å±æ€§ï¼Œå›ºå®šä¸º3'b000
+    output wire         i_arvalid,  // è¯»æŒ‡ä»¤å‘é€çš„è¯·æ±‚åœ°å€æœ‰æ•ˆä¿¡å·
+    //input  wire         i_arready,  // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯å‡†å¤‡å¥½æ¥å—åœ°å€çš„ä¿¡å·
 
-    //½ÓÊÕÖ¸Áî
-    input wire[3:0]     i_rid,      // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë·µ»ØµÄid
-    input wire[31:0]    i_rdata,    // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë·µ»ØµÄÖ¸Áî
-    input wire[1:0]     i_rresp,    // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë·µ»ØµÄÊÇ·ñ³É¹¦Íê³ÉĞÅºÅ£¬¿ÉºöÂÔ
-    input wire          i_rlast,     // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë·µ»ØµÄÊÇ·ñÊÇ×îºóÒ»ÅÄÊı¾İĞÅºÅ£¬¿ÉºöÂÔ£¨¿ÉÄÜÓÃÓÚburst´«Êä£©
-    input wire          i_rvalid  // ¶ÁÖ¸Áî½ÓÊÕµÄslave¶Ë·µ»ØµÄÖ¸ÁîÊÇ·ñÓĞĞ§ĞÅºÅ
-    //output reg          i_rready,   // ¶ÁÖ¸Áî·¢ËÍµÄmaster¶Ë×¼±¸ºÃ½ÓÊÕÖ¸Áî´«ÊäµÄĞÅºÅ
+    //æ¥æ”¶æŒ‡ä»¤
+    input wire[3:0]     i_rid,      // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯è¿”å›çš„id
+    input wire[31:0]    i_rdata,    // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯è¿”å›çš„æŒ‡ä»¤
+    input wire[1:0]     i_rresp,    // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ˜¯å¦æˆåŠŸå®Œæˆä¿¡å·ï¼Œå¯å¿½ç•¥
+    input wire          i_rlast,     // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ˜¯å¦æ˜¯æœ€åä¸€æ‹æ•°æ®ä¿¡å·ï¼Œå¯å¿½ç•¥ï¼ˆå¯èƒ½ç”¨äºburstä¼ è¾“ï¼‰
+    input wire          i_rvalid  // è¯»æŒ‡ä»¤æ¥æ”¶çš„slaveç«¯è¿”å›çš„æŒ‡ä»¤æ˜¯å¦æœ‰æ•ˆä¿¡å·
+    //output reg          i_rready,   // è¯»æŒ‡ä»¤å‘é€çš„masterç«¯å‡†å¤‡å¥½æ¥æ”¶æŒ‡ä»¤ä¼ è¾“çš„ä¿¡å·
 
 );
 
@@ -46,7 +46,7 @@ module inst_axi(
     assign i_arburst    = 2'b01;        // Incrementing-address burst
     assign i_arlock     = 2'b00;        // Normal access
     assign i_arcache    = 4'b0000;      // Noncacheable and nonbufferable
-    assign i_arprot     = 3'b000;       // ÓëawprotÓĞ¹Ø£¬Ä¿Ç°Ôİ¶¨3'b000
+    assign i_arprot     = 3'b000;       // ä¸awprotæœ‰å…³ï¼Œç›®å‰æš‚å®š3'b000
     assign i_arvalid    = flush ? 1'b0 : cached_trans ? miss : pc_en;
 
     //reg[31:0] last_pc;

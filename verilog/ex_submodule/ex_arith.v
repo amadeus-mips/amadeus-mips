@@ -9,11 +9,11 @@ module ex_arith(
     output wire sub_over_flag,
     output reg[31:0]arith_result
 );
-    wire [31:0] reg2_i_mux;//²Ù×÷Êı2µÄ²¹Âë
-    wire [31:0] add_result;//¼Ó·¨½á¹û
-    wire [31:0] sub_result;//¼õ·¨½á¹û
-    wire slt_result;//ÓĞ·ûºÅ±È½Ï½á¹û
-    wire sltu_result;//ÎŞ·ûºÅ±È½Ï½á¹û
+    wire [31:0] reg2_i_mux;//æ“ä½œæ•°2çš„è¡¥ç 
+    wire [31:0] add_result;//åŠ æ³•ç»“æœ
+    wire [31:0] sub_result;//å‡æ³•ç»“æœ
+    wire slt_result;//æœ‰ç¬¦å·æ¯”è¾ƒç»“æœ
+    wire sltu_result;//æ— ç¬¦å·æ¯”è¾ƒç»“æœ
 
     assign add_result = reg1_i + reg2_i;
     assign sub_result = reg1_i + reg2_i_mux;

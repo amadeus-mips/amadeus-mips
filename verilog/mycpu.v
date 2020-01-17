@@ -1,7 +1,7 @@
 module mycpu(
     input wire clk,
     input wire resetn,
-    input wire[5:0] int,
+    input wire[5:0] intr,
 
     output wire[31:0]   pc_o,
     output wire         pc_en,
@@ -87,14 +87,14 @@ if_id u_if_id(
 
 
 //id
-//´¦ÓÚÖ´ĞĞ½×¶ÎµÄÖ¸ÁîµÄÒ»Ğ©ĞÅÏ¢£¬ÓÃÓÚ½â¾öloadÏà¹Ø
+//å¤„äºæ‰§è¡Œé˜¶æ®µçš„æŒ‡ä»¤çš„ä¸€äº›ä¿¡æ¯ï¼Œç”¨äºè§£å†³loadç›¸å…³
 wire[7:0]       alu_op_from_ex;
 
-//´¦ÓÚÖ´ĞĞ½×¶ÎµÄÖ¸ÁîÒªĞ´ÈëµÄÄ¿µÄ¼Ä´æÆ÷ĞÅÏ¢
+//å¤„äºæ‰§è¡Œé˜¶æ®µçš„æŒ‡ä»¤è¦å†™å…¥çš„ç›®çš„å¯„å­˜å™¨ä¿¡æ¯
 wire[4:0]       write_addr_from_ex;
 wire            write_reg_from_ex;
 wire[31:0]      write_data_from_ex;
-//´¦ÓÚ·Ã´æ½×¶ÎµÄÖ¸ÁîÒªĞ´ÈëµÄÄ¿µÄ¼Ä´æÆ÷ĞÅÏ¢
+//å¤„äºè®¿å­˜é˜¶æ®µçš„æŒ‡ä»¤è¦å†™å…¥çš„ç›®çš„å¯„å­˜å™¨ä¿¡æ¯
 wire            write_reg_from_mem;
 wire[31:0]      write_data_from_mem;
 wire[4:0]       write_address_from_mem;
@@ -247,7 +247,7 @@ wire        l_op_from_ex;
 wire        s_op_from_ex;
 wire        cached_trans_from_ex;
 
-assign      ex_data_addr = mem_addr_from_ex;         // ex¼¶»ñÈ¡tag¼°ÆäËüĞÅÏ¢
+assign      ex_data_addr = mem_addr_from_ex;         // exçº§è·å–tagåŠå…¶å®ƒä¿¡æ¯
 
 //cp0 and ex
 wire[31:0]  cp0_reg_data_to_ex;
@@ -285,8 +285,8 @@ wire stallreq_from_ex;
 
 ex_top u_ex_top(
 	.rst                    (rst                    ),
-    .clk                    (clk),  //½öÓÃÓÚmult
-    .flush                  (flush), //½öÓÃÓÚmult
+    .clk                    (clk),  //ä»…ç”¨äºmult
+    .flush                  (flush), //ä»…ç”¨äºmult
     .alu_op_i               (aluop_to_ex              ),
     .alu_sel_i              (alusel_to_ex            ),
     .reg1_i                 (reg1_to_ex                 ),
@@ -559,7 +559,7 @@ cp0 u_cp0(
     .raddr_i             (ex_cp0_reg_read_addr_to_cp0             ),
 
     .excepttype_i        (excepttype_from_mem        ),
-    .int_i               (int              ),
+    .int_i               (intr              ),
 
     .current_inst_addr_i (current_inst_address_from_mem ),
     .is_in_delayslot_i   (is_in_delayslot_from_mem   ),

@@ -4,22 +4,22 @@ module cp0(
 	input wire			       clk,
 	input wire				   rst,
 	
-	// wb�׶�дcp0
+	// wb阶段写cp0
 	input wire                 we_i,
 	input wire[4:0]            waddr_i,
 	input wire[31:0]           data_i,
 	
-	// ex�׶ζ�cp0
+	// ex阶段读cp0
 	input wire[4:0]            raddr_i,
 
 	input wire[31:0]           excepttype_i,
-	input wire[5:0]            int_i,			// �ⲿ�ж�	
+	input wire[5:0]            int_i,			// 外部中断	
 
 	input wire[31:0]           current_inst_addr_i,	
 	input wire                 is_in_delayslot_i,
 	input wire[31:0]           bad_addr_i,
 
-	// ˲ʱ���
+	// 瞬时输出
 	output reg[31:0]           data_o,
 
 	output reg[31:0]           count_o,

@@ -1,57 +1,57 @@
 `include "../defines.v"
 
 module axi_master_interface(
-    //AXIÊ±ÖÓÓë¸´Î»ĞÅºÅ
-    input wire          aclk,//AXIÊ±ÖÓ
-    input wire          aresetn,//AXI¸´Î»£¬µÍµçÆ½ÓĞĞ§
+    //AXIæ—¶é’Ÿä¸å¤ä½ä¿¡å·
+    input wire          aclk,//AXIæ—¶é’Ÿ
+    input wire          aresetn,//AXIå¤ä½ï¼Œä½ç”µå¹³æœ‰æ•ˆ
 
-    //¶ÁÇëÇóµØÖ·Í¨µÀ£¬(ÒÔar¿ªÍ·)
-    output wire[3:0]    arid,//¶ÁÇëÇóµÄIDºÅ  È¡Ö¸Îª0 È¡ÊıÎª1
-    output wire[31:0]   araddr,//¶ÁÇëÇóµÄµØÖ·
-    output wire[3:0]    arlen,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬ÇëÇó´«ÊäµÄ³¤¶È(Êı¾İ´«ÊäÅÄÊı) ¹Ì¶¨Îª0
-    output wire[2:0]    arsize,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬ÇëÇó´«ÊäµÄ´óĞ¡(Êı¾İ´«ÊäÃ¿ÅÄµÄ×Ö½ÚÊı)
-    output wire[1:0]    arburst,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬´«ÊäÀàĞÍ  ¹Ì¶¨Îª2¡¯b01
-    output wire[1:0]    arlock,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬Ô­×ÓËø  ¹Ì¶¨Îª0
-    output wire[3:0]    arcache,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬CACHEÊôĞÔ ¹Ì¶¨Îª0
-    output wire[2:0]    arprot,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬±£»¤ÊôĞÔ ¹Ì¶¨Îª0
-    output wire          arvalid,//¶ÁÇëÇóµØÖ·ÎÕÊÖĞÅºÅ£¬¶ÁÇëÇóµØÖ·ÓĞĞ§
-    input wire          arready,//¶ÁÇëÇóµØÖ·ÎÕÊÖĞÅºÅ£¬slave¶Ë×¼±¸ºÃ½ÓÊÜµØÖ·´«Êä
+    //è¯»è¯·æ±‚åœ°å€é€šé“ï¼Œ(ä»¥arå¼€å¤´)
+    output wire[3:0]    arid,//è¯»è¯·æ±‚çš„IDå·  å–æŒ‡ä¸º0 å–æ•°ä¸º1
+    output wire[31:0]   araddr,//è¯»è¯·æ±‚çš„åœ°å€
+    output wire[3:0]    arlen,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œè¯·æ±‚ä¼ è¾“çš„é•¿åº¦(æ•°æ®ä¼ è¾“æ‹æ•°) å›ºå®šä¸º0
+    output wire[2:0]    arsize,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œè¯·æ±‚ä¼ è¾“çš„å¤§å°(æ•°æ®ä¼ è¾“æ¯æ‹çš„å­—èŠ‚æ•°)
+    output wire[1:0]    arburst,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œä¼ è¾“ç±»å‹  å›ºå®šä¸º2â€™b01
+    output wire[1:0]    arlock,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼ŒåŸå­é”  å›ºå®šä¸º0
+    output wire[3:0]    arcache,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼ŒCACHEå±æ€§ å›ºå®šä¸º0
+    output wire[2:0]    arprot,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œä¿æŠ¤å±æ€§ å›ºå®šä¸º0
+    output wire          arvalid,//è¯»è¯·æ±‚åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œè¯»è¯·æ±‚åœ°å€æœ‰æ•ˆ
+    input wire          arready,//è¯»è¯·æ±‚åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œslaveç«¯å‡†å¤‡å¥½æ¥å—åœ°å€ä¼ è¾“
 
-    //¶ÁÇëÇóÊı¾İÍ¨µÀ£¬(ÒÔr¿ªÍ·)
-    input wire[3:0]     rid,//¶ÁÇëÇóµÄIDºÅ£¬Í¬Ò»ÇëÇóµÄridÓ¦ºÍaridÒ»ÖÂ  Ö¸Áî»ØÀ´Îª0Êı¾İ »ØÀ´Îª1
-    input wire[31:0]    rdata,//¶ÁÇëÇóµÄ¶Á»ØÊı¾İ
-    input wire[1:0]     rresp,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬±¾´Î¶ÁÇëÇóÊÇ·ñ³É¹¦Íê³É ¿ÉºöÂÔ
-    input wire          rlast,//¶ÁÇëÇó¿ØÖÆĞÅºÅ£¬±¾´Î¶ÁÇëÇóµÄ×îºóÒ»ÅÄÊı¾İµÄÖ¸Ê¾ĞÅºÅ ¿ÉºöÂÔ
-    input wire          rvalid,//¶ÁÇëÇóÊı¾İÎÕÊÖĞÅºÅ£¬¶ÁÇëÇóÊı¾İÓĞĞ§
-    output reg          rready,//¶ÁÇëÇóÊı¾İÎÕÊÖĞÅºÅ£¬master¶Ë×¼±¸ºÃ½ÓÊÜÊı¾İ´«Êä
+    //è¯»è¯·æ±‚æ•°æ®é€šé“ï¼Œ(ä»¥rå¼€å¤´)
+    input wire[3:0]     rid,//è¯»è¯·æ±‚çš„IDå·ï¼ŒåŒä¸€è¯·æ±‚çš„ridåº”å’Œaridä¸€è‡´  æŒ‡ä»¤å›æ¥ä¸º0æ•°æ® å›æ¥ä¸º1
+    input wire[31:0]    rdata,//è¯»è¯·æ±‚çš„è¯»å›æ•°æ®
+    input wire[1:0]     rresp,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œæœ¬æ¬¡è¯»è¯·æ±‚æ˜¯å¦æˆåŠŸå®Œæˆ å¯å¿½ç•¥
+    input wire          rlast,//è¯»è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œæœ¬æ¬¡è¯»è¯·æ±‚çš„æœ€åä¸€æ‹æ•°æ®çš„æŒ‡ç¤ºä¿¡å· å¯å¿½ç•¥
+    input wire          rvalid,//è¯»è¯·æ±‚æ•°æ®æ¡æ‰‹ä¿¡å·ï¼Œè¯»è¯·æ±‚æ•°æ®æœ‰æ•ˆ
+    output reg          rready,//è¯»è¯·æ±‚æ•°æ®æ¡æ‰‹ä¿¡å·ï¼Œmasterç«¯å‡†å¤‡å¥½æ¥å—æ•°æ®ä¼ è¾“
     
-    //Ğ´ÇëÇóµØÖ·Í¨µÀ£¬(ÒÔaw¿ªÍ·)
-    output wire[3:0]    awid,//Ğ´ÇëÇóid ¹Ì¶¨Îª1
-    output wire[31:0]   awaddr,//Ğ´ÇëÇóµØÖ·
-    output wire[3:0]    awlen,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬ÇëÇó´«ÊäµÄ³¤¶È(Êı¾İ´«ÊäÅÄÊı) ¹Ì¶¨Îª0
-    output wire[2:0]    awsize,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬ÇëÇó´«ÊäµÄ´óĞ¡(Êı¾İ´«ÊäÃ¿ÅÄµÄ×Ö½ÚÊı)
-    output wire[1:0]    awburst,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬´«ÊäÀàĞÍ ¹Ì¶¨Îª2¡¯b01
-    output wire[1:0]    awlock,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬Ô­×ÓËø ¹Ì¶¨Îª0
-    output wire[3:0]    awcache,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬CACHEÊôĞÔ ¹Ì¶¨Îª0
-    output wire[2:0]    awprot,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬±£»¤ÊôĞÔ ¹Ì¶¨Îª0
-    output wire         awvalid,//Ğ´ÇëÇóµØÖ·ÎÕÊÖĞÅºÅ£¬Ğ´ÇëÇóµØÖ·ÓĞĞ§
-    input wire          awready,//Ğ´ÇëÇóµØÖ·ÎÕÊÖĞÅºÅ£¬slave¶Ë×¼±¸ºÃ½ÓÊÜµØÖ·´«Êä
+    //å†™è¯·æ±‚åœ°å€é€šé“ï¼Œ(ä»¥awå¼€å¤´)
+    output wire[3:0]    awid,//å†™è¯·æ±‚id å›ºå®šä¸º1
+    output wire[31:0]   awaddr,//å†™è¯·æ±‚åœ°å€
+    output wire[3:0]    awlen,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œè¯·æ±‚ä¼ è¾“çš„é•¿åº¦(æ•°æ®ä¼ è¾“æ‹æ•°) å›ºå®šä¸º0
+    output wire[2:0]    awsize,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œè¯·æ±‚ä¼ è¾“çš„å¤§å°(æ•°æ®ä¼ è¾“æ¯æ‹çš„å­—èŠ‚æ•°)
+    output wire[1:0]    awburst,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œä¼ è¾“ç±»å‹ å›ºå®šä¸º2â€™b01
+    output wire[1:0]    awlock,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼ŒåŸå­é” å›ºå®šä¸º0
+    output wire[3:0]    awcache,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼ŒCACHEå±æ€§ å›ºå®šä¸º0
+    output wire[2:0]    awprot,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œä¿æŠ¤å±æ€§ å›ºå®šä¸º0
+    output wire         awvalid,//å†™è¯·æ±‚åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œå†™è¯·æ±‚åœ°å€æœ‰æ•ˆ
+    input wire          awready,//å†™è¯·æ±‚åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œslaveç«¯å‡†å¤‡å¥½æ¥å—åœ°å€ä¼ è¾“
     
-    //Ğ´ÇëÇóÊı¾İÍ¨µÀ£¬(ÒÔw¿ªÍ·)
-    output wire[3:0]    wid, //Ğ´ÇëÇóµÄIDºÅ ¹Ì¶¨Îª1
-    output wire[31:0]   wdata, //Ğ´ÇëÇóµÄĞ´Êı¾İ
-    output wire[3:0]    wstrb, //Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬×Ö½ÚÑ¡Í¨Î»
-    output wire         wlast, //Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬±¾´ÎĞ´ÇëÇóµÄ×îºóÒ»ÅÄÊı¾İµÄÖ¸Ê¾ĞÅºÅ ¹Ì¶¨Îª1
-    output wire         wvalid, //Ğ´ÇëÇóÊı¾İÎÕÊÖĞÅºÅ£¬Ğ´ÇëÇóÊı¾İÓĞĞ§
-    input  wire    wready, //Ğ´ÇëÇóÊı¾İÎÕÊÖĞÅºÅ£¬slave¶Ë×¼±¸ºÃ½ÓÊÜÊı¾İ´«Êä
+    //å†™è¯·æ±‚æ•°æ®é€šé“ï¼Œ(ä»¥wå¼€å¤´)
+    output wire[3:0]    wid, //å†™è¯·æ±‚çš„IDå· å›ºå®šä¸º1
+    output wire[31:0]   wdata, //å†™è¯·æ±‚çš„å†™æ•°æ®
+    output wire[3:0]    wstrb, //å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œå­—èŠ‚é€‰é€šä½
+    output wire         wlast, //å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œæœ¬æ¬¡å†™è¯·æ±‚çš„æœ€åä¸€æ‹æ•°æ®çš„æŒ‡ç¤ºä¿¡å· å›ºå®šä¸º1
+    output wire         wvalid, //å†™è¯·æ±‚æ•°æ®æ¡æ‰‹ä¿¡å·ï¼Œå†™è¯·æ±‚æ•°æ®æœ‰æ•ˆ
+    input  wire    wready, //å†™è¯·æ±‚æ•°æ®æ¡æ‰‹ä¿¡å·ï¼Œslaveç«¯å‡†å¤‡å¥½æ¥å—æ•°æ®ä¼ è¾“
     
-    //Ğ´ÇëÇóÏìÓ¦Í¨µÀ£¬(ÒÔb¿ªÍ·)
-    input wire[3:0]     bid,//Ğ´ÇëÇóµÄIDºÅ£¬Í¬Ò»ÇëÇóµÄbid¡¢widºÍawidÓ¦Ò»ÖÂ  ¿ÉºöÂÔ
-    input wire[1:0]     bresp,//Ğ´ÇëÇó¿ØÖÆĞÅºÅ£¬±¾´ÎĞ´ÇëÇóÊÇ·ñ³É¹¦Íê³É  ¿ÉºöÂÔ
-    input wire          bvalid,//Ğ´ÇëÇóÏìÓ¦ÎÕÊÖĞÅºÅ£¬Ğ´ÇëÇóÏìÓ¦ÓĞĞ§
-    output reg         bready,//Ğ´ÇëÇóÏìÓ¦ÎÕÊÖĞÅºÅ£¬master¶Ë×¼±¸ºÃ½ÓÊÜĞ´ÏìÓ¦
+    //å†™è¯·æ±‚å“åº”é€šé“ï¼Œ(ä»¥bå¼€å¤´)
+    input wire[3:0]     bid,//å†™è¯·æ±‚çš„IDå·ï¼ŒåŒä¸€è¯·æ±‚çš„bidã€widå’Œawidåº”ä¸€è‡´  å¯å¿½ç•¥
+    input wire[1:0]     bresp,//å†™è¯·æ±‚æ§åˆ¶ä¿¡å·ï¼Œæœ¬æ¬¡å†™è¯·æ±‚æ˜¯å¦æˆåŠŸå®Œæˆ  å¯å¿½ç•¥
+    input wire          bvalid,//å†™è¯·æ±‚å“åº”æ¡æ‰‹ä¿¡å·ï¼Œå†™è¯·æ±‚å“åº”æœ‰æ•ˆ
+    output reg         bready,//å†™è¯·æ±‚å“åº”æ¡æ‰‹ä¿¡å·ï¼Œmasterç«¯å‡†å¤‡å¥½æ¥å—å†™å“åº”
 
-    //Á¬½Ómycpu
+    //è¿æ¥mycpu
     input wire          flush,
     //inst
     input wire[31:0]    pc_i,
@@ -72,11 +72,11 @@ module axi_master_interface(
     output wire         data_bvalid
 );
 
-//¶Á£¨Ö¸Áî»òÊı¾İ£©
+//è¯»ï¼ˆæŒ‡ä»¤æˆ–æ•°æ®ï¼‰
 //reg[1:0]        axi_wait;   // [1] inst
                             // [0] data
-//reg[1:0]        axi_ar_finish;   // Í¬ÉÏ
-//reg[1:0]        axi_r_finish;   // Í¬ÉÏ
+//reg[1:0]        axi_ar_finish;   // åŒä¸Š
+//reg[1:0]        axi_r_finish;   // åŒä¸Š
 
 reg[2:0]        r_state;   // see defines.v
 
@@ -101,12 +101,12 @@ wire[3:0]       data_arcache;
 wire[2:0]       data_arprot;
 wire            data_arvalid;
 
-reg         arvalid_tmp;    // ÓÃÓÚ×´Ì¬»ú
+reg         arvalid_tmp;    // ç”¨äºçŠ¶æ€æœº
 reg[1:0]    cnt;
 reg         cnt_en;
 wire        rvalid_s = (flush != 1'b1 && r_state == `R_WAIT && rvalid == 1'b1 && rready == 1'b1 && cnt_en == 1'b1 && cnt != 2'b01) ? 1'b0 : (rvalid & rready);
 
-//ÖÙ²Ã£¨×ÜÊÇÏÈ´¦Àí¶ÁÖ¸Áî£©
+//ä»²è£ï¼ˆæ€»æ˜¯å…ˆå¤„ç†è¯»æŒ‡ä»¤ï¼‰
 wire     i_d_arvalid_tmp = (inst_arvalid == 1'b1) ? inst_arvalid : data_arvalid;
 
 assign arid     = (inst_arvalid == 1'b1) ? inst_arid    : data_arid;
@@ -194,7 +194,7 @@ always @(posedge aclk) begin
     end
 end
 
-//Ğ´Êı¾İ
+//å†™æ•°æ®
 reg[2:0]        w_state;
 
 wire[3:0]       data_awid;
@@ -213,7 +213,7 @@ wire[3:0]       data_wstrb;
 wire            data_wlast;
 wire            data_wvalid;
 
-// ÓÃÓÚ×´Ì¬»ú
+// ç”¨äºçŠ¶æ€æœº
 reg     awvalid_tmp;
 reg     wvalid_tmp;
 
@@ -233,7 +233,7 @@ assign wstrb    = data_wstrb;
 assign wlast    = data_wlast;
 assign wvalid   = wvalid_tmp & data_wvalid;
 
-//ÏÈ´«µØÖ·ÔÙ´«Êı¾İ£¬¿É¸Ä½ø
+//å…ˆä¼ åœ°å€å†ä¼ æ•°æ®ï¼Œå¯æ”¹è¿›
 always @(posedge aclk) begin
     if(aresetn == 1'b0) begin
         w_state <= `W_IDLE;

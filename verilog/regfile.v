@@ -5,17 +5,17 @@ module regfile(
 	input	wire		clk,
 	input wire			rst,
 	
-	//Ğ´¶Ë¿Ú
+	//å†™ç«¯å£
 	input wire			we,
 	input wire[4:0]    	waddr,
 	input wire[31:0]	wdata,
 	
-	//¶Á¶Ë¿Ú1
+	//è¯»ç«¯å£1
 	input wire			re1,
 	input wire[4:0]    	raddr1,
 	output reg[31:0]    rdata1,
 	
-	//¶Á¶Ë¿Ú2
+	//è¯»ç«¯å£2
 	input wire			re2,
 	input wire[4:0]		raddr2,
 	output reg[31:0]    rdata2
@@ -71,7 +71,7 @@ module regfile(
 		end else begin
 			if(raddr1 == 5'd0) begin
 				rdata1 <= 32'd0;
-			end else if(re1 == 1'b1 && we == 1'b1 && raddr1 == waddr) begin	// Êı¾İÇ°ÍÆ
+			end else if(re1 == 1'b1 && we == 1'b1 && raddr1 == waddr) begin	// æ•°æ®å‰æ¨
 				rdata1 <= wdata;
 			end else if(re1 == 1'b1) begin
 				rdata1 <= regs[raddr1];

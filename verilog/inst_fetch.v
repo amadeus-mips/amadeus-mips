@@ -39,7 +39,7 @@ module inst_fetch(
 			inst_buffer <= 32'd0;
 			use_ibuffer <= 1'b0;
 		end else begin
-			if(flush == 1'b1) begin			// 发生例外清空流水线，修改pc为指定地址
+			if(flush == 1'b1) begin			// 鍙戠敓渚嬪娓呯┖娴佹按绾匡紝淇敼pc涓烘寚瀹氬湴鍧?
 				pc <= new_pc;
 				if(new_pc[1:0] != 2'b00) begin
 					if_excepttype_o <= 1'b1;

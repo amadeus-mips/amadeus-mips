@@ -8,20 +8,20 @@ module ex_logic(
     output reg[31:0] logic_result
 );
     always @(*)begin
-        if(rst==1'b1) begin//Èç¹ûrstÊ¹ÄÜ£¬Êä³öZeroWord
+        if(rst==1'b1) begin//å¦‚æžœrstä½¿èƒ½ï¼Œè¾“å‡ºZeroWord
             logic_result <= 32'h00000000;
         end else begin
             case (alu_op_i)
-                `EXE_OR_OP:begin//Âß¼­»ò
+                `EXE_OR_OP:begin//é€»è¾‘æˆ–
                     logic_result <= reg1_i | reg2_i;
                 end
-                `EXE_AND_OP:begin//Âß¼­Óë
+                `EXE_AND_OP:begin//é€»è¾‘ä¸Ž
                     logic_result <= reg1_i & reg2_i;
                 end
-                `EXE_NOR_OP:begin//Âß¼­»ò·Ç
+                `EXE_NOR_OP:begin//é€»è¾‘æˆ–éž
                     logic_result <= ~(reg1_i | reg2_i); 
                 end
-                `EXE_XOR_OP:begin//Âß¼­Òì»ò
+                `EXE_XOR_OP:begin//é€»è¾‘å¼‚æˆ–
                     logic_result <= reg1_i ^ reg2_i;
                 end
                 default: begin

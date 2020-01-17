@@ -72,10 +72,10 @@ module div(
                             end
                         end else begin
                             if((signed_div_i == 1'b1) && ((opdata1_i[31] ^ opdata2_i[31]) == 1'b1)) begin
-                                tmp_result[31:0] <= ~tmp_result[31:0] + 1;      // ����Ϊ����
+                                tmp_result[31:0] <= ~tmp_result[31:0] + 1;      // 若商为负数
                             end
                             if((signed_div_i == 1'b1) && ((opdata1_i[31] ^ tmp_result[64]) == 1'b1)) begin
-                                tmp_result[64:33] <= ~tmp_result[64:33] + 1;    // ������Ϊ����(��������Ϊ����ʱ)
+                                tmp_result[64:33] <= ~tmp_result[64:33] + 1;    // 若余数为负数(当被除数为负数时)
                             end
                             state <= `DIV_END;
                         end

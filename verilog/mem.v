@@ -2,36 +2,36 @@ module mem(
     input wire      rst,
 
     input wire[7:0]  alu_op_i,
-    input wire[31:0] mem_addr_i,        //ÄÚ´æµØÖ·
-    input wire[31:0] mem_wdata_i,            //ÒªĞ´ÈëÄÚ´æµÄÊı¾İ
+    input wire[31:0] mem_addr_i,        //å†…å­˜åœ°å€
+    input wire[31:0] mem_wdata_i,            //è¦å†™å…¥å†…å­˜çš„æ•°æ®
     input wire       mem_l_op,
     input wire       mem_s_op,
     input wire       mem_cached_trans,
 
-    //regfileÏà¹Ø     
-    input wire[4:0] write_address_i,    //Ğ´¼Ä´æÆ÷µÄµØÖ·
-    input wire      write_reg_i,        //ÊÇ·ñĞ´¼Ä´æÆ÷
-    input wire[31:0] write_data_i,      //Ğ´¼Ä´æÆ÷µÄÊı¾İ
+    //regfileç›¸å…³     
+    input wire[4:0] write_address_i,    //å†™å¯„å­˜å™¨çš„åœ°å€
+    input wire      write_reg_i,        //æ˜¯å¦å†™å¯„å­˜å™¨
+    input wire[31:0] write_data_i,      //å†™å¯„å­˜å™¨çš„æ•°æ®
     
     output wire[4:0] write_address_o,
     output wire      write_reg_o,
     output reg[31:0] write_data_o,
 
-    //hi,loÏà¹Ø
+    //hi,loç›¸å…³
     input wire[31:0] hi_i,
     input wire[31:0] lo_i,
-    input wire      write_hilo_i,       //Ğ´Ê¹ÄÜ
+    input wire      write_hilo_i,       //å†™ä½¿èƒ½
 
     output wire[31:0] hi_o,
     output wire[31:0] lo_o,
     output wire      write_hilo_o,
     
-    //cp0Ïà¹Ø
-    input wire       cp0_reg_we_i,      //cp0Ğ´Ê¹ÄÜĞÅºÅ
-    input wire[4:0]  cp0_reg_write_addr_i,//cp0Ğ´µØÖ·
-    input wire[31:0] cp0_reg_data_i,    //cp0Ğ´Êı¾İ
+    //cp0ç›¸å…³
+    input wire       cp0_reg_we_i,      //cp0å†™ä½¿èƒ½ä¿¡å·
+    input wire[4:0]  cp0_reg_write_addr_i,//cp0å†™åœ°å€
+    input wire[31:0] cp0_reg_data_i,    //cp0å†™æ•°æ®
 
-    //wb½×¶Îcp0
+    //wbé˜¶æ®µcp0
     input wire       wb_cp0_reg_we,
     input wire[4:0]  wb_cp0_write_addr,
     input wire[31:0] wb_cp0_reg_data,
@@ -42,11 +42,11 @@ module mem(
     
     output reg[31:0] bad_addr_o,
 
-    //Ìø×ªÏà¹Ø
+    //è·³è½¬ç›¸å…³
     input wire       is_in_delayslot_i,
     output wire       is_in_delayslot_o,
 
-    //Òì³£Ïà¹Ø
+    //å¼‚å¸¸ç›¸å…³
     input wire[31:0] excepttype_i,
     input wire[31:0] current_inst_address_i,
     output reg[31:0] excepttype_o,
@@ -56,21 +56,21 @@ module mem(
     input wire[31:0]  cp0_cause_i,
     input wire[31:0]  cp0_epc_i,
 
-    input  wire[31:0]   mem_data_rdata,     //¶Áµ½µÄÊı¾İ
-    input  wire         mem_data_rvalid,    //¶Áµ½µÄÊı¾İÓĞĞ§
-    input  wire         mem_data_bvalid,    //Ğ´Êı¾İÍê³É
-    //input  wire         mem_data_wait,      //ÉĞÎ´´¦Àí
+    input  wire[31:0]   mem_data_rdata,     //è¯»åˆ°çš„æ•°æ®
+    input  wire         mem_data_rvalid,    //è¯»åˆ°çš„æ•°æ®æœ‰æ•ˆ
+    input  wire         mem_data_bvalid,    //å†™æ•°æ®å®Œæˆ
+    //input  wire         mem_data_wait,      //å°šæœªå¤„ç†
 
-    output wire          mem_data_ren,       //¶ÁÊı¾İÊ¹ÄÜ
-    output wire          mem_data_wen,       //Ğ´Êı¾İÊ¹ÄÜ
-    output reg[3:0]     mem_data_wsel,      //Ğ´Êı¾İÑ¡Í¨
-    output wire[31:0]    mem_data_addr,      //Êı¾İµØÖ·
-    output reg[31:0]    mem_data_wdata,     //ÒªĞ´µÄÊı¾İ
-    output wire          cached_trans,       // ÄÜ·ñ¾­¹ıcache
+    output wire          mem_data_ren,       //è¯»æ•°æ®ä½¿èƒ½
+    output wire          mem_data_wen,       //å†™æ•°æ®ä½¿èƒ½
+    output reg[3:0]     mem_data_wsel,      //å†™æ•°æ®é€‰é€š
+    output wire[31:0]    mem_data_addr,      //æ•°æ®åœ°å€
+    output reg[31:0]    mem_data_wdata,     //è¦å†™çš„æ•°æ®
+    output wire          cached_trans,       // èƒ½å¦ç»è¿‡cache
 
     output wire[31:0] cp0_epc_o,
 
-    //´¦Àíaxi·Ã´æstall
+    //å¤„ç†axiè®¿å­˜stall
     output wire       stallreq
 );
     assign cached_trans = mem_cached_trans;
@@ -225,7 +225,7 @@ module mem(
                         (mem_s_op == 1'b1) ? (~mem_data_bvalid) : 1'b0;
 
 //***********except handle *****************************************************//
-    //Êı¾İÒÀÀµ
+    //æ•°æ®ä¾èµ–
     reg[31:0]   cp0_status;
     reg[31:0]   cp0_epc;
     reg[31:0]   cp0_cause;

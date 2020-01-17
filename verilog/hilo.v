@@ -2,12 +2,12 @@ module hilo(
     input wire clk,
     input wire rst,
 
-    //Ğ´¶Ë¿Ú 
+    //å†™ç«¯å£ 
     input wire write_enable,
     input wire[31:0] hi_i,
     input wire[31:0] lo_i,
 
-    //¶Á¶Ë¿Ú
+    //è¯»ç«¯å£
     output reg [31:0] hi_o,
     output reg [31:0] lo_o
 );

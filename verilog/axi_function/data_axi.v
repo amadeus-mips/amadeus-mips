@@ -18,56 +18,56 @@ module data_axi(
     output wire         mem_rvalid,
     output wire         mem_bvalid,
 
-    //¶Á
-    //·¢ËÍµØÖ·
-    output wire[3:0]    d_arid,     //¶ÁÊı¾İ·¢ËÍµÄIDºÅ 
-    output wire[31:0]   d_araddr,   //¶ÁÊı¾İ·¢ËÍµÄµØÖ·
-    output wire[3:0]    d_arlen,    //¶ÁÊı¾İ·¢ËÍµÄÇëÇó´«Êä³¤¶È(Êı¾İ´«ÊäÅÄÊı) ¹Ì¶¨Îª0
-    output wire[2:0]    d_arsize,   //¶ÁÊı¾İ·¢ËÍµÄÇëÇó´«Êä´óĞ¡(Êı¾İ´«ÊäÃ¿ÅÄµÄ×Ö½ÚÊı)
-    output wire[1:0]    d_arburst,  //¶ÁÊı¾İ·¢ËÍµÄÇëÇó´«ÊäÀàĞÍ  ¹Ì¶¨Îª2'b01
-    output wire[1:0]    d_arlock,   //¶ÁÊı¾İ·¢ËÍµÄÔ­×ÓËø£¬¹Ì¶¨Îª2'b01
-    output wire[3:0]    d_arcache,  //¶ÁÊı¾İ·¢ËÍµÄCACHEÊôĞÔ ¹Ì¶¨Îª4'b0000
-    output wire[2:0]    d_arprot,   //¶ÁÊı¾İ·¢ËÍµÄ±£»¤ÊôĞÔ ¹Ì¶¨Îª3'b000
-    output wire         d_arvalid,  //¶ÁÊı¾İ·¢ËÍµØÖ·ÎÕÊÖĞÅºÅ£¬¶ÁÊı¾İ·¢ËÍµØÖ·ÓĞĞ§
-    //input wire          d_arready,  //¶ÁÊı¾İ·¢ËÍµØÖ·ÎÕÊÖĞÅºÅ£¬slave¶Ë×¼±¸ºÃ½ÓÊÜµØÖ·´«Êä
+    //è¯»
+    //å‘é€åœ°å€
+    output wire[3:0]    d_arid,     //è¯»æ•°æ®å‘é€çš„IDå· 
+    output wire[31:0]   d_araddr,   //è¯»æ•°æ®å‘é€çš„åœ°å€
+    output wire[3:0]    d_arlen,    //è¯»æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“é•¿åº¦(æ•°æ®ä¼ è¾“æ‹æ•°) å›ºå®šä¸º0
+    output wire[2:0]    d_arsize,   //è¯»æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“å¤§å°(æ•°æ®ä¼ è¾“æ¯æ‹çš„å­—èŠ‚æ•°)
+    output wire[1:0]    d_arburst,  //è¯»æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“ç±»å‹  å›ºå®šä¸º2'b01
+    output wire[1:0]    d_arlock,   //è¯»æ•°æ®å‘é€çš„åŸå­é”ï¼Œå›ºå®šä¸º2'b01
+    output wire[3:0]    d_arcache,  //è¯»æ•°æ®å‘é€çš„CACHEå±æ€§ å›ºå®šä¸º4'b0000
+    output wire[2:0]    d_arprot,   //è¯»æ•°æ®å‘é€çš„ä¿æŠ¤å±æ€§ å›ºå®šä¸º3'b000
+    output wire         d_arvalid,  //è¯»æ•°æ®å‘é€åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œè¯»æ•°æ®å‘é€åœ°å€æœ‰æ•ˆ
+    //input wire          d_arready,  //è¯»æ•°æ®å‘é€åœ°å€æ¡æ‰‹ä¿¡å·ï¼Œslaveç«¯å‡†å¤‡å¥½æ¥å—åœ°å€ä¼ è¾“
 
-    //½ÓÊÕÊı¾İ
-    input wire[3:0]     d_rid,      // ¶ÁÊı¾İ½ÓÊÕµÄslave¶Ë·µ»ØµÄid
-    input wire[31:0]    d_rdata,    // ¶ÁÊı¾İ½ÓÊÕµÄslave¶Ë·µ»ØµÄÊı¾İ
-    input wire[1:0]     d_rresp,    // ¶ÁÊı¾İ½ÓÊÕµÄslave¶Ë·µ»ØµÄÊÇ·ñ³É¹¦Íê³ÉĞÅºÅ£¬¿ÉºöÂÔ
-    input wire          d_rlast,    // ¶ÁÊı¾İ½ÓÊÕµÄslave¶Ë·µ»ØµÄÊÇ·ñÊÇ×îºóÒ»ÅÄÊı¾İĞÅºÅ£¬¿ÉºöÂÔ£¨¿ÉÄÜÓÃÓÚburst´«Êä£©
-    input wire          d_rvalid,   // ¶ÁÊı¾İ½ÓÊÕµÄslave¶Ë·µ»ØµÄÊı¾İÊÇ·ñÓĞĞ§ĞÅºÅ
-    //output reg          d_rready,   // ¶ÁÊı¾İ·¢ËÍµÄmaster¶Ë×¼±¸ºÃ½ÓÊÕÊı¾İ´«ÊäµÄĞÅºÅ
+    //æ¥æ”¶æ•°æ®
+    input wire[3:0]     d_rid,      // è¯»æ•°æ®æ¥æ”¶çš„slaveç«¯è¿”å›çš„id
+    input wire[31:0]    d_rdata,    // è¯»æ•°æ®æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ•°æ®
+    input wire[1:0]     d_rresp,    // è¯»æ•°æ®æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ˜¯å¦æˆåŠŸå®Œæˆä¿¡å·ï¼Œå¯å¿½ç•¥
+    input wire          d_rlast,    // è¯»æ•°æ®æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ˜¯å¦æ˜¯æœ€åä¸€æ‹æ•°æ®ä¿¡å·ï¼Œå¯å¿½ç•¥ï¼ˆå¯èƒ½ç”¨äºburstä¼ è¾“ï¼‰
+    input wire          d_rvalid,   // è¯»æ•°æ®æ¥æ”¶çš„slaveç«¯è¿”å›çš„æ•°æ®æ˜¯å¦æœ‰æ•ˆä¿¡å·
+    //output reg          d_rready,   // è¯»æ•°æ®å‘é€çš„masterç«¯å‡†å¤‡å¥½æ¥æ”¶æ•°æ®ä¼ è¾“çš„ä¿¡å·
 
-    //Ğ´
-    //·¢ËÍµØÖ·
-    output wire[3:0]    d_awid,     // Ğ´Êı¾İ·¢ËÍµÄIDºÅ
-    output wire[31:0]   d_awaddr,   // Ğ´Êı¾İ·¢ËÍµÄµØÖ·
-    output wire[3:0]    d_awlen,    // Ğ´Êı¾İ·¢ËÍµÄÇëÇó´«Êä³¤¶È£¬¹Ì¶¨Îª0
-    output wire[2:0]    d_awsize,   // Ğ´Êı¾İ·¢ËÍµÄÇëÇó´«Êä´óĞ¡£¬¹Ì¶¨Îª3'b010(4Bytes)
-    output wire[1:0]    d_awburst,  // Ğ´Êı¾İ·¢ËÍµÄÇëÇó´«ÊäÀàĞÍ£¬¹Ì¶¨Îª2'b01
-    output wire[1:0]    d_awlock,   // Ğ´Êı¾İ·¢ËÍµÄÔ­×ÓËø£¬¹Ì¶¨Îª2'b00
-    output wire[3:0]    d_awcache,  // Ğ´Êı¾İ·¢ËÍµÄCACHEÊôĞÔ£¬¹Ì¶¨Îª4'b0000
-    output wire[2:0]    d_awprot,   // Ğ´Êı¾İ·¢ËÍµÄ±£»¤ÊôĞÔ£¬¹Ì¶¨Îª3'b000
-    output wire         d_awvalid,  // Ğ´Êı¾İ·¢ËÍµÄµØÖ·ÎÕÊÖĞÅºÅ
-    //input  wire         d_awready,  // Ğ´Êı¾İ½ÓÊÕµÄslave¶Ë×¼±¸ºÃ½ÓÊÜµØÖ·µÄĞÅºÅ
+    //å†™
+    //å‘é€åœ°å€
+    output wire[3:0]    d_awid,     // å†™æ•°æ®å‘é€çš„IDå·
+    output wire[31:0]   d_awaddr,   // å†™æ•°æ®å‘é€çš„åœ°å€
+    output wire[3:0]    d_awlen,    // å†™æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“é•¿åº¦ï¼Œå›ºå®šä¸º0
+    output wire[2:0]    d_awsize,   // å†™æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“å¤§å°ï¼Œå›ºå®šä¸º3'b010(4Bytes)
+    output wire[1:0]    d_awburst,  // å†™æ•°æ®å‘é€çš„è¯·æ±‚ä¼ è¾“ç±»å‹ï¼Œå›ºå®šä¸º2'b01
+    output wire[1:0]    d_awlock,   // å†™æ•°æ®å‘é€çš„åŸå­é”ï¼Œå›ºå®šä¸º2'b00
+    output wire[3:0]    d_awcache,  // å†™æ•°æ®å‘é€çš„CACHEå±æ€§ï¼Œå›ºå®šä¸º4'b0000
+    output wire[2:0]    d_awprot,   // å†™æ•°æ®å‘é€çš„ä¿æŠ¤å±æ€§ï¼Œå›ºå®šä¸º3'b000
+    output wire         d_awvalid,  // å†™æ•°æ®å‘é€çš„åœ°å€æ¡æ‰‹ä¿¡å·
+    //input  wire         d_awready,  // å†™æ•°æ®æ¥æ”¶çš„slaveç«¯å‡†å¤‡å¥½æ¥å—åœ°å€çš„ä¿¡å·
 
-    //·¢ËÍÊı¾İ
-    output wire[3:0]    d_wid,      // Ğ´Êı¾İ·¢ËÍµÄIDºÅ
-    output wire[31:0]   d_wdata,    // Ğ´Êı¾İ·¢ËÍµÄÊı¾İ
-    output wire[3:0]    d_wstrb,    // Ğ´Êı¾İ·¢ËÍµÄ×Ö½ÚÑ¡Í¨Î»
-    output wire         d_wlast,    // Ğ´Êı¾İ·¢ËÍµÄÊÇ·ñÊÇ×îºóÒ»ÅÄÊı¾İµÄĞÅºÅ£¬¹Ì¶¨Îª1
-    output wire         d_wvalid,   // Ğ´Êı¾İ·¢ËÍµÄÊı¾İÊÇ·ñÓĞĞ§µÄĞÅºÅ
-    input  wire         d_wready,   // Ğ´Êı¾İ½ÓÊÕµÄslave¶Ë×¼±¸ºÃ½ÓÊÕÊı¾İµÄĞÅºÅ
+    //å‘é€æ•°æ®
+    output wire[3:0]    d_wid,      // å†™æ•°æ®å‘é€çš„IDå·
+    output wire[31:0]   d_wdata,    // å†™æ•°æ®å‘é€çš„æ•°æ®
+    output wire[3:0]    d_wstrb,    // å†™æ•°æ®å‘é€çš„å­—èŠ‚é€‰é€šä½
+    output wire         d_wlast,    // å†™æ•°æ®å‘é€çš„æ˜¯å¦æ˜¯æœ€åä¸€æ‹æ•°æ®çš„ä¿¡å·ï¼Œå›ºå®šä¸º1
+    output wire         d_wvalid,   // å†™æ•°æ®å‘é€çš„æ•°æ®æ˜¯å¦æœ‰æ•ˆçš„ä¿¡å·
+    input  wire         d_wready,   // å†™æ•°æ®æ¥æ”¶çš„slaveç«¯å‡†å¤‡å¥½æ¥æ”¶æ•°æ®çš„ä¿¡å·
 
-    //½ÓÊÕĞ´ÏìÓ¦
-    input wire[3:0]     d_bid,      // Ğ´Êı¾İµÄIDºÅ
-    input wire[1:0]     d_bresp,    // Ğ´Êı¾İ½ÓÊÕµÄĞ´ÊÇ·ñ³É¹¦Íê³É£¬¿ÉºöÂÔ
-    input wire          d_bvalid  // Ğ´Êı¾İ½ÓÊÕµÄÏìÓ¦ÊÇ·ñÓĞĞ§ĞÅºÅ
-    //output wire         d_bready,   // Ğ´Êı¾İ·¢ËÍµÄmaster¶Ë×¼±¸ºÅ½ÓÊÕĞ´ÏìÓ¦µÄĞÅºÅ
+    //æ¥æ”¶å†™å“åº”
+    input wire[3:0]     d_bid,      // å†™æ•°æ®çš„IDå·
+    input wire[1:0]     d_bresp,    // å†™æ•°æ®æ¥æ”¶çš„å†™æ˜¯å¦æˆåŠŸå®Œæˆï¼Œå¯å¿½ç•¥
+    input wire          d_bvalid  // å†™æ•°æ®æ¥æ”¶çš„å“åº”æ˜¯å¦æœ‰æ•ˆä¿¡å·
+    //output wire         d_bready,   // å†™æ•°æ®å‘é€çš„masterç«¯å‡†å¤‡å·æ¥æ”¶å†™å“åº”çš„ä¿¡å·
 );
 
-    //wire    cached_trans = (mem_addr[31:29] == 3'b101) ?  1'b0 : 1'b1;   // 0xA0000000~0xBFFFFFFF ²»¿Écache
+    //wire    cached_trans = (mem_addr[31:29] == 3'b101) ?  1'b0 : 1'b1;   // 0xA0000000~0xBFFFFFFF ä¸å¯cache
     //wire    cached_trans = 1'b;
     wire[31:0]    cache_data_to_cpu;
     wire    hit;
@@ -79,7 +79,7 @@ module data_axi(
     wire    cache_wlast_to_axi;
     wire    write_back;
 
-    //¶Á
+    //è¯»
     assign d_arid       = `AXI_DATA_Id;
     assign d_araddr     = (cached_trans == 1'b1)  ? {3'b0, mem_addr[28:5], 5'b00000} : {3'b0, mem_addr[28:0]};
     assign d_arlen      = (cached_trans == 1'b1)  ? 4'b0111 : 4'b0000;     // 8 transfers or 1 transfer
@@ -93,7 +93,7 @@ module data_axi(
     assign mem_rdata    = (cached_trans == 1'b1)  ? cache_data_to_cpu : d_rdata;
     assign mem_rvalid   = (cached_trans == 1'b1)  ? hit : (d_rid == `AXI_DATA_Id) ? d_rvalid : 1'b0;
 
-    //Ğ´
+    //å†™
     assign d_awid       = `AXI_DATA_Id;
     assign d_awaddr     = (cached_trans == 1'b1)  ? {3'b0, cache_waddr_to_axi[28:0]} : {3'b0, mem_addr[28:0]};
     assign d_awlen      = (cached_trans == 1'b1)  ? 4'b0111 : 4'b0000;

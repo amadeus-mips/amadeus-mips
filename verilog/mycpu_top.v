@@ -2,55 +2,55 @@
 
 module mycpu_top(
     input wire[5:0]     int,
-    //AXI时钟与复位信号
-    input wire          aclk,//AXI时钟
-    input wire          aresetn,//AXI复位，低电平有效
+    //AXI鏃堕挓涓庡浣嶄俊鍙?
+    input wire          aclk,//AXI鏃堕挓
+    input wire          aresetn,//AXI澶嶄綅锛屼綆鐢靛钩鏈夋晥
 
-    //读请求地址通道，(以ar开头)
-    output wire[3:0]    arid,//读请求的ID号  取指为0 取数为1
-    output wire[31:0]   araddr,//读请求的地址
-    output wire[3:0]    arlen,//读请求控制信号，请求传输的长度(数据传输拍数) 固定为0
-    output wire[2:0]    arsize,//读请求控制信号，请求传输的大小(数据传输每拍的字节数)
-    output wire[1:0]    arburst,//读请求控制信号，传输类型  固定为2’b01
-    output wire[1:0]    arlock,//读请求控制信号，原子锁  固定为0
-    output wire[3:0]    arcache,//读请求控制信号，CACHE属性 固定为0
-    output wire[2:0]    arprot,//读请求控制信号，保护属性 固定为0
-    output wire         arvalid,//读请求地址握手信号，读请求地址有效
-    input wire          arready,//读请求地址握手信号，slave端准备好接受地址传输
+    //璇昏姹傚湴鍧?閫氶亾锛?(浠r寮?澶?)
+    output wire[3:0]    arid,//璇昏姹傜殑ID鍙?  鍙栨寚涓?0 鍙栨暟涓?1
+    output wire[31:0]   araddr,//璇昏姹傜殑鍦板潃
+    output wire[3:0]    arlen,//璇昏姹傛帶鍒朵俊鍙凤紝璇锋眰浼犺緭鐨勯暱搴?(鏁版嵁浼犺緭鎷嶆暟) 鍥哄畾涓?0
+    output wire[2:0]    arsize,//璇昏姹傛帶鍒朵俊鍙凤紝璇锋眰浼犺緭鐨勫ぇ灏?(鏁版嵁浼犺緭姣忔媿鐨勫瓧鑺傛暟)
+    output wire[1:0]    arburst,//璇昏姹傛帶鍒朵俊鍙凤紝浼犺緭绫诲瀷  鍥哄畾涓?2鈥檅01
+    output wire[1:0]    arlock,//璇昏姹傛帶鍒朵俊鍙凤紝鍘熷瓙閿?  鍥哄畾涓?0
+    output wire[3:0]    arcache,//璇昏姹傛帶鍒朵俊鍙凤紝CACHE灞炴?? 鍥哄畾涓?0
+    output wire[2:0]    arprot,//璇昏姹傛帶鍒朵俊鍙凤紝淇濇姢灞炴?? 鍥哄畾涓?0
+    output wire         arvalid,//璇昏姹傚湴鍧?鎻℃墜淇″彿锛岃璇锋眰鍦板潃鏈夋晥
+    input wire          arready,//璇昏姹傚湴鍧?鎻℃墜淇″彿锛宻lave绔噯澶囧ソ鎺ュ彈鍦板潃浼犺緭
 
-    //读请求数据通道，(以r开头)
-    input wire[3:0]     rid,//读请求的ID号，同一请求的rid应和arid一致  指令回来为0数据 回来为1
-    input wire[31:0]    rdata,//读请求的读回数据
-    input wire[1:0]     rresp,//读请求控制信号，本次读请求是否成功完成 可忽略
-    input wire          rlast,//读请求控制信号，本次读请求的最后一拍数据的指示信号 可忽略
-    input wire          rvalid,//读请求数据握手信号，读请求数据有效
-    output wire         rready,//读请求数据握手信号，master端准备好接受数据传输
+    //璇昏姹傛暟鎹?氶亾锛?(浠寮?澶?)
+    input wire[3:0]     rid,//璇昏姹傜殑ID鍙凤紝鍚屼竴璇锋眰鐨剅id搴斿拰arid涓?鑷?  鎸囦护鍥炴潵涓?0鏁版嵁 鍥炴潵涓?1
+    input wire[31:0]    rdata,//璇昏姹傜殑璇诲洖鏁版嵁
+    input wire[1:0]     rresp,//璇昏姹傛帶鍒朵俊鍙凤紝鏈璇昏姹傛槸鍚︽垚鍔熷畬鎴? 鍙拷鐣?
+    input wire          rlast,//璇昏姹傛帶鍒朵俊鍙凤紝鏈璇昏姹傜殑鏈?鍚庝竴鎷嶆暟鎹殑鎸囩ず淇″彿 鍙拷鐣?
+    input wire          rvalid,//璇昏姹傛暟鎹彙鎵嬩俊鍙凤紝璇昏姹傛暟鎹湁鏁?
+    output wire         rready,//璇昏姹傛暟鎹彙鎵嬩俊鍙凤紝master绔噯澶囧ソ鎺ュ彈鏁版嵁浼犺緭
     
-    //写请求地址通道，(以aw开头)
-    output wire[3:0]    awid,//写请求id 固定为1
-    output wire[31:0]   awaddr,//写请求地址
-    output wire[3:0]    awlen,//写请求控制信号，请求传输的长度(数据传输拍数) 固定为0
-    output wire[2:0]    awsize,//写请求控制信号，请求传输的大小(数据传输每拍的字节数)
-    output wire[1:0]    awburst,//写请求控制信号，传输类型 固定为2’b01
-    output wire[1:0]    awlock,//写请求控制信号，原子锁 固定为0
-    output wire[3:0]    awcache,//写请求控制信号，CACHE属性 固定为0
-    output wire[2:0]    awprot,//写请求控制信号，保护属性 固定为0
-    output wire         awvalid,//写请求地址握手信号，写请求地址有效
-    input wire          awready,//写请求地址握手信号，slave端准备好接受地址传输
+    //鍐欒姹傚湴鍧?閫氶亾锛?(浠w寮?澶?)
+    output wire[3:0]    awid,//鍐欒姹俰d 鍥哄畾涓?1
+    output wire[31:0]   awaddr,//鍐欒姹傚湴鍧?
+    output wire[3:0]    awlen,//鍐欒姹傛帶鍒朵俊鍙凤紝璇锋眰浼犺緭鐨勯暱搴?(鏁版嵁浼犺緭鎷嶆暟) 鍥哄畾涓?0
+    output wire[2:0]    awsize,//鍐欒姹傛帶鍒朵俊鍙凤紝璇锋眰浼犺緭鐨勫ぇ灏?(鏁版嵁浼犺緭姣忔媿鐨勫瓧鑺傛暟)
+    output wire[1:0]    awburst,//鍐欒姹傛帶鍒朵俊鍙凤紝浼犺緭绫诲瀷 鍥哄畾涓?2鈥檅01
+    output wire[1:0]    awlock,//鍐欒姹傛帶鍒朵俊鍙凤紝鍘熷瓙閿? 鍥哄畾涓?0
+    output wire[3:0]    awcache,//鍐欒姹傛帶鍒朵俊鍙凤紝CACHE灞炴?? 鍥哄畾涓?0
+    output wire[2:0]    awprot,//鍐欒姹傛帶鍒朵俊鍙凤紝淇濇姢灞炴?? 鍥哄畾涓?0
+    output wire         awvalid,//鍐欒姹傚湴鍧?鎻℃墜淇″彿锛屽啓璇锋眰鍦板潃鏈夋晥
+    input wire          awready,//鍐欒姹傚湴鍧?鎻℃墜淇″彿锛宻lave绔噯澶囧ソ鎺ュ彈鍦板潃浼犺緭
     
-    //写请求数据通道，(以w开头)
-    output wire[3:0]    wid, //写请求的ID号 固定为1
-    output wire[31:0]   wdata, //写请求的写数据
-    output wire[3:0]    wstrb, //写请求控制信号，字节选通位
-    output wire         wlast, //写请求控制信号，本次写请求的最后一拍数据的指示信号 固定为1
-    output wire         wvalid, //写请求数据握手信号，写请求数据有效
-    input  wire         wready, //写请求数据握手信号，slave端准备好接受数据传输
+    //鍐欒姹傛暟鎹?氶亾锛?(浠寮?澶?)
+    output wire[3:0]    wid, //鍐欒姹傜殑ID鍙? 鍥哄畾涓?1
+    output wire[31:0]   wdata, //鍐欒姹傜殑鍐欐暟鎹?
+    output wire[3:0]    wstrb, //鍐欒姹傛帶鍒朵俊鍙凤紝瀛楄妭閫夐?氫綅
+    output wire         wlast, //鍐欒姹傛帶鍒朵俊鍙凤紝鏈鍐欒姹傜殑鏈?鍚庝竴鎷嶆暟鎹殑鎸囩ず淇″彿 鍥哄畾涓?1
+    output wire         wvalid, //鍐欒姹傛暟鎹彙鎵嬩俊鍙凤紝鍐欒姹傛暟鎹湁鏁?
+    input  wire         wready, //鍐欒姹傛暟鎹彙鎵嬩俊鍙凤紝slave绔噯澶囧ソ鎺ュ彈鏁版嵁浼犺緭
     
-    //写请求响应通道，(以b开头)
-    input wire[3:0]     bid,//写请求的ID号，同一请求的bid、wid和awid应一致  可忽略
-    input wire[1:0]     bresp,//写请求控制信号，本次写请求是否成功完成  可忽略
-    input wire          bvalid,//写请求响应握手信号，写请求响应有效
-    output wire         bready,//写请求响应握手信号，master端准备好接受写响应
+    //鍐欒姹傚搷搴旈?氶亾锛?(浠寮?澶?)
+    input wire[3:0]     bid,//鍐欒姹傜殑ID鍙凤紝鍚屼竴璇锋眰鐨刡id銆亀id鍜宎wid搴斾竴鑷?  鍙拷鐣?
+    input wire[1:0]     bresp,//鍐欒姹傛帶鍒朵俊鍙凤紝鏈鍐欒姹傛槸鍚︽垚鍔熷畬鎴?  鍙拷鐣?
+    input wire          bvalid,//鍐欒姹傚搷搴旀彙鎵嬩俊鍙凤紝鍐欒姹傚搷搴旀湁鏁?
+    output wire         bready,//鍐欒姹傚搷搴旀彙鎵嬩俊鍙凤紝master绔噯澶囧ソ鎺ュ彈鍐欏搷搴?
 
     //debug 
     output wire[31:0]   debug_wb_pc,
@@ -147,7 +147,7 @@ axi_master_interface u_axi_master_interface(
 mycpu u_mycpu(
 	.clk               (aclk               ),
     .resetn            (aresetn            ),
-    .int               (int               ),
+    .intr              (int               ),
     
     .pc_o              (pc_from_cpu              ),
     .pc_en             (pc_en_from_cpu             ),

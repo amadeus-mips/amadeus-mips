@@ -1,54 +1,54 @@
-/**********È«¾Ö***********/
+/**********å…¨å±€***********/
 `define RstEnable 		1'b1
 `define RstDisable 		1'b0
-`define ZeroWord 		32'h00000000 //×ÖÖÃÎª0
+`define ZeroWord 		32'h00000000 //å­—ç½®ä¸º0
 `define WriteEnable 	1'b1
 `define WriteDisable 	1'b0
 `define ReadEnable 		1'b1
 `define ReadDisable 	1'b0
-`define AluOpBus 		7:0  		//×Ô¶¨Òå8Î»AluOp
-`define AluSelBus 		2:0   		//×Ô¶¨Òå3Î»Ñ¡ÔñÀà±ğ
-`define InstValid 		1'b0  		//Ö¸Áî´æÓĞĞ§
-`define InstInvalid		1'b1        //Ö¸Áî´æÎŞĞ§
+`define AluOpBus 		7:0  		//è‡ªå®šä¹‰8ä½AluOp
+`define AluSelBus 		2:0   		//è‡ªå®šä¹‰3ä½é€‰æ‹©ç±»åˆ«
+`define InstValid 		1'b0  		//æŒ‡ä»¤å­˜æœ‰æ•ˆ
+`define InstInvalid		1'b1        //æŒ‡ä»¤å­˜æ— æ•ˆ
 `define Stop 			1'b1
 `define NoStop 			1'b0  
-`define InDelaySlot 	1'b1 		//ÑÓ³ÙäîÖ¸Áî
-`define NotInDelaySlot 	1'b0        //·ÇÑÓ³ÙäîÖ¸Áî
-`define Branch 			1'b1  		//·ÖÖ§Ìø×ª
+`define InDelaySlot 	1'b1 		//å»¶è¿Ÿæ¼•æŒ‡ä»¤
+`define NotInDelaySlot 	1'b0        //éå»¶è¿Ÿæ¼•æŒ‡ä»¤
+`define Branch 			1'b1  		//åˆ†æ”¯è·³è½¬
 `define NotBranch 		1'b0 
-`define InterruptAssert 		1'b1 //ÖĞ¶Ï¿É´ï
-`define InterruptNotAssert 		1'b0 //ÖĞ¶Ï²»¿É´ï
-`define TrapAssert 				1'b1 //×ÔÏİ¿É´ï
-`define TrapNotAssert 			1'b0 //×ÔÏİ²»¿É´ï
+`define InterruptAssert 		1'b1 //ä¸­æ–­å¯è¾¾
+`define InterruptNotAssert 		1'b0 //ä¸­æ–­ä¸å¯è¾¾
+`define TrapAssert 				1'b1 //è‡ªé™·å¯è¾¾
+`define TrapNotAssert 			1'b0 //è‡ªé™·ä¸å¯è¾¾
 `define True_v 					1'b1 
 `define False_v 				1'b0
 `define ChipEnable 				1'b1
 `define ChipDisable 			1'b0
 
-//**********Ö¸Áî´æ´¢Æ÷inst_rom***********
+//**********æŒ‡ä»¤å­˜å‚¨å™¨inst_rom***********
 `define InstAddrBus 31:0
 `define InstBus 31:0
 `define InstMemNum 131071
 `define InstMemNumLog2 17
 
-//**********Êı¾İ´æ´¢Æ÷data_ram***********
+//**********æ•°æ®å­˜å‚¨å™¨data_ram***********
 `define DataAddrBus 31:0
 `define DataBus 31:0
 `define DataMemNum 131071
 `define DataMemNumLog2 17
 `define ByteWidth 7:0
 
-//************EXÄ£¿é*********
-//Âß¼­ÔËËãop
+//************EXæ¨¡å—*********
+//é€»è¾‘è¿ç®—op
 `define EXE_OR_OP  8'd0
 `define EXE_XOR_OP 8'd1
 `define EXE_AND_OP 8'd2
 `define EXE_NOR_OP 8'd3
-//Âß¼­ÔËËãop
+//é€»è¾‘è¿ç®—op
 `define EXE_SLL_OP 8'd4
 `define EXE_SRL_OP 8'd5
 `define EXE_SRA_OP 8'd6
-//Êı¾İÒÆ¶¯op
+//æ•°æ®ç§»åŠ¨op
 `define EXE_MFHI_OP 8'd7
 `define EXE_MFLO_OP 8'd9
 `define EXE_MTHI_OP 8'd10
@@ -62,7 +62,7 @@
 `define EXE_SB_OP   8'd29
 `define EXE_SH_OP   8'd30
 `define EXE_SW_OP   8'd31
-//ËãÊıÔËËãop
+//ç®—æ•°è¿ç®—op
 `define EXE_ADDU_OP 8'd12
 `define EXE_SUB_OP 8'd13
 `define EXE_ADD_OP 8'd14
@@ -73,10 +73,10 @@
 `define EXE_MULTU_OP 8'd19
 `define EXE_SLT_OP 8'd20
 `define EXE_SLTU_OP 8'd21
-//ÌØÈ¨Ö¸Áîop
+//ç‰¹æƒæŒ‡ä»¤op
 `define EXE_MFC0_OP 8'd22
 `define EXE_MTC0_OP 8'd23
-//·Ã´æÖ¸Áîop
+//è®¿å­˜æŒ‡ä»¤op
 `define EXE_LB_OP  8'd24
 `define EXE_LBU_OP  8'd25
 `define EXE_LH_OP  8'd26
@@ -87,7 +87,7 @@
 `define EXE_SW_OP   8'd31
 
 ///**************temp****************
-//Ìø×ªÖ¸Áîop
+//è·³è½¬æŒ‡ä»¤op
 `define EXE_JR_OP       8'd100
 `define EXE_JALR_OP     8'd103
 `define EXE_J_OP        8'd104
@@ -100,12 +100,12 @@
 
 `define EXE_SYSCALL_OP  8'd101
 `define EXE_BREAK_OP    8'd102
-//¿ÕÖ¸Áî
+//ç©ºæŒ‡ä»¤
 `define EXE_NOP_OP    8'b00000000
-//×ÔÏİÖ¸Áî
+//è‡ªé™·æŒ‡ä»¤
 `define EXE_ERET_OP   8'd200
 
-//½á¹ûÑ¡ÔñĞÅºÅ
+//ç»“æœé€‰æ‹©ä¿¡å·
 `define EXE_RES_LOGIC 3'd0
 `define EXE_RES_SHIFT 3'd1
 `define EXE_RES_ARITH 3'd2
@@ -115,18 +115,18 @@
 
 `define EXE_RES_NOP 3'b000
 
-//**********Í¨ÓÃ¼Ä´æÆ÷regfile**********
-`define RegAddrBus 		4:0       //¼Ä´æÆ÷µØÖ·±àºÅ
-`define RegBus 			31:0      //¼Ä´æÆ÷Î»¿í
-`define RegWidth 		32	      //¼Ä´æÆ÷Î»¿í¸öÊı
+//**********é€šç”¨å¯„å­˜å™¨regfile**********
+`define RegAddrBus 		4:0       //å¯„å­˜å™¨åœ°å€ç¼–å·
+`define RegBus 			31:0      //å¯„å­˜å™¨ä½å®½
+`define RegWidth 		32	      //å¯„å­˜å™¨ä½å®½ä¸ªæ•°
 `define DoubleRegWidth 	64		  
-`define DoubleRegBus 	63:0	  //64Î»µØÖ·
-`define RegNum 			32		  //RegfileÖĞ¼Ä´æÆ÷µÄ¸öÊı
+`define DoubleRegBus 	63:0	  //64ä½åœ°å€
+`define RegNum 			32		  //Regfileä¸­å¯„å­˜å™¨çš„ä¸ªæ•°
 `define RegNumLog2 		5
-`define NOPRegAddr 		5'b00000  //RSTÊ±£¬Ğ´Èë¼Ä´æÆ÷µÄµØÖ·±àºÅ
+`define NOPRegAddr 		5'b00000  //RSTæ—¶ï¼Œå†™å…¥å¯„å­˜å™¨çš„åœ°å€ç¼–å·
 
-//**********IDÄ£¿éÖ¸Áî**********
-//Âß¼­ÔËËãÖ¸Áî
+//**********IDæ¨¡å—æŒ‡ä»¤**********
+//é€»è¾‘è¿ç®—æŒ‡ä»¤
 `define EXE_AND  	6'b100100
 `define EXE_OR   	6'b100101
 `define EXE_XOR 	6'b100110
@@ -135,20 +135,20 @@
 `define EXE_ORI  	6'b001101
 `define EXE_XORI 	6'b001110
 `define EXE_LUI 	6'b001111
-//Î»ÒÆÔËËã
+//ä½ç§»è¿ç®—
 `define EXE_SLL  	6'b000000
 `define EXE_SLLV  	6'b000100
 `define EXE_SRL  	6'b000010
 `define EXE_SRLV  	6'b000110
 `define EXE_SRA  	6'b000011
 `define EXE_SRAV  	6'b000111
-//Î»ÒÆÔËËã---HI,LOÎ»ÒÆÖ¸Áî
+//ä½ç§»è¿ç®—---HI,LOä½ç§»æŒ‡ä»¤
 `define EXE_MFHI  	6'b010000
 `define EXE_MTHI  	6'b010001
 `define EXE_MFLO  	6'b010010
 `define EXE_MTLO  	6'b010011
-//ËãÊõÔËËãÖ¸Áî
-//ËãÊõÔËËãÖ¸Áî---¼Ó¼õ
+//ç®—æœ¯è¿ç®—æŒ‡ä»¤
+//ç®—æœ¯è¿ç®—æŒ‡ä»¤---åŠ å‡
 `define EXE_ADD  	6'b100000
 `define EXE_ADDU  	6'b100001
 `define EXE_ADDI  	6'b001000
@@ -159,13 +159,13 @@
 `define EXE_SLTIU  	6'b001011   
 `define EXE_SUB  	6'b100010
 `define EXE_SUBU  	6'b100011
-//ËãÊõÔËËãÖ¸Áî---³ı·¨
+//ç®—æœ¯è¿ç®—æŒ‡ä»¤---é™¤æ³•
 `define EXE_DIV  	6'b011010
 `define EXE_DIVU  	6'b011011
-//ËãÊõÔËËãÖ¸Áî---³Ë·¨
+//ç®—æœ¯è¿ç®—æŒ‡ä»¤---ä¹˜æ³•
 `define EXE_MULT  	6'b011000
 `define EXE_MULTU  	6'b011001
-//Ìø×ªÖ¸Áî
+//è·³è½¬æŒ‡ä»¤
 `define EXE_J  	  	6'b000010
 `define EXE_JAL   	6'b000011
 `define EXE_JALR  	6'b001001
@@ -178,7 +178,7 @@
 `define EXE_BLTZ  	5'b00000
 `define EXE_BLTZAL  5'b10000
 `define EXE_BNE  	6'b000101
-//·Ã´æÖ¸Áî 
+//è®¿å­˜æŒ‡ä»¤ 
 `define EXE_LB  	6'b100000
 `define EXE_LBU  	6'b100100
 `define EXE_LH  	6'b100001
@@ -187,22 +187,22 @@
 `define EXE_SB  	6'b101000
 `define EXE_SW  	6'b101011
 `define EXE_SH  	6'b101001
-//×ÔÏİÖ¸Áî 
+//è‡ªé™·æŒ‡ä»¤ 
 `define EXE_BREAK    6'b001101
 `define EXE_SYSCALL  6'b001100
-//ÌØÈ¨Ö¸Áî
+//ç‰¹æƒæŒ‡ä»¤
 `define EXE_ERET 	32'b01000010000000000000000000011000
-//×Ô¶¨Òå¿ÕÖ¸ÁîºÍ¿ÕµØÖ·
+//è‡ªå®šä¹‰ç©ºæŒ‡ä»¤å’Œç©ºåœ°å€
 `define EXE_NOP     6'b000000
 `define SSNOP       32'b00000000000000000000000001000000
-//×Ô¶¨ÒåÈıÖÖÌØ±ğÖ¸ÁîÀà±ğ
+//è‡ªå®šä¹‰ä¸‰ç§ç‰¹åˆ«æŒ‡ä»¤ç±»åˆ«
 `define EXE_SPECIAL_INST 6'b000000
 `define EXE_REGIMM_INST 6'b000001
 `define EXE_SPECIAL2_INST 6'b011100
 `define EXE_PREF  6'b110011
 
 
-// ÓÃÓÚaxi×ÜÏß
+// ç”¨äºaxiæ€»çº¿
 `define AXI_INST_Id     4'b0000
 `define AXI_DATA_Id     4'b0001
 

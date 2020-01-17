@@ -1,96 +1,96 @@
 
 module ex_top(
-    input wire rst,//Ê±ÖÓ¸´Î»ĞÅºÅ
-    input wire clk, //½öÓÃÓÚmult
-    input wire flush, //½öÓÃÓÚmult
+    input wire rst,//æ—¶é’Ÿå¤ä½ä¿¡å·
+    input wire clk, //ä»…ç”¨äºmult
+    input wire flush, //ä»…ç”¨äºmult
 
-    input wire [7:0]alu_op_i,//alu²Ù×÷ÀàĞÍ  °ËÎ»
-    input wire [2:0]alu_sel_i,//alu½á¹ûÔËËãÑ¡Ôñ ÈıÎ»
-    input wire [31:0]reg1_i,//¼Ä´æÆ÷Êı¾İ
-    input wire [31:0]reg2_i,//¼Ä´æÆ÷Êı¾İ
-    input wire [4:0] write_addr_i,//½á¹ûµÄ´æ´¢µØÖ·
-    input wire write_reg_i,//½á¹ûÊÇ·ñĞ´¼Ä´æÆ÷ĞÅºÅ
+    input wire [7:0]alu_op_i,//aluæ“ä½œç±»å‹  å…«ä½
+    input wire [2:0]alu_sel_i,//aluç»“æœè¿ç®—é€‰æ‹© ä¸‰ä½
+    input wire [31:0]reg1_i,//å¯„å­˜å™¨æ•°æ®
+    input wire [31:0]reg2_i,//å¯„å­˜å™¨æ•°æ®
+    input wire [4:0] write_addr_i,//ç»“æœçš„å­˜å‚¨åœ°å€
+    input wire write_reg_i,//ç»“æœæ˜¯å¦å†™å¯„å­˜å™¨ä¿¡å·
     input wire [31:0] inst_i,
 
 
-    output wire[4:0] write_addr_o,//Ğ´¼Ä´æÆ÷µÄµØÖ·
-    output wire write_reg_o,//ÊÇ·ñĞ´¼Ä´æÆ÷
-    output wire[31:0] write_data_o,//¼ÆËã½á¹û
+    output wire[4:0] write_addr_o,//å†™å¯„å­˜å™¨çš„åœ°å€
+    output wire write_reg_o,//æ˜¯å¦å†™å¯„å­˜å™¨
+    output wire[31:0] write_data_o,//è®¡ç®—ç»“æœ
 
-    //cp0Ïà¹Ø¶Ë¿Ú
+    //cp0ç›¸å…³ç«¯å£
     input wire[31:0] cp0_reg_data_i,
 
-    input wire       wb_cp0_reg_we,//Ğ´»Ø½×¶Î¶Ôcp0µÄĞ´Ê¹ÄÜĞÅºÅ
-    input wire[4:0]  wb_cp0_reg_write_addr,//Ğ´»Ø½×¶Îcp0µÄĞ´µØÖ·
-    input wire[31:0] wb_cp0_reg_data,//Ğ´»Ø½×¶Îcp0µÄĞ´Êı¾İ
+    input wire       wb_cp0_reg_we,//å†™å›é˜¶æ®µå¯¹cp0çš„å†™ä½¿èƒ½ä¿¡å·
+    input wire[4:0]  wb_cp0_reg_write_addr,//å†™å›é˜¶æ®µcp0çš„å†™åœ°å€
+    input wire[31:0] wb_cp0_reg_data,//å†™å›é˜¶æ®µcp0çš„å†™æ•°æ®
 
-    input wire       mem_cp0_reg_we,//·Ã´æ½×¶Î¶Ôcp0µÄĞ´Ê¹ÄÜĞÅºÅ
-    input wire[4:0]  mem_cp0_reg_write_addr,//·Ã´æ½×¶Îcp0µÄĞ´µØÖ·
-    input wire[31:0] mem_cp0_reg_data,//·Ã´æ½×¶Îcp0µÄĞ´Êı¾İ
+    input wire       mem_cp0_reg_we,//è®¿å­˜é˜¶æ®µå¯¹cp0çš„å†™ä½¿èƒ½ä¿¡å·
+    input wire[4:0]  mem_cp0_reg_write_addr,//è®¿å­˜é˜¶æ®µcp0çš„å†™åœ°å€
+    input wire[31:0] mem_cp0_reg_data,//è®¿å­˜é˜¶æ®µcp0çš„å†™æ•°æ®
 
-    output wire[4:0]  cp0_reg_read_addr_o,//Ö±½ÓÓëcp0Á¬½Ó£¬Òª¶ÁÈ¡µÄcp0¼Ä´æÆ÷µØÖ·
+    output wire[4:0]  cp0_reg_read_addr_o,//ç›´æ¥ä¸cp0è¿æ¥ï¼Œè¦è¯»å–çš„cp0å¯„å­˜å™¨åœ°å€
     
-    output wire       cp0_reg_we_o,//¶Ôcp0µÄĞ´Ê¹ÄÜĞÅºÅ
-    output wire[4:0]  cp0_reg_write_addr_o,//¶Ôcp0µÄĞ´µØÖ·
-    output wire[31:0] cp0_reg_data_o,//¶Ôcp0µÄĞ´Êı¾İ
+    output wire       cp0_reg_we_o,//å¯¹cp0çš„å†™ä½¿èƒ½ä¿¡å·
+    output wire[4:0]  cp0_reg_write_addr_o,//å¯¹cp0çš„å†™åœ°å€
+    output wire[31:0] cp0_reg_data_o,//å¯¹cp0çš„å†™æ•°æ®
 
-    //hi loÏà¹Ø¶Ë¿Ú
-    input wire[31:0] hi_i,//hiloÖĞhiµÄÖµ
-    input wire[31:0] lo_i,//hiloÖĞloµÄÖµ
+    //hi loç›¸å…³ç«¯å£
+    input wire[31:0] hi_i,//hiloä¸­hiçš„å€¼
+    input wire[31:0] lo_i,//hiloä¸­loçš„å€¼
 
-    input wire wb_write_hilo_i,//Ğ´»Ø½×¶Î¶ÔhiloµÄĞ´Ê¹ÄÜĞÅºÅ
-    input wire[31:0] wb_hi_i,//Ğ´»Ø½×¶Î¶ÔhiĞ´ÈëµÄÖµ
-    input wire[31:0] wb_lo_i,//Ğ´»Ø½×¶Î¶ÔhoĞ´ÈëµÄÖµ
+    input wire wb_write_hilo_i,//å†™å›é˜¶æ®µå¯¹hiloçš„å†™ä½¿èƒ½ä¿¡å·
+    input wire[31:0] wb_hi_i,//å†™å›é˜¶æ®µå¯¹hiå†™å…¥çš„å€¼
+    input wire[31:0] wb_lo_i,//å†™å›é˜¶æ®µå¯¹hoå†™å…¥çš„å€¼
 
-    input wire mem_write_hilo_i,//·Ã´æ½×¶Î¶ÔhiloµÄĞ´Ê¹ÄÜĞÅºÅ
-    input wire[31:0] mem_hi_i,//·Ã´æ½×¶Î¶ÔhiĞ´ÈëµÄÖµ
-    input wire[31:0] mem_lo_i,//·Ã´æ½×¶Î¶ÔloĞ´ÈëµÄÖµ
+    input wire mem_write_hilo_i,//è®¿å­˜é˜¶æ®µå¯¹hiloçš„å†™ä½¿èƒ½ä¿¡å·
+    input wire[31:0] mem_hi_i,//è®¿å­˜é˜¶æ®µå¯¹hiå†™å…¥çš„å€¼
+    input wire[31:0] mem_lo_i,//è®¿å­˜é˜¶æ®µå¯¹loå†™å…¥çš„å€¼
 
-    output wire write_hilo_o,//ex½×¶ÎhiloµÄĞ´Ê¹ÄÜĞÅºÅ
-    output wire [31:0] hi_o,//ex½×¶Îh¶ÔhiĞ´ÈëµÄÖµ
-    output wire [31:0] lo_o,//ex½×¶Î¶ÔloĞ´ÈëµÄÖµ
+    output wire write_hilo_o,//exé˜¶æ®µhiloçš„å†™ä½¿èƒ½ä¿¡å·
+    output wire [31:0] hi_o,//exé˜¶æ®µhå¯¹hiå†™å…¥çš„å€¼
+    output wire [31:0] lo_o,//exé˜¶æ®µå¯¹loå†™å…¥çš„å€¼
 
-    //div Ïà¹Ø¶Ë¿Ú
-    input wire[63:0] div_result_i,//³ı·¨ÔËËã½á¹û
-    input wire div_ready_i,//³ı·¨ÊÇ·ñ½áÊø
+    //div ç›¸å…³ç«¯å£
+    input wire[63:0] div_result_i,//é™¤æ³•è¿ç®—ç»“æœ
+    input wire div_ready_i,//é™¤æ³•æ˜¯å¦ç»“æŸ
 
-    output wire signed_div_o,//ÊÇ·ñÓĞ·ûºÅ³ı·¨
-    output wire div_start_o,//ÊÇ·ñ¿ªÊ¼³ı·¨
-    output wire[31:0] div_op_data1_o,//±»³ıÊı
-    output wire[31:0] div_op_data2_o,//³ıÊı
+    output wire signed_div_o,//æ˜¯å¦æœ‰ç¬¦å·é™¤æ³•
+    output wire div_start_o,//æ˜¯å¦å¼€å§‹é™¤æ³•
+    output wire[31:0] div_op_data1_o,//è¢«é™¤æ•°
+    output wire[31:0] div_op_data2_o,//é™¤æ•°
 
-    output wire stallreq,//Á÷Ë®ÏßÔİÍ£ĞÅºÅ
+    output wire stallreq,//æµæ°´çº¿æš‚åœä¿¡å·
 
-    //Ìø×ªÏà¹Ø¶Ë¿Ú
-    input wire[31:0] link_address_i,//Á¬½ÓÌø×ªµÄÖ¸ÁîµØÖ·
-    input wire is_in_delayslot_i,//ÊÇ·ñÔÚÑÓ³Ù²ÛÖĞ
+    //è·³è½¬ç›¸å…³ç«¯å£
+    input wire[31:0] link_address_i,//è¿æ¥è·³è½¬çš„æŒ‡ä»¤åœ°å€
+    input wire is_in_delayslot_i,//æ˜¯å¦åœ¨å»¶è¿Ÿæ§½ä¸­
     output wire is_in_delayslot_o,
-    //Òì³£´¦ÀíÏà¹Ø
+    //å¼‚å¸¸å¤„ç†ç›¸å…³
     input wire[31:0] excepttype_i,
     input wire[31:0] current_inst_address_i,
     output wire[31:0] excepttype_o,
     output wire[31:0] current_inst_address_o,
 
-    //·Ã´æÏà¹Ø½Ó¿Ú
+    //è®¿å­˜ç›¸å…³æ¥å£
     output wire       mem_l_op,
     output wire       mem_s_op,
     output wire       mem_cached_trans,
-    output wire [7:0] mem_op_o,//Ö´ĞĞ½×¶ÎÔËËãÀàĞÍ(ÅĞ¶ÏÊÇload»¹ÊÇstore)
-    output wire[31:0] mem_addr_o,//½øĞĞ²Ù×÷µÄ´æ´¢Æ÷µØÖ·
-    output wire[31:0] data_to_mem_o//loadÖ¸Áî´«ÈëÄÚ´æµÄÊı¾İ
+    output wire [7:0] mem_op_o,//æ‰§è¡Œé˜¶æ®µè¿ç®—ç±»å‹(åˆ¤æ–­æ˜¯loadè¿˜æ˜¯store)
+    output wire[31:0] mem_addr_o,//è¿›è¡Œæ“ä½œçš„å­˜å‚¨å™¨åœ°å€
+    output wire[31:0] data_to_mem_o//loadæŒ‡ä»¤ä¼ å…¥å†…å­˜çš„æ•°æ®
 );
 
 
-    wire[31:0] logic_result;//´æ´¢Âß¼­ÔËËã½á¹ûµÄ¼Ä´æÆ÷
-    wire[31:0] arith_result;//´æ´¢ËãÊõÔËËã½á¹ûµÄ¼Ä´æÆ÷
-    wire[31:0] shift_result;//´æ´¢Î»ÒÆÔËËã½á¹ûµÄ¼Ä´æÆ÷
-    wire[31:0] move_result;//´æ´¢ÒÆ¶¯²Ù×÷½á¹ûµÄ¼Ä´æÆ÷
-    wire[31:0] hi;//±£´æhiµÄÖµ
+    wire[31:0] logic_result;//å­˜å‚¨é€»è¾‘è¿ç®—ç»“æœçš„å¯„å­˜å™¨
+    wire[31:0] arith_result;//å­˜å‚¨ç®—æœ¯è¿ç®—ç»“æœçš„å¯„å­˜å™¨
+    wire[31:0] shift_result;//å­˜å‚¨ä½ç§»è¿ç®—ç»“æœçš„å¯„å­˜å™¨
+    wire[31:0] move_result;//å­˜å‚¨ç§»åŠ¨æ“ä½œç»“æœçš„å¯„å­˜å™¨
+    wire[31:0] hi;//ä¿å­˜hiçš„å€¼
     wire[31:0] lo;//
-    wire[63:0] mult_result;//´æ´¢³Ë·¨ÔËËã½á¹ûµÄ¼Ä´æÆ÷
-    wire overexcept;//±íÊ¾ÊÇ·ñÓĞÒì³£
+    wire[63:0] mult_result;//å­˜å‚¨ä¹˜æ³•è¿ç®—ç»“æœçš„å¯„å­˜å™¨
+    wire overexcept;//è¡¨ç¤ºæ˜¯å¦æœ‰å¼‚å¸¸
     
-    //½øĞĞÏàÓ¦µÄÂß¼­ÔËËã
+    //è¿›è¡Œç›¸åº”çš„é€»è¾‘è¿ç®—
     ex_logic ex_logic0(
         .reg1_i(reg1_i),
         .reg2_i(reg2_i),
@@ -99,7 +99,7 @@ module ex_top(
         .logic_result(logic_result)
     );
 
-    //½øĞĞÎ»ÒÆÔËËã
+    //è¿›è¡Œä½ç§»è¿ç®—
     ex_shift ex_shift0(
         .reg1_i(reg1_i),
         .reg2_i(reg2_i),
@@ -108,8 +108,8 @@ module ex_top(
         .shift_result(shift_result)
     );
 
-    //hi loÏà¹Ø
-    //½â¾öhiloÊı¾İÒÀÀµ
+    //hi loç›¸å…³
+    //è§£å†³hiloæ•°æ®ä¾èµ–
     ex_hilo_register ex_hilo_register0(
         .rst(rst),
         .mem_hi_i(mem_hi_i),
@@ -127,7 +127,7 @@ module ex_top(
         .lo(lo)
     );
 
-    //¶Ôhilo½øĞĞĞ´
+    //å¯¹hiloè¿›è¡Œå†™
     ex_hilo_write ex_hilo_write0(
         .reg1_i(reg1_i),
         .hi(hi),
@@ -141,7 +141,7 @@ module ex_top(
         .write_hilo_o(write_hilo_o)
     );
 
-    //ÒÆ¶¯²Ù×÷Ö¸Áî
+    //ç§»åŠ¨æ“ä½œæŒ‡ä»¤
     ex_move ex_move0(
         .hi(hi),
         .lo(lo),
@@ -162,7 +162,7 @@ module ex_top(
         .cp0_reg_read_addr_o(cp0_reg_read_addr_o)
     );
     
-    //cp0Ïà¹ØÔËËã
+    //cp0ç›¸å…³è¿ç®—
     ex_cpzero ex_cpzero0(
         .rst(rst),
         .reg1_i(reg1_i),
@@ -173,9 +173,9 @@ module ex_top(
         .cp0_reg_write_addr_o(cp0_reg_write_addr_o)
     );
 
-    //½øĞĞËãÊıÔËËã
-    wire add_over_flag;//¼Ó·¨Òç³öĞÅºÅ
-    wire sub_over_flag;//¼õ·¨Òç³öĞÅºÅ
+    //è¿›è¡Œç®—æ•°è¿ç®—
+    wire add_over_flag;//åŠ æ³•æº¢å‡ºä¿¡å·
+    wire sub_over_flag;//å‡æ³•æº¢å‡ºä¿¡å·
     ex_arith ex_arith0(
         .rst(rst),
         .reg1_i(reg1_i),
@@ -186,12 +186,12 @@ module ex_top(
         .arith_result(arith_result)
     );
     
-    wire stallreq_for_div;//³ı·¨ÊÇ·ñÔİÍ£Á÷Ë®Ïß
-    wire stallreq_for_mult;//³Ë·¨ÊÇ·ñÔİÍ£Á÷Ë®Ïß
-    //¸üĞÂstallÇëÇó
+    wire stallreq_for_div;//é™¤æ³•æ˜¯å¦æš‚åœæµæ°´çº¿
+    wire stallreq_for_mult;//ä¹˜æ³•æ˜¯å¦æš‚åœæµæ°´çº¿
+    //æ›´æ–°stallè¯·æ±‚
     assign    stallreq = stallreq_for_div | stallreq_for_mult;
 
-    //³ı·¨Ïà¹ØÔËËã
+    //é™¤æ³•ç›¸å…³è¿ç®—
     ex_div ex_div0(
         .rst(rst),
         .alu_op_i(alu_op_i),
@@ -205,7 +205,7 @@ module ex_top(
         .signed_div_o(signed_div_o)
     );
 
-    //³Ë·¨ÔËËã
+    //ä¹˜æ³•è¿ç®—
     ex_mult ex_mult0(
         .rst(rst),
         .clk(clk),
@@ -220,7 +220,7 @@ module ex_top(
         .stallreq_for_mult(stallreq_for_mult)
     );
 
-    //Ñ¡ÔñÏàÓ¦µÄ½á¹ûÊä³ö
+    //é€‰æ‹©ç›¸åº”çš„ç»“æœè¾“å‡º
     ex_select_result ex_select_result0(
         .alu_op_i(alu_op_i),
         .write_addr_i(write_addr_i),
@@ -241,7 +241,7 @@ module ex_top(
         .write_reg_o(write_reg_o)
     );
 
-    //·Ã´æ²Ù×÷
+    //è®¿å­˜æ“ä½œ
     wire[31:0] offeset;
     assign offeset = {{16{inst_i[15]}},inst_i[15:0]};   
     assign mem_op_o = alu_op_i;
@@ -254,7 +254,7 @@ module ex_top(
                              alu_op_i == `EXE_SW_OP) ? 1'b1 : 1'b0;
     assign mem_cached_trans = (mem_addr_o[31:29] == 3'b101) ? 1'b0 : 1'b1;                        
 //-------------ex hanlde in advance-------------------------------
-//¶ÁÊı¾İÀıÍâ
+//è¯»æ•°æ®ä¾‹å¤–
     reg rdata_except;
     always @(*) begin
         if(rst == 1'b1) begin
@@ -270,7 +270,7 @@ module ex_top(
         end
     end
 
-    //Ğ´Êı¾İÀıÍâ
+    //å†™æ•°æ®ä¾‹å¤–
     reg wdata_except;
     always @(*) begin
         if(rst == 1'b1) begin
@@ -289,10 +289,10 @@ module ex_top(
 
 
 
-    //Ìø×ªÖ¸Áî
+    //è·³è½¬æŒ‡ä»¤
     assign is_in_delayslot_o = is_in_delayslot_i;
 
-    //Òì³£´¦Àí
+    //å¼‚å¸¸å¤„ç†
     assign excepttype_o = {excepttype_i[31:17],overexcept,wdata_except,rdata_except,excepttype_i[13:0]};
     assign current_inst_address_o = current_inst_address_i;
 

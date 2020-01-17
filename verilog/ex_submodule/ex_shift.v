@@ -8,19 +8,19 @@ module ex_shift(
     output reg[31:0] shift_result
 );
     wire [31:0] high_value;
-    assign high_value = {32{reg2_i[31]}} << (6'd32 - {1'b0,reg1_i[4:0]});//ËãÊõÓÒÒÆ¼ÆËã×ó±ßµÄ¸ßÎ»
+    assign high_value = {32{reg2_i[31]}} << (6'd32 - {1'b0,reg1_i[4:0]});//ç®—æœ¯å³ç§»è®¡ç®—å·¦è¾¹çš„é«˜ä½
     always @(*)begin
-        if(rst==1'b1) begin//Èç¹ûrstÊ¹ÄÜ£¬Êä³öZeroWord
+        if(rst==1'b1) begin//å¦‚æœrstä½¿èƒ½ï¼Œè¾“å‡ºZeroWord
             shift_result <= 32'h00000000;
         end else begin
             case (alu_op_i)
-                `EXE_SLL_OP:begin//Âß¼­×óÒÆ
+                `EXE_SLL_OP:begin//é€»è¾‘å·¦ç§»
                     shift_result <= reg2_i << reg1_i[4:0];
                 end
-                `EXE_SRL_OP:begin//Âß¼­ÓÒÒÆ
+                `EXE_SRL_OP:begin//é€»è¾‘å³ç§»
                     shift_result <= reg2_i >> reg1_i[4:0];
                 end
-                `EXE_SRA_OP:begin//ËãÊıÓÒÒÆ
+                `EXE_SRA_OP:begin//ç®—æ•°å³ç§»
                     shift_result <= reg2_i >> reg1_i[4:0] | high_value;
                 end
                 default: begin

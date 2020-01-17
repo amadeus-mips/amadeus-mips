@@ -2,8 +2,8 @@ module mult(
     input wire          rst,
     input wire          clk,
 
-    input wire[31:0]    mcand,          // ±»³ËÊý
-    input wire[31:0]    mplier,         // ³ËÊý
+    input wire[31:0]    mcand,          // è¢«ä¹˜æ•°
+    input wire[31:0]    mplier,         // ä¹˜æ•°
     input wire          start_i,        // start mult
     input wire          flush,          // cancel divide
 

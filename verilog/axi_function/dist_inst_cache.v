@@ -194,16 +194,16 @@ module inst_cache(
         .clk   (clk),
         .we    (way0_tag_wen),
         .a  (index),
-        .d   (tag),                 //输入
-        .spo  (way0_tag_dout)       // 输出
+        .d   (tag),                 //杈撳叆
+        .spo  (way0_tag_dout)       // 杈撳嚭
     );
 
     inst_tag_dist_ram way1_tag (
         .clk   (clk),
         .we    (way1_tag_wen),
         .a  (index),
-        .d   (tag),                 //输入
-        .spo  (way1_tag_dout)       // 输出
+        .d   (tag),                 //杈撳叆
+        .spo  (way1_tag_dout)       // 杈撳嚭
     );
     
     // bank way0
@@ -211,62 +211,62 @@ module inst_cache(
         .clk   (clk),        
         .we    (way0_wen[0]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout0)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout0)          // 杈撳嚭
     );
     inst_bank_dist_ram way0_bank1(
         .clk   (clk),        
         .we    (way0_wen[1]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout1)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout1)          // 杈撳嚭
     );
 
     inst_bank_dist_ram way0_bank2(
         .clk   (clk),        
         .we    (way0_wen[2]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout2)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout2)          // 杈撳嚭
     );
 
     inst_bank_dist_ram way0_bank3(
         .clk   (clk),        
         .we    (way0_wen[3]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout3)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout3)          // 杈撳嚭
     );
 
     inst_bank_dist_ram way0_bank4(
         .clk   (clk),        
         .we    (way0_wen[4]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout4)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout4)          // 杈撳嚭
     );
 
     inst_bank_dist_ram way0_bank5(
         .clk   (clk),        
         .we    (way0_wen[5]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout5)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout5)          // 杈撳嚭
     );
 
     inst_bank_dist_ram way0_bank6(
         .clk   (clk),        
         .we    (way0_wen[6]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout6)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout6)          // 杈撳嚭
     );
     inst_bank_dist_ram way0_bank7(
         .clk   (clk),        
         .we    (way0_wen[7]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way0_dout7)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way0_dout7)          // 杈撳嚭
     );
 
 
@@ -274,8 +274,8 @@ module inst_cache(
         .clk   (clk),        
         .we    (way1_wen[0]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout0)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout0)          // 杈撳嚭
     );
 
     // bank way1
@@ -283,50 +283,50 @@ module inst_cache(
         .clk   (clk),        
         .we    (way1_wen[1]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout1)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout1)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank2(
         .clk   (clk),        
         .we    (way1_wen[2]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout2)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout2)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank3(
         .clk   (clk),        
         .we    (way1_wen[3]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout3)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout3)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank4(
         .clk   (clk),        
         .we    (way1_wen[4]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout4)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout4)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank5(
         .clk   (clk),        
         .we    (way1_wen[5]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout5)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout5)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank6(
         .clk   (clk),        
         .we    (way1_wen[6]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout6)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout6)          // 杈撳嚭
     );
     inst_bank_dist_ram way1_bank7(
         .clk   (clk),        
         .we    (way1_wen[7]),
         .a  (index),
-        .d   (axi_rdata),           //输入
-        .spo  (way1_dout7)          // 输出
+        .d   (axi_rdata),           //杈撳叆
+        .spo  (way1_dout7)          // 杈撳嚭
     );
 
 endmodule // inst_cache
