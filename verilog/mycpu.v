@@ -1,7 +1,7 @@
 module mycpu(
     input wire clk,
     input wire resetn,
-    input wire[5:0] intr,
+    input wire[5:0] int,
 
     output wire[31:0]   pc_o,
     output wire         pc_en,
@@ -559,7 +559,7 @@ cp0 u_cp0(
     .raddr_i             (ex_cp0_reg_read_addr_to_cp0             ),
 
     .excepttype_i        (excepttype_from_mem        ),
-    .int_i               (intr              ),
+    .int_i               (int              ),
 
     .current_inst_addr_i (current_inst_address_from_mem ),
     .is_in_delayslot_i   (is_in_delayslot_from_mem   ),
