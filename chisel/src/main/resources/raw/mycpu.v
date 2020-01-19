@@ -60,10 +60,10 @@ InstFetch u_inst_fetch (
     .io_inst                     (inst),
     .io_instValid                 (inst_valid),
 
-    .io_outputInstFetchExcept      (if_excepttype_from_pc),
-    .io_outputPC                         (pc_if),
+    .io_out_pc                         (pc_if),
+    .io_out_inst                     (inst_from_pc),
+    .io_out_instFetchExcept      (if_excepttype_from_pc),
     .io_outputPCValid                      (pc_en),
-    .io_outputInst                     (inst_from_pc),
     .io_outputStallReq                   (stallreq_from_pc)
 );
 
@@ -72,22 +72,22 @@ InstFetch u_inst_fetch (
 wire[31:0] id_pc_ifid;
 wire[31:0] id_inst_ifid;
 wire       if_excepttype_from_if_id;
-if_id u_if_id(
-	.clk     (clk     ),
-    .rst     (rst     ),
-    .stall   (stall   ),
-    .flush   (flush   ),
-    .if_excepttype_i (if_excepttype_from_pc),
-    .if_pc   (pc_if   ),
-    .if_inst (inst_from_pc ),
-    .if_excepttype_o (if_excepttype_from_if_id),
-    .id_pc   (id_pc_ifid   ),
-    .id_inst (id_inst_ifid )
+IFID u_if_id(
+	.clock     (clk     ),
+    .reset     (rst     ),
+    .io_stall   (stall   ),
+    .io_flush   (flush   ),
+    .io_in_pc   (pc_if   ),
+    .io_in_inst (inst_from_pc ),
+    .io_in_instFetchExcept (if_excepttype_from_pc),
+    .io_out_pc   (id_pc_ifid   ),
+    .io_out_inst (id_inst_ifid ),
+    .io_out_instFetchExcept (if_excepttype_from_if_id)
 );
 
 
 //id
-//处于执行阶段的指令的�?些信息，用于解决load相关
+//处于执行阶段的指令的一些信息，用于解决load相关
 wire[7:0]       alu_op_from_ex;
 
 //处于执行阶段的指令要写入的目的寄存器信息
@@ -247,7 +247,7 @@ wire        l_op_from_ex;
 wire        s_op_from_ex;
 wire        cached_trans_from_ex;
 
-assign      ex_data_addr = mem_addr_from_ex;         // ex级获取tag及其它信�?
+assign      ex_data_addr = mem_addr_from_ex;         // ex级获取tag及其它信息
 
 //cp0 and ex
 wire[31:0]  cp0_reg_data_to_ex;

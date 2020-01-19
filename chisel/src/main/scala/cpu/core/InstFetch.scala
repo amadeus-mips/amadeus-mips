@@ -3,34 +3,33 @@
 package cpu.core
 
 import chisel3._
+import cpu.common.DefaultWireLength
+import cpu.core.bundles.IFIDBundle
 
 object InstFetch {
   val startPC = "hbfbffffc".U(32.W)
 }
 
-class InstFetch extends Module {
+class InstFetch extends Module with DefaultWireLength {
   val io = IO(new Bundle {
     // from ctrl module
-    val stall = Input(UInt(6.W))
+    val stall = Input(UInt(cpuStallLen.W))
     val flush = Input(Bool())
-    val flushPC = Input(UInt(32.W))
+    val flushPC = Input(UInt(addressLen.W))
 
     // from id module
     val branchFlag = Input(Bool())
-    val branchTargetAddress = Input(UInt(32.W))
+    val branchTargetAddress = Input(UInt(addressLen.W))
 
     // from ram
-    val inst = Input(UInt(32.W))
+    val inst = Input(UInt(dataLen.W))
     val instValid = Input(Bool())
 
-    val outputInstFetchExcept = Output(Bool())
-
-    // to ram and if_id
-    val outputPC = Output(UInt(32.W))
+    // to IFID
+    val out = Output(new IFIDBundle)
     // to ram
     val outputPCValid = Output(Bool())
-
-    val outputInst = Output(UInt(32.W))
+    // to ctrl
     val outputStallReq = Output(Bool())
   })
 
@@ -58,16 +57,19 @@ class InstFetch extends Module {
    * 若被<b>其它模块</b>暂停则需将读到的指令暂存。
    * TODO: 把这个实现移到ICache中
    */
-  val instBuffer = RegInit(0.U(32.W))
+  val instBuffer = RegInit(0.U(dataLen.W))
   /**
    * see [[instBuffer]]
    */
   val useIBuffer = RegInit(false.B)
 
-  io.outputInstFetchExcept := instFetchExcept
-  io.outputPC := pc
+  useIBuffer := stalledByOthers
+  instBuffer := Mux(stalledByOthers && !useIBuffer, io.inst, instBuffer)
+
+  io.out.instFetchExcept := instFetchExcept
+  io.out.pc := pc
+  io.out.inst := Mux(useIBuffer, instBuffer, io.inst)
   io.outputPCValid := pcValid
-  io.outputInst := Mux(useIBuffer, instBuffer, io.inst)
   io.outputStallReq := stallReq
 
   /**
@@ -96,6 +98,4 @@ class InstFetch extends Module {
     pcValid := stallReq
     instFetchExcept := false.B
   }
-  useIBuffer := stalledByOthers
-  instBuffer := Mux(stalledByOthers && !useIBuffer, io.inst, instBuffer)
 }
