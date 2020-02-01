@@ -5,7 +5,9 @@
 
 package cpu.core
 {
+
   import cpu.common.PhoenixConfiguration
+
   import chisel3._
 
   // the io of the register file
@@ -31,7 +33,7 @@ package cpu.core
   // the actual register file module
   class RegisterFile(implicit val conf: PhoenixConfiguration) extends Module
   {
-    val io = IO(new RegisterFileIO(conf)
+    val io = IO(new RegisterFileIO())
 
     val registerFile = Mem(32,UInt(conf.regLen.W))
 
