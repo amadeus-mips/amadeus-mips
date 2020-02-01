@@ -8,7 +8,7 @@ import cpu.core.bundles.IFIDBundle
 
 class IFID extends Module with DefaultWireLength {
   val io = IO(new Bundle {
-    val stall = Input(UInt(6.W))
+    val stall = Input(UInt(cpuStallLen.W))
     val flush = Input(Bool())
     val in = Input(new IFIDBundle)
     val out = Output(new IFIDBundle)

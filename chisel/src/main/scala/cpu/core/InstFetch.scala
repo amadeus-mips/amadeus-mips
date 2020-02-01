@@ -19,7 +19,7 @@ class InstFetch extends Module with DefaultWireLength {
 
     // from id module
     val branchFlag = Input(Bool())
-    val branchTargetAddress = Input(UInt(addressLen.W))
+    val branchTarget = Input(UInt(addressLen.W))
 
     // from ram
     val inst = Input(UInt(dataLen.W))
@@ -89,9 +89,9 @@ class InstFetch extends Module with DefaultWireLength {
   }.elsewhen(!io.stall(0)) {
     // 流水线未暂停，pc+=4，或为跳转指令指定的pc
     // 非跳转指令默认不会产生指令地址未对齐异常
-    pc := Mux(io.branchFlag, io.branchTargetAddress, pc + 4.U)
-    pcValid := !io.branchFlag || !addressMisalignment(io.branchTargetAddress)
-    instFetchExcept := io.branchFlag && addressMisalignment(io.branchTargetAddress)
+    pc := Mux(io.branchFlag, io.branchTarget, pc + 4.U)
+    pcValid := !io.branchFlag || !addressMisalignment(io.branchTarget)
+    instFetchExcept := io.branchFlag && addressMisalignment(io.branchTarget)
   }.otherwise {
     // 流水线被暂停
     pc := pc

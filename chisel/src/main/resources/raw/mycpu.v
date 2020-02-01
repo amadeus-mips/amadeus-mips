@@ -56,7 +56,7 @@ InstFetch u_inst_fetch (
 
     //information from id module
 	.io_branchFlag              (branch_flag_from_id),
-    .io_branchTargetAddress     (branch_target_address_from_id),
+    .io_branchTarget             (branch_target_address_from_id),
     .io_inst                     (inst),
     .io_instValid                 (inst_valid),
 
