@@ -1,7 +1,8 @@
 package cpu.core
 {
   import chisel3._
-  import chisel3.util.{Enum, is, switch}
+  // TODO: Don't import them individually! had problem with switch when imported that way
+  import chisel3.util._
   import cpu.common.PhoenixConfiguration
 
   //TODO: compare is unimplemented

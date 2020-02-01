@@ -8,7 +8,7 @@ package cpu.common{
     for (i <- 1 until 100) {
       poke(c.io.isWrite, true)
       poke(c.io.addr, i << 5)
-      poke(c.io.writeData(i))
+      poke(c.io.writeData, i)
       step(1)
 
       poke(c.io.isWrite, false)
