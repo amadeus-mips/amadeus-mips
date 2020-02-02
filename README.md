@@ -1,50 +1,136 @@
-# Phoenix
+Chisel Project Template
+=======================
 
-`chisel/`为chisel项目文件夹
-`verilog/`为原龙芯verilog HDL源码文件夹
+You've done the Chisel [tutorials](https://github.com/ucb-bar/chisel-tutorial), and now you 
+are ready to start your own chisel project.  The following procedure should get you started
+with a clean running [Chisel3](https://github.com/freechipsproject/chisel3) project.
 
+> More and more users are finding IntelliJ to be a powerful tool for Chisel coding. See the 
+[IntelliJ Installation Guide](https://github.com/ucb-bar/chisel-template/wiki/IntelliJ-Installation-Guide) for how to install it.
 
-## 配置推荐
+## Make your own Chisel3 project
+### How to get started
+The first thing you want to do is clone this repo into a directory of your own.  I'd recommend creating a chisel projects directory somewhere
+```sh
+mkdir ~/ChiselProjects
+cd ~/ChiselProjects
 
-### 通用配置
+git clone https://github.com/ucb-bar/chisel-template.git MyChiselProject
+cd MyChiselProject
+```
+### Make your project into a fresh git repo
+There may be more elegant way to do it, but the following works for me. **Note:** this project comes with a magnificent 339 line (at this writing) .gitignore file.
+ You may want to edit that first in case we missed something, whack away at it, or start it from scratch.
+ 
+#### Clear out the old git stuff
+```sh
+rm -rf .git
+git init
+git add .gitignore *
+```
 
-- JDK1.8(即Java 8)
-- 下载sbt--[scala官网链接](https://www.scala-sbt.org/download.html), 版本1.3.2, 若使用其它版本，最终仍会下载1.3.2
-- 可以默认安装，也可以自己更改安装路径
-- 安装完成后，项目构建过程需要用到maven，一般来说会比较慢，可以选择换源，方法如下
-  - 找到用户目录下的 `.sbt/` 文件夹，Windows的一般为 `C:\Users\{}\.sbt\` ,花括号为用户名，linux的一般为 `~/.sbt/`
-  - 在该 `.sbt/` 文件夹下新建文件 `repositories`
-  - 编辑该文件，加入内容
-    ```
-    [repositories]
-        local
-        huaweicloud-maven: https://repo.huaweicloud.com/repository/maven/
-        maven-central: https://repo1.maven.org/maven2/
-        huaweicloud-ivy: https://repo.huaweicloud.com/repository/ivy/, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-        sbt-plugin-repo: https://repo.scala-sbt.org/scalasbt/sbt-plugin-releases, [organization]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]
-    ```
-  - 如果已经换过源可以忽略，不过要注意http的源在sbt下载过程中会报warning，应该没有影响。
+#### Rename project in build.sbt file
+Use your favorite text editor to change the first line of the **build.sbt** file
+(it ships as ```name := "chisel-module-template"```) to correspond 
+to your project.<br/>
+Perhaps as ```name := "my-chisel-project"```
 
-编辑器可使用 [IntelliJ IDEA](#intellij-idea) 或 [VSCode](#vscode)
+#### Clean up the README.md file
+Again use you editor of choice to make the README specific to your project.
+Be sure to update (or delete) the License section and add a LICENSE file of your own.
 
-各自优点
-  - idea的代码提示和格式化可能会更好一点，可以直接在代码中选择运行主类或者运行测试。
-  - vscode的体积更小，可以使用`live share`进行同步开发，虽然idea也有`saros`实现类似功能，但是体验不如`live share`
+#### Commit your changes
+```
+git commit -m 'Starting MyChiselProject'
+```
+Connecting this up to github or some other remote host is an exercise left to the reader.
 
+### Did it work?
+You should now have a project based on Chisel3 that can be run.<br/>
+So go for it, at the command line in the project root.
+```sh
+sbt 'testOnly gcd.GCDTester -- -z Basic'
+```
+>This tells the test harness to only run the test in GCDTester that contains the word Basic
+There are a number of other examples of ways to run tests in there, but we just want to see that
+one works.
 
-### IntelliJ IDEA
-- 下载：[官网链接](https://www.jetbrains.com/idea/download)。推荐选择`Ultimate`版，收费，但是学生邮箱认证后免费（一年有效，到期后再认证一次即可），用学校邮箱就行。`Community`版，免费，也可以使用。
-- 安装
-- 打开以后，安装scala插件：
-  - `File`->`Setting`（或者快捷键`Ctrl+Alt+S`), 选择`Plugin`，选择顶部的`Marketplace`标签，然后在下面的搜索栏搜索`scala`, 然后安装。安装过程可能会有点慢。
-- **导入项目**：
-  - 导入时的目录选择为`.../Phoenix/chisel/`, 点击next
-  - 选择`Import project from external model`->`sbt`, 点击next
-  - 勾选`for imports`和`for builds`（这一步不确定是否有效，至少我这样配置是可用的），点击finish
-  - 然后应该会自动导入依赖，等一会即可
+You should see a whole bunch of output that ends with something like the following lines
+```
+[info] [0.001] SEED 1540570744913
+test GCD Success: 168 tests passed in 1107 cycles in 0.067751 seconds 16339.24 Hz
+[info] [0.050] RAN 1102 CYCLES PASSED
+[info] GCDTester:
+[info] GCD
+[info] Basic test using Driver.execute
+[info] - should be used as an alternative way to run specification
+[info] using --backend-name verilator
+[info] running with --is-verbose
+[info] running with --generate-vcd-output on
+[info] running with --generate-vcd-output off
+[info] ScalaTest
+[info] Run completed in 3 seconds, 184 milliseconds.
+[info] Total number of tests run: 1
+[info] Suites: completed 1, aborted 0
+[info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
+[info] All tests passed.
+[info] Passed: Total 1, Failed 0, Errors 0, Passed 1
+[success] Total time: 5 s, completed Oct 26, 2018 9:19:07 AM
+```
+If you see the above then...
 
-### VSCode
-- 下载：[官网链接](https://code.visualstudio.com/Download)。免费开源
-- 安装
-- 打开以后选择打开文件夹，目录为`.../Pheneix/`或`.../Phoenix/chisel/`都可以
-- 点击左侧的插件图标，搜索`scala`, **选择`Scala (Metals)`**，安装完成后会自动开始导入，等一会即可
+### It worked!
+You are ready to go. We have a few recommended practices and things to do.
+* Use packages and following conventions for [structure](http://www.scala-sbt.org/0.13/docs/Directories.html) and [naming](http://docs.scala-lang.org/style/naming-conventions.html)
+* Package names should be clearly reflected in the testing hierarchy
+* Build tests for all your work.
+* This template includes a dependency on the Chisel3 IOTesters, this is a reasonable starting point for most tests
+* You can remove this dependency in the build.sbt file if necessary
+* Change the name of your project in the build.sbt file
+* Change your README.md
+
+There are [instructions for generating Verilog](https://github.com/freechipsproject/chisel3/wiki/Frequently-Asked-Questions#get-me-verilog) on the Chisel wiki.
+
+Some backends (verilator for example) produce VCD files by default, while other backends (firrtl and treadle) do not.
+You can control the generation of VCD files with the `--generate-vcd-output` flag.
+
+To run the simulation and generate a VCD output file regardless of the backend:
+```bash
+sbt 'test:runMain gcd.GCDMain --generate-vcd-output on'
+```
+
+To run the simulation and suppress the generation of a VCD output file:
+```bash
+sbt 'test:runMain gcd.GCDMain --generate-vcd-output off'
+```
+
+## Development/Bug Fixes
+This is the release version of chisel-template. If you have bug fixes or
+changes you would like to see incorporated in this repo, please checkout
+the master branch and submit pull requests against it.
+
+## License
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
