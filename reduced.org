@@ -1,0 +1,15 @@
+* instructions to implement
+** No op
+   no-op
+** R type
+*** add rd, rs, rt  
+*** sub rd, rs, rt
+*** and rd, rs, rt
+** I type
+*** addi rd, rs, IMME
+** J type
+*** J target
+*** BEQ rs, rt, Offset
+** Mem
+*** lw rt, offset(base)
+*** sw rt, offset(base)
