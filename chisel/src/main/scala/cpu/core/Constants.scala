@@ -3,9 +3,7 @@
 package cpu.core
 
 import chisel3._
-import cpu.common.{DefaultWireLength, Instructions}
-
-
+import cpu.common.{DefaultConfig, DefaultWireLength, Instructions}
 
 trait opConstants {
   // @formatter:off
@@ -51,7 +49,7 @@ trait opConstants {
   val OP2_N     = 2.U(2.W)    // 不需要
 
   // ALU 类型
-  private val AL = Constants.aluOpLen
+  private val AL = DefaultConfig.aluOpLen
   val ALU_N     = 0.U(AL.W)   // 无ALU
   val ALU_OR    = 1.U(AL.W)   // OR
   val ALU_AND   = 2.U(AL.W)
@@ -74,7 +72,7 @@ trait opConstants {
   val ALU_MEM   = 19.U(AL.W)
 
   // 访存类型 Memory
-  private val ML = Constants.memOpLen
+  private val ML = DefaultConfig.memOpLen
   val MEM_N     = 0.U(ML.W)   // 无访存
   val MEM_LB    = 1.U(ML.W)
   val MEM_LH    = 2.U(ML.W)

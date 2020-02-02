@@ -24,7 +24,7 @@ class Decode extends Module {
     val branchLinkAddress = Output(UInt(addressLen.W))
     val outputInDelaySlot = Output(Bool())
     val stallReq = Output(Bool())
-    val except = Output(UInt(exceptionTypeNumber.W))
+    val except = Output(Vec(exceptionTypeNumber, Bool()))
     val pc = Output(UInt(addressLen.W))
   })
 
@@ -167,13 +167,21 @@ class Decode extends Module {
       WRT_T3 -> "b11111".U(5.W),
     )
   )
+  io.out.writeRegister.writeData := DontCare
 
   io.out.inst := io.ifIn.inst
+
+  io.reg1.readEnable := DontCare
+  io.reg2.readEnable := DontCare
+  io.reg1.readTarget := io.ifIn.inst(25,21)
+  io.reg2.readTarget := io.ifIn.inst(20,16)
 
   io.nextInstInDelaySlot := csBRType =/= BR_N
 
   val pcPlus4 = io.ifIn.pc + 4.U
   val BTarget = pcPlus4 + Cat(Fill(14, io.ifIn.inst(15)), io.ifIn.inst(15,0), 0.U(2.W))
+  io.branchFlag := false.B
+  io.branchTarget := zeroWord
   switch(csBRType) {
     is(BR_N) {
       io.branchFlag := false.B
@@ -222,11 +230,13 @@ class Decode extends Module {
   val stallReqByReg2LoadUse = preInstIsLoad && csOP2Type === OP2_RS && io.exWR.writeTarget === reg2Address
   io.stallReq := stallReqByReg1LoadUse || stallReqByReg2LoadUse
 
+  io.except := 0.U(exceptionTypeNumber.W).asBools()
   io.except(EXCEPT_IF) := io.ifIn.instFetchExcept
   io.except(EXCEPT_ERET) := csEXCType === EXC_ER
   io.except(EXCEPT_BREAK) := csEXCType === EXC_BR
   io.except(EXCEPT_SYSCALL) := csEXCType === EXC_SC
   io.except(EXCEPT_INST_INVALID) := csInstValid === N
 
+  io.pc := io.ifIn.pc
 
 }

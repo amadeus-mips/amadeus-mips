@@ -18,3 +18,7 @@ trait DefaultWireLength {
 
   val exceptionTypeNumber = 32
 }
+
+object DefaultConfig extends DefaultWireLength {
+
+}
