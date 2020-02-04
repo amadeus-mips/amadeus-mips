@@ -1,15 +1,22 @@
 * instructions to implement
+
 ** No op
    no-op
 ** R type
+| opcode | rs | rt | rd | shamt | funct
 *** add rd, rs, rt  
 *** sub rd, rs, rt
 *** and rd, rs, rt
 ** I type
-*** addi rd, rs, IMME
-** J type
-*** J target
+| opcode | rs | rt | immediate |
+*** addi rt, rs, IMME
 *** BEQ rs, rt, Offset
-** Mem
+** J type
+| opcode | address |
+*** J target
+** Mem 
+format similar as I type
+| opcode | rs | rt | offset |
 *** lw rt, offset(base)
 *** sw rt, offset(base)
+    

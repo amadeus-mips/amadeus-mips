@@ -15,6 +15,7 @@ package cpu.core {
     val rsAddress = UInt(5.W)
     val rtAddress = UInt(5.W)
     val rdAddress = UInt(5.W)
+
     // TODO: add support for reading data from RegFile
     // select signal to memory
   }
@@ -36,6 +37,7 @@ package cpu.core {
     val rsAddress = instrWire(25,21)
     val rtAddress = instrWire(20,16)
     val rdAddress = instrWire(15,11)
+
 
     io.decodeOut.rsAddress := rsAddress
     io.decodeOut.rtAddress := rtAddress
