@@ -19,5 +19,6 @@ format similar as I type
 | opcode | rs | rt | offset |
 *** lw rt, offset(base)
 *** sw rt, offset(base)
-* TODO add isZero to ALU
+* DONE add isZero to ALU
+  CLOSED: [2020-02-04 Tue 16:57]
    (this is cool) 

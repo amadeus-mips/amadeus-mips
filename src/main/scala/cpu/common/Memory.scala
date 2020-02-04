@@ -14,23 +14,17 @@ package cpu.common{
   class InstrMem( addrWidth : Int, dataWidth : Int, memSize : Int) extends Module {
     val io = IO(new Bundle {
       // select read or write, true is write, false is read
-      val isWrite = Input(Bool())
       // the address for write/ read
       val addr = Input(UInt(addrWidth.W))
       // the data to write
-      val writeData = Input(UInt(dataWidth.W))
       // the data to read
       val readData = Output(UInt(dataWidth.W))
     })
     val mem = SyncReadMem(memSize, UInt(addrWidth.W))
-    when (io.isWrite) {
-      mem.write(io.addr,io.writeData);
-      io.readData := DontCare
-    }.otherwise {
       // second argument is for enabling the memory
       io.readData := mem.read(io.addr, true.B)
     }
-  }
+
 
   /**
     * the data  memory
