@@ -11,7 +11,7 @@ package cpu.common{
     * @param dataWidth the data width of the memory
     * @param memSize the size of the memory ( word )
     */
-  class InstrMem( addrWidth : Int, dataWidth : Int, memSize : Int) extends Module {
+  class InstrMem( addrWidth : Int, dataWidth : Int, memSize : Int) extends Module() {
     val io = IO(new Bundle {
       // select read or write, true is write, false is read
       // the address for write/ read
@@ -32,7 +32,7 @@ package cpu.common{
     * @param dataWidth the data width of the memory
     * @param memSize the size of the memory ( word )
     */
-  class DataMem( addrWidth : Int, dataWidth : Int, memSize : Int) extends Module {
+  class DataMem( addrWidth : Int, dataWidth : Int, memSize : Int) extends Module() {
     val io = IO(new Bundle {
       // select read or write, true is write, false is read
       val isWrite = Input(Bool())

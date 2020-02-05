@@ -10,17 +10,18 @@ package cpu.core
     // the instruction to decode
     val instruction = Output(UInt(config.regLen.W))
     //TODO: an alternate way to do this is to add extra ports to the alu to make branch work
+    // maybe add a mux to the signals, and let the controller control the mux?
     val alu_branch_take = Output(Bool())
   }
 
   class DataPathIO(implicit val config: PhoenixConfiguration) extends Bundle(){
-    val instrMem = new InstrMem(config.memAddressWidth,config.memDataWidth, config.memSize)
-    val dataMem = new DataMem(config.memAddressWidth,config.memDataWidth, config.memSize)
+    val instrMem = Module(new InstrMem(config.memAddressWidth,config.memDataWidth, config.memSize))
+    val dataMem = Module(new DataMem(config.memAddressWidth,config.memDataWidth, config.memSize))
     val control = Flipped(new ControlToDataIO())
     val data = new DataToControlIO()
   }
 
-  class DataPath(implicit val config: PhoenixConfiguration, memSize: Int) extends Module {
+  class DataPath(implicit val config: PhoenixConfiguration) extends Module {
     // // the pipeline registers
     // // Instruction Fetch
     // val instruFetch_PC = RegInit(0.U(config.regLen.W))
@@ -55,6 +56,7 @@ package cpu.core
     val io = IO(new DataPathIO())
     io := DontCare
 
+    // wire the next PC
     val pc_next = Wire(UInt(32.W))
     val pc_plus4 = Wire(UInt(32.W))
     val br_target = Wire(UInt(32.W))
@@ -62,7 +64,7 @@ package cpu.core
 
     // handle the pc register
     pc_next := MuxCase(pc_plus4, Array(
-      (io.control.PC_isBranch === true.B) -> br_target,
+      (io.control.PC_isBranch  === true.B) -> br_target,
       (io.control.PC_isJump === true.B) -> j_target
                        ))
 
@@ -80,27 +82,66 @@ package cpu.core
     //-----------------------------------------DECODING-----------------------------------------------------------
 
     // all the operands. Set them apart
-    val Op = instruction(31,26)
     val rs_address = instruction(25,21)
     val rt_address = instruction(20,16)
     val rd_address = instruction(15,11)
     val shamt = instruction(10,6)
-    val funct = instruction(5,0)
     val immediate = instruction(15,0)
     val address = instruction(25,0)
 
+    // extend stuff we need to extend
+    val extendedImmediate = Cat(Fill(16,immediate(15)),immediate)
+    // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
+    j_target := Cat(reg_PC(31,28),address,Fill(2,0.U))
+    br_target := extendedImmediate + pc_plus4
+
     val wb_data = Wire(UInt(config.regLen.W))
 
-    val regFile = new RegisterFile()
+    val regFile = Module(new RegisterFile())
     regFile.io.rs1Addr := rs_address
     regFile.io.rs2Addr := rt_address
     regFile.io.writeAddr := Mux(io.control.DstRegSelect, rt_address, rd_address)
     regFile.io.writeData := wb_data
+    regFile.io.writeEnable := io.control.WBEnable
 
-    val extendedImmediate = Cat(Fill(16,immediate(15)),immediate)
+    // make the value of rs register a wire
+    val valRS = Wire(UInt(config.regLen.W))
+    val valRT = Wire(UInt(config.regLen.W))
+
+    valRS := regFile.io.rs1Data
+    valRT := regFile.io.rs2Data
+
+    val alu = Module(new ALU())
+    alu.io.input.inputA := valRS
+    // if OpBSelect is true, select rb; otherwise select sign extended immediate
+    alu.io.input.inputB := Mux(io.control.OpBSelect, valRT, extendedImmediate)
+    alu.io.input.controlSignal := io.control.AluOp
+
+    val isBranchTaken = Wire(Bool())
+    val aluOutput = Wire(UInt(config.regLen.W))
+
+    isBranchTaken := alu.io.output.branchTake
+    aluOutput := alu.io.output.aluOutput
+
+    // now the memory stage
+    //TODO: CSR
+    //------------------------------Mem Stage----------------------------------
+    io.dataMem.io.addr := aluOutput
+    io.dataMem.io.writeData := valRT
+    io.dataMem.io.isWrite := io.control.MemWriteEnable
+
+    //data output from data memory
+    val readData = Wire(UInt(config.regLen.W))
+    readData := io.dataMem.io.readData
+    // drive back to write back stage
+    wb_data := Mux(io.control.WBSelect, aluOutput, readData)
+
+    // Write back stage is automatically done in early sections
+    reg_PC := pc_next
+    // output to the control
+    io.data.alu_branch_take := isBranchTaken
+    io.data.instruction := instruction
 
 
-
-    // decode state
   }
 }
