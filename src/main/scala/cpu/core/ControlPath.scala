@@ -35,8 +35,6 @@ package cpu.core {
 
 
   class ControlPathIO(implicit val conf: PhoenixConfiguration ) extends Bundle() {
-    val instrMem = Module(new InstrMem(conf.memAddressWidth, conf.memDataWidth, conf.memSize))
-    val dataMem = Module(new DataMem(conf.memAddressWidth, conf.memDataWidth, conf.memSize))
     val data = Flipped(new DataToControlIO())
     val control = new ControlToDataIO()
   }

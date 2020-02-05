@@ -21,9 +21,9 @@ package cpu.common{
       val readData = Output(UInt(dataWidth.W))
     })
     val mem = SyncReadMem(memSize, UInt(addrWidth.W))
-      // second argument is for enabling the memory
-      io.readData := mem.read(io.addr, true.B)
-    }
+    io.readData := mem.read(io.addr, true.B)
+
+  }
 
 
   /**
