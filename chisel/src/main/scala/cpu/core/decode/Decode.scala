@@ -129,7 +129,7 @@ class Decode extends Module {
   val reg2Address = io.ifIn.inst(20,16)
 
   io.out.aluOp := csALUType
-  io.out.aluSel := 0.U // TODO delete
+  io.out.aluSigned := csUSType
 
   // 解决数据冒险
   val reg1Data = MuxCase(zeroWord,
