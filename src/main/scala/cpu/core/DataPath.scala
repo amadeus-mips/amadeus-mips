@@ -15,8 +15,7 @@ package cpu.core
   }
 
   class DataPathIO(implicit val config: PhoenixConfiguration) extends Bundle(){
-    val instrMem = Module(new InstrMem(config.memAddressWidth,config.memDataWidth, config.memSize))
-    val dataMem = Module(new DataMem(config.memAddressWidth,config.memDataWidth, config.memSize))
+
     val control = Flipped(new ControlToDataIO())
     val data = new DataToControlIO()
   }
@@ -51,7 +50,8 @@ package cpu.core
     // the PC register
 
     //-------------------------------------FETCHING-----------------------------------
-
+    val instrMem = Module(new InstrMem(config.memAddressWidth,config.memDataWidth, config.memSize))
+    val dataMem = Module(new DataMem(config.memAddressWidth,config.memDataWidth, config.memSize))
     // now the actual implementation
     val io = IO(new DataPathIO())
     io := DontCare
@@ -72,11 +72,11 @@ package cpu.core
     val reg_PC = RegInit(0.U(32.W))
 
     // calculate the pc_plus4
-    pc_plus4 := reg_PC + 4.U(config.regLen)
+    pc_plus4 := reg_PC + 4.U
 
     // read the instruction from instr mem
-    io.instrMem.io.addr := reg_PC
-    val instruction = io.instrMem.io.readData
+    instrMem.io.addr := reg_PC
+    val instruction = instrMem.io.readData
 
     //start decoding
     //-----------------------------------------DECODING-----------------------------------------------------------
@@ -126,13 +126,13 @@ package cpu.core
     // now the memory stage
     //TODO: CSR
     //------------------------------Mem Stage----------------------------------
-    io.dataMem.io.addr := aluOutput
-    io.dataMem.io.writeData := valRT
-    io.dataMem.io.isWrite := io.control.MemWriteEnable
+    dataMem.io.addr := aluOutput
+    dataMem.io.writeData := valRT
+    dataMem.io.isWrite := io.control.MemWriteEnable
 
     //data output from data memory
     val readData = Wire(UInt(config.regLen.W))
-    readData := io.dataMem.io.readData
+    readData := dataMem.io.readData
     // drive back to write back stage
     wb_data := Mux(io.control.WBSelect, aluOutput, readData)
 

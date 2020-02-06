@@ -35,6 +35,11 @@ package cpu.core
                   val input = new ALUInputIO
                   val output = new ALUOutputIO
          })
+    // using this as a work around, should change to muxcase
+    // TODO: change to muxcase
+    io.output.aluOutput := 0.U
+    io.output.branchTake := false.B
+
 
     switch(io.input.controlSignal) {
       // imported from the constants class
