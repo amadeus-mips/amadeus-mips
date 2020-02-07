@@ -102,6 +102,7 @@ trait opConstants {
 
 trait valueConstants {
   val zeroWord = 0.U(Constants.dataLen.W)
+  val GPR31 = "b11111".U(5.W)
 }
 
 trait exceptConstants {

@@ -6,6 +6,7 @@ import chisel3._
 import chisel3.util._
 import cpu.core.Constants._
 import cpu.core.bundles.{IDEXBundle, IFIDBundle, ReadRegisterMasterBundle, WriteRegisterBundle}
+import common.Util._
 
 class Decode extends Module {
   val io = IO(new Bundle {
@@ -116,17 +117,20 @@ class Decode extends Module {
   val (csInstValid: Bool) :: (csBRL: Bool) :: csBRType :: csEXCType :: csUSType :: csOP1Type :: csOP2Type :: cs0 = csignals
   val csALUType :: csMEMType :: (csWR: Bool) :: csWRType :: csIMMType :: Nil = cs0
 
+  val rs = io.ifIn.inst(25, 21)
+  val rt = io.ifIn.inst(20, 16)
+  val rd = io.ifIn.inst(15, 11)
+  val sa = io.ifIn.inst(10, 6)
+  val imm16 = io.ifIn.inst(15, 0)
   // 根据IMMType选择imm
-  val imm = MuxLookup(csIMMType, zeroWord,
+  val imm32 = MuxLookup(csIMMType, zeroWord,
     Array(
-      IMM_LSE -> Cat(Fill(16, io.ifIn.inst(15)), io.ifIn.inst(15, 0)),
-      IMM_LZE -> Cat(Fill(16, 0.U), io.ifIn.inst(15, 0)),
-      IMM_HZE -> Cat(io.ifIn.inst(15, 0), Fill(16, 0.U)),
-      IMM_SHT -> Cat(Fill(27, 0.U), io.ifIn.inst(10, 6))
+      IMM_LSE -> signedExtend(imm16),
+      IMM_LZE -> zeroExtend(imm16),
+      IMM_HZE -> Cat(imm16, Fill(16, 0.U)),
+      IMM_SHT -> zeroExtend(sa)
     )
   )
-  val reg1Address = io.ifIn.inst(25,21)
-  val reg2Address = io.ifIn.inst(20,16)
 
   io.out.aluOp := csALUType
   io.out.aluSigned := csUSType
@@ -135,10 +139,10 @@ class Decode extends Module {
   val reg1Data = MuxCase(zeroWord,
     Array(
       (csOP1Type === OP1_IMM) ->
-        imm,
-      (csOP1Type === OP1_RS && io.exWR.writeEnable && io.exWR.writeTarget === reg1Address) ->
+        imm32,
+      (csOP1Type === OP1_RS && io.exWR.writeEnable && io.exWR.writeTarget === rs) ->
         io.exWR.writeData,
-      (csOP1Type === OP1_RS && io.memWR.writeEnable && io.memWR.writeTarget === reg1Address) ->
+      (csOP1Type === OP1_RS && io.memWR.writeEnable && io.memWR.writeTarget === rs) ->
         io.memWR.writeData,
       (csOP1Type === OP1_RS) ->
         io.reg1.readData,
@@ -147,10 +151,10 @@ class Decode extends Module {
   val reg2Data = MuxCase(zeroWord,
     Array(
       (csOP2Type === OP1_IMM) ->
-        imm,
-      (csOP2Type === OP2_RS && io.exWR.writeEnable && io.exWR.writeTarget === reg2Address) ->
+        imm32,
+      (csOP2Type === OP2_RS && io.exWR.writeEnable && io.exWR.writeTarget === rt) ->
         io.exWR.writeData,
-      (csOP2Type === OP2_RS && io.memWR.writeEnable && io.memWR.writeTarget === reg2Address) ->
+      (csOP2Type === OP2_RS && io.memWR.writeEnable && io.memWR.writeTarget === rt) ->
         io.memWR.writeData,
       (csOP2Type === OP2_RS) ->
         io.reg2.readData,
@@ -162,9 +166,9 @@ class Decode extends Module {
   io.out.writeRegister.writeEnable := csWR
   io.out.writeRegister.writeTarget := MuxLookup(csWRType, zeroWord,
     Array(
-      WRT_T1 -> io.ifIn.inst(15,11),
-      WRT_T2 -> io.ifIn.inst(20,16),
-      WRT_T3 -> "b11111".U(5.W),
+      WRT_T1 -> rd,
+      WRT_T2 -> rt,
+      WRT_T3 -> GPR31,  // 31th register
     )
   )
   io.out.writeRegister.writeData := DontCare
@@ -173,13 +177,15 @@ class Decode extends Module {
 
   io.reg1.readEnable := DontCare
   io.reg2.readEnable := DontCare
-  io.reg1.readTarget := io.ifIn.inst(25,21)
-  io.reg2.readTarget := io.ifIn.inst(20,16)
+  io.reg1.readTarget := rs
+  io.reg2.readTarget := rt
 
   io.nextInstInDelaySlot := csBRType =/= BR_N
 
   val pcPlus4 = io.ifIn.pc + 4.U
-  val BTarget = pcPlus4 + Cat(Fill(14, io.ifIn.inst(15)), io.ifIn.inst(15,0), 0.U(2.W))
+  val BImmExt = Cat(signedExtend(imm16, to = 30), 0.U(2.W))
+  val BTarget = pcPlus4 + BImmExt
+
   io.branchFlag := false.B
   io.branchTarget := zeroWord
   switch(csBRType) {
@@ -226,8 +232,8 @@ class Decode extends Module {
   io.outputInDelaySlot := io.inDelaySlot
 
   val preInstIsLoad = io.exMemOp === MEM_LB || io.exMemOp === MEM_LH || io.exMemOp === MEM_LW
-  val stallReqByReg1LoadUse = preInstIsLoad && csOP1Type === OP1_RS && io.exWR.writeTarget === reg1Address
-  val stallReqByReg2LoadUse = preInstIsLoad && csOP2Type === OP2_RS && io.exWR.writeTarget === reg2Address
+  val stallReqByReg1LoadUse = preInstIsLoad && csOP1Type === OP1_RS && io.exWR.writeTarget === rs
+  val stallReqByReg2LoadUse = preInstIsLoad && csOP2Type === OP2_RS && io.exWR.writeTarget === rt
   io.stallReq := stallReqByReg1LoadUse || stallReqByReg2LoadUse
 
   io.except := 0.U(exceptionTypeNumber.W).asBools()
