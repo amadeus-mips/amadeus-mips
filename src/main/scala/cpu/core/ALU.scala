@@ -35,59 +35,28 @@ package cpu.core
                   val input = new ALUInputIO
                   val output = new ALUOutputIO
          })
-    // using this as a work around, should change to muxcase
-    // TODO: change to muxcase
-    io.output.aluOutput := 0.U
-    io.output.branchTake := false.B
 
+    // omitting nop and passthrough, as they are the default: input A
+    io.output.aluOutput := MuxLookup(io.input.controlSignal, io.input.inputA,Array(
+      add -> (io.input.inputA + io.input.inputB),
+      sub -> (io.input.inputA - io.input.inputB),
+      and -> (io.input.inputA & io.input.inputB),
+      comp_is_equal -> DontCare,
+      comp_not_equal -> DontCare,
+      comp_greater_than_z -> DontCare,
+      comp_greater_than_or_e_z -> DontCare,
+      comp_less_than_z -> DontCare,
+      comp_less_than_or_e_z -> DontCare
+    ))
 
-    switch(io.input.controlSignal) {
-      // imported from the constants class
-      is(nop) {
-        io.output.aluOutput := DontCare
-        io.output.branchTake := DontCare
-      }
-      is(add) {
-        io.output.aluOutput := (io.input.inputA + io.input.inputB)
-        io.output.branchTake := DontCare
-      }
-      is(sub) {
-        io.output.aluOutput := (io.input.inputA - io.input.inputB)
-        io.output.branchTake := DontCare
-      }
-      is(and) {
-        io.output.aluOutput := (io.input.inputA & io.input.inputB)
-        io.output.branchTake := DontCare
-      }
-      is(comp_is_equal) {
-        io.output.branchTake := Mux((io.input.inputA === io.input.inputB), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(comp_not_equal) {
-        io.output.branchTake := Mux((io.input.inputA =/= io.input.inputB), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(comp_greater_than_z) {
-        io.output.branchTake := Mux((io.input.inputA > 0.U), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(comp_greater_than_or_e_z) {
-        io.output.branchTake := Mux((io.input.inputA >= 0.U), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(comp_less_than_z) {
-        io.output.branchTake := Mux((io.input.inputA < 0.U), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(comp_less_than_or_e_z) {
-        io.output.branchTake := Mux((io.input.inputA <= 0.U), true.B, false.B)
-        io.output.aluOutput := io.input.inputA
-      }
-      is(passthrough) {
-        // note: this passes input A
-        io.output.aluOutput := io.input.inputA
-        io.output.branchTake := DontCare
-     }
-    }
+    io.output.branchTake := MuxLookup(io.input.controlSignal, false.B, Array(
+      comp_is_equal -> (io.input.inputA === io.input.inputB),
+      comp_not_equal -> !(io.input.inputA === io.input.inputB),
+      comp_greater_than_z -> (io.input.inputA > 0.U) ,
+      comp_greater_than_or_e_z -> (io.input.inputA >= 0.U),
+      comp_less_than_z -> !(io.input.inputA >= 0.U),
+      comp_less_than_or_e_z -> !(io.input.inputA > 0.U)
+    ))
+
   }
 }
