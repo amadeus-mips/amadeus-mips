@@ -3,9 +3,9 @@
 package cpu.core.bundles
 
 import chisel3._
-import cpu.common.DefaultWireLength
+import cpu.core.Constants._
 
-class IFIDBundle extends Bundle with DefaultWireLength{
+class IFIDBundle extends Bundle {
   val pc = UInt(addressLen.W)
   val inst = UInt(dataLen.W)
   val instFetchExcept = Bool()

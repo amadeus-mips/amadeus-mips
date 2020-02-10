@@ -3,10 +3,10 @@
 package cpu.core.pipeline
 
 import chisel3._
-import cpu.common.DefaultWireLength
+import cpu.core.Constants._
 import cpu.core.bundles.IFIDBundle
 
-class IFID extends Module with DefaultWireLength {
+class IFID extends Module {
   val io = IO(new Bundle {
     val stall = Input(UInt(cpuStallLen.W))
     val flush = Input(Bool())

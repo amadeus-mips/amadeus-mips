@@ -3,14 +3,14 @@
 package cpu.core
 
 import chisel3._
-import cpu.common.DefaultWireLength
+import cpu.core.Constants._
 import cpu.core.bundles.IFIDBundle
 
 object InstFetch {
   val startPC = "hbfbffffc".U(32.W)
 }
 
-class InstFetch extends Module with DefaultWireLength {
+class InstFetch extends Module {
   val io = IO(new Bundle {
     // from ctrl module
     val stall = Input(UInt(cpuStallLen.W))
