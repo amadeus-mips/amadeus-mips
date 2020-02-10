@@ -33,8 +33,8 @@ class DecodeUnitTester(c: Decode) extends PeekPokeTester(c) {
   poke(de.io.memWR.writeEnable, false)
 
   var a = 0
-//  val seed = System.currentTimeMillis()
-    val seed = 1581058598703L
+  val seed = System.currentTimeMillis()
+//    val seed = 1581058598703L
   println(s"random seed: $seed")
   val r = new Random(seed)
   R_golden.foreach(f => {
@@ -56,7 +56,7 @@ class DecodeUnitTester(c: Decode) extends PeekPokeTester(c) {
     //    expect(de.io.out.inst, inst.U(32.W))
     expect(de.io.reg1.readTarget, rs)
     expect(de.io.reg2.readTarget, rt)
-    expect(de.io.out.writeRegister.writeTarget, rd)
+    if(writeEnable) expect(de.io.out.writeRegister.writeTarget, rd)
     expect(de.io.out.writeRegister.writeEnable, writeEnable)
     expect(de.io.out.reg1, opData1)
     expect(de.io.out.reg2, opData2)
@@ -85,6 +85,29 @@ class DecodeUnitTester(c: Decode) extends PeekPokeTester(c) {
     expect(de.io.out.reg1, opData1)
     expect(de.io.out.reg2, immExt)
     //    println(s"$name test finished")
+    step(1)
+  })
+
+  M_I_golden.foreach(f => {
+    val rs = r.nextInt(1 << 5)
+    val rt = r.nextInt(1 << 5)
+    val imm = BigInt(16, r)
+    val (name, inst, memOp, immExt, unsignedALU, writeEnable) = f(rs, rt, imm)
+    println(s"$a. $name testing")
+    a += 1
+    poke(de.io.ifIn.inst, inst.U(32.W))
+    val opData1 = BigInt(32, r)
+    val opData2 = BigInt(32, r)
+    poke(de.io.reg1.readData, opData1)
+    poke(de.io.reg2.readData, opData2)
+
+    expect(de.io.out.memOp, memOp)
+    expect(de.io.out.aluSigned, unsignedALU)
+    expect(de.io.reg1.readTarget, rs)
+    expect(de.io.out.writeRegister.writeTarget, rt)
+    expect(de.io.out.writeRegister.writeEnable, writeEnable)
+    expect(de.io.out.reg1, opData1)
+    expect(de.io.out.reg2, immExt)
     step(1)
   })
 
@@ -164,11 +187,14 @@ class DecodeUnitTester(c: Decode) extends PeekPokeTester(c) {
     step(1)
   })
 
-  //  poke(de.io.reg1.readData, 23.U)
-  //  poke(de.io.reg2.readData, 8.U)
+  EX_golden.foreach(f => {
+    val (name, inst, excNumber) = f(r)
+    println(s"$a. $name testing")
+    a += 1
+    poke(de.io.ifIn.inst, inst.U(32.W))
+    expect(de.io.except(excNumber), true)
+  })
 
-  //  expect(de.io.out.reg1, 23)
-  //  expect(de.io.out.reg2, 8)
   step(1)
 }
 
@@ -209,7 +235,21 @@ object DecodeUnitTester {
     val USType = US_X.litToBoolean
     ("AND", inst, aluOp, USType, true)
   }
-  val R_golden = Array(ADD, ADDU, AND)
+  def DIV: R_instFunc = (rs, rt, rd, sa) => {
+    paramCheck(Seq(rs, rt, rd, sa))
+    val inst = "b000000" + rs.tb(5) + rt.tb(5) + "00000" + "00000" + "011010"
+    val aluOp = ALU_DIV.litValue()
+    val USType = US_S.litToBoolean
+    ("DIV", inst, aluOp, USType, false)
+  }
+  def DIVU: R_instFunc = (rs, rt, rd, sa) => {
+    paramCheck(Seq(rs, rt, rd, sa))
+    val inst = "b000000" + rs.tb(5) + rt.tb(5) + "00000" + "00000" + "011011"
+    val aluOp = ALU_DIV.litValue()
+    val USType = US_U.litToBoolean
+    ("DIVU", inst, aluOp, USType, false)
+  }
+  val R_golden = Array(ADD, ADDU, AND, DIV, DIVU)
 
   /**
    * rs, rt, imm => instName, inst, aluOp, immExt, unsignedALU, writeEnable
@@ -240,6 +280,53 @@ object DecodeUnitTester {
     ("ANDI", inst, aluOp, immExt, USType, true)
   }
   val I_golden = Array(ADDI, ANDI)
+
+  /**
+   * rs, rt, imm => name, inst, memOp, immExt, unsignedALU, writeEnable
+   */
+  type M_I_instFunc = I_instFunc
+  def LB: M_I_instFunc = (rs, rt, imm) => {
+    paramCheck(Seq(rs, rt), Seq(imm))
+    val inst = "b100000" + rs.tb(5) + rt.tb(5) + imm.tb(16)
+    val memOp = MEM_LB.litValue()
+    val immExt = immHighSignedExtend(imm)
+    val USType = US_S.litToBoolean
+    ("LB", inst, memOp, immExt, USType, true)
+  }
+  def LBU: M_I_instFunc = (rs, rt, imm) => {
+    paramCheck(Seq(rs, rt), Seq(imm))
+    val inst = "b100100" + rs.tb(5) + rt.tb(5) + imm.tb(16)
+    val memOp = MEM_LB.litValue()
+    val immExt = immHighSignedExtend(imm)
+    val USType = US_U.litToBoolean
+    ("LBU", inst, memOp, immExt, USType, true)
+  }
+  def LH: M_I_instFunc = (rs, rt, imm) => {
+    paramCheck(Seq(rs, rt), Seq(imm))
+    val inst = "b100001" + rs.tb(5) + rt.tb(5) + imm.tb(16)
+    val memOp = MEM_LH.litValue()
+    val immExt = immHighSignedExtend(imm)
+    val USType = US_S.litToBoolean
+    ("LH", inst, memOp, immExt, USType, true)
+  }
+  def LHU: M_I_instFunc = (rs, rt, imm) => {
+    paramCheck(Seq(rs, rt), Seq(imm))
+    val inst = "b100101" + rs.tb(5) + rt.tb(5) + imm.tb(16)
+    val memOp = MEM_LH.litValue()
+    val immExt = immHighSignedExtend(imm)
+    val USType = US_U.litToBoolean
+    ("LHU", inst, memOp, immExt, USType, true)
+  }
+  def LW: M_I_instFunc = (rs, rt, imm) => {
+    paramCheck(Seq(rs, rt), Seq(imm))
+    val inst = "b100011" + rs.tb(5) + rt.tb(5) + imm.tb(16)
+    val memOp = MEM_LW.litValue()
+    val immExt = immHighSignedExtend(imm)
+    val USType = US_X.litToBoolean
+    ("LW", inst, memOp, immExt, USType, true)
+  }
+  val M_I_golden = Array(LB, LBU, LH, LHU, LW)
+
 
   /**
    * rs, rt, imm, pc, opData1, opData2 => name, inst, branchFlag, branchTarget
@@ -346,6 +433,29 @@ object DecodeUnitTester {
     ("JALR", inst, Target, true)
   }
   val JR_golden = Array(JR, JALR)
+
+  /**
+   * Random => name, inst, except number
+   */
+  type EX_instFunc = Random => (String, String, Int)
+  def BREAK: EX_instFunc = r => {
+    val code = BigInt(20, r)
+    val inst = "b000000" + code.tb(20) + "001101"
+    val excNumber = EXCEPT_BREAK
+    ("BREAK", inst, excNumber)
+  }
+  def SYSCALL: EX_instFunc = r => {
+    val code = BigInt(20, r)
+    val inst = "b000000" + code.tb(20) + "001100"
+    val excNumber = EXCEPT_SYSCALL
+    ("BREAK", inst, excNumber)
+  }
+  def ERET: EX_instFunc = r => {
+    val inst = "b010000" + "10000_00000_00000_00000" + "011000"
+    val excNumber = EXCEPT_ERET
+    ("ERET", inst, excNumber)
+  }
+  val EX_golden = Array(BREAK, SYSCALL, ERET)
 
   private def JTarget(pc: BigInt, index: BigInt): BigInt = {
     ("b" + pc.tb().substring(0,4) + index.tb(26) + "00").U.litValue()

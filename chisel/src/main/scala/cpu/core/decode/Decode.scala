@@ -102,14 +102,14 @@ class Decode extends Module {
         ERET      -> List(Y , BRL_X, BR_N  , EXC_ER , US_X     , OP1_N  , OP2_N  , ALU_N   , MEM_N , WR_N  , WRT_X  , IMM_N  ),
 
         // 访存指令
-        LB        -> List(Y , BRL_X, BR_N  , EXC_N  , US_S     , OP1_RS , OP2_N  , ALU_N   , MEM_LB, WR_Y  , WRT_T2 , IMM_N  ),
-        LBU       -> List(Y , BRL_X, BR_N  , EXC_N  , US_U     , OP1_RS , OP2_N  , ALU_N   , MEM_LB, WR_Y  , WRT_T2 , IMM_N  ),
-        LH        -> List(Y , BRL_X, BR_N  , EXC_N  , US_S     , OP1_RS , OP2_N  , ALU_N   , MEM_LH, WR_Y  , WRT_T2 , IMM_N  ),
-        LHU       -> List(Y , BRL_X, BR_N  , EXC_N  , US_U     , OP1_RS , OP2_N  , ALU_N   , MEM_LH, WR_Y  , WRT_T2 , IMM_N  ),
-        LW        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_N  , ALU_N   , MEM_LW, WR_Y  , WRT_T2 , IMM_N  ),
-        SB        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SB, WR_N  , WRT_X  , IMM_N  ),
-        SH        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SH, WR_N  , WRT_X  , IMM_N  ),
-        SW        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SW, WR_N  , WRT_X  , IMM_N  ),
+        LB        -> List(Y , BRL_X, BR_N  , EXC_N  , US_S     , OP1_RS , OP2_IMM, ALU_N   , MEM_LB, WR_Y  , WRT_T2 , IMM_LSE),
+        LBU       -> List(Y , BRL_X, BR_N  , EXC_N  , US_U     , OP1_RS , OP2_IMM, ALU_N   , MEM_LB, WR_Y  , WRT_T2 , IMM_LSE),
+        LH        -> List(Y , BRL_X, BR_N  , EXC_N  , US_S     , OP1_RS , OP2_IMM, ALU_N   , MEM_LH, WR_Y  , WRT_T2 , IMM_LSE),
+        LHU       -> List(Y , BRL_X, BR_N  , EXC_N  , US_U     , OP1_RS , OP2_IMM, ALU_N   , MEM_LH, WR_Y  , WRT_T2 , IMM_LSE),
+        LW        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_IMM, ALU_N   , MEM_LW, WR_Y  , WRT_T2 , IMM_LSE),
+        SB        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SB, WR_N  , WRT_X  , IMM_LSE),
+        SH        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SH, WR_N  , WRT_X  , IMM_LSE),
+        SW        -> List(Y , BRL_X, BR_N  , EXC_N  , US_X     , OP1_RS , OP2_RS , ALU_N   , MEM_SW, WR_N  , WRT_X  , IMM_LSE),
       )
     )
   // @formatter:on
@@ -133,6 +133,7 @@ class Decode extends Module {
   )
 
   io.out.aluOp := csALUType
+  io.out.memOp := csMEMType
   io.out.aluSigned := csUSType
 
   // 解决数据冒险
