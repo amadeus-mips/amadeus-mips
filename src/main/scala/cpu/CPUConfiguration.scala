@@ -73,6 +73,7 @@ class CPUConfig
 
     memType match {
       case "combinational"     => new DualPortedCombinMemory (minSize, memFile)
+//      non-comb prohibited, as they are not possible on FPGAs
 //      case "non-combinational" => new DualPortedNonCombinMemory (minSize, memFile, memLatency)
       case _ => throw new IllegalArgumentException("Must specify known backing memory type")
     }
@@ -91,8 +92,9 @@ class CPUConfig
 
     memPortType match {
       case "combinational-port"     => new ICombinMemPort
+//      non-comb prohibited, as they are not possible on FPGAs
 //      case "non-combinational-port" => new INonCombinMemPort
-      // case "non-combinational-cache" => new ICache
+//       case "non-combinational-cache" => new ICache
       case _ => throw new IllegalArgumentException("Must specify known instruction memory port type")
     }
   }

@@ -2,10 +2,12 @@ package cpu.singleCycle
 
 import chisel3._
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.components.{BaseCPU, Controller, RegisterFile}
 import cpu.components._
 
-class SingleCycleCPU() extends BaseCPU{
+class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
+  // initialize all the modules
   //TODO: which mem address to initialize it to
   val reg_pc = RegInit(0.U(32.W))
   val controller = Module(new Controller)
@@ -86,4 +88,19 @@ class SingleCycleCPU() extends BaseCPU{
   //---------------write back stage-----------------------
   reg_pc := pc_next
 
+}
+
+/*
+ * Object to make it easier to print information about the CPU
+ */
+object SingleCycleCPUInfo {
+  def getModules(): List[String] = {
+    List(
+      "dmem",
+      "imem",
+      "controller",
+      "regFile",
+      "alu",
+    )
+  }
 }

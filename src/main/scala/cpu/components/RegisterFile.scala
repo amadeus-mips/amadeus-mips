@@ -1,6 +1,7 @@
 package cpu.components
 
 import chisel3._
+import cpu.CPUConfig
 
   class RegisterFileIO extends Bundle()
   {
@@ -21,19 +22,29 @@ import chisel3._
     val writeEnable= Input(Bool())
   }
 
-  // the actual register file module
-  class RegisterFile extends Module
-  {
-    val io = IO(new RegisterFileIO())
 
-    val registerFile = Mem(32,UInt(32.W))
+class RegisterFile(implicit val conf: CPUConfig) extends Module {
+  val io = IO(new RegisterFileIO)
 
-    when (io.writeEnable && (io.writeAddr =/= 0.U))
-    {
-      registerFile(io.writeAddr) := io.writeData
-    }
+  val regs = Reg(Vec(32, UInt(32.W)))
 
-    io.rs1Data := Mux((io.rs1Addr =/= 0.U), registerFile(io.rs1Addr), 0.U)
-    io.rs2Data := Mux((io.rs2Addr =/= 0.U), registerFile(io.rs2Addr), 0.U)
-
+  // When the write enable is high, write the data
+  when (io.writeEnable) {
+    regs(io.writeAddr) := io.writeData
   }
+
+  // *Always* read the data. This is required for the single cycle CPU since in a single cycle it
+  // might both read and write the registers (e.g., an add)
+  io.rs1Data := regs(io.rs1Addr)
+  io.rs2Data := regs(io.rs2Addr)
+//
+//  if (conf.cpuType != "single-cycle") {
+//    // For the five-cycle and pipelined CPU forward the data through the register file
+//    when (io.readreg1 === io.writereg && io.wen) {
+//      io.readdata1 := io.writedata
+//    } .elsewhen (io.readreg2 === io.writereg && io.wen) {
+//      io.readdata2 := io.writedata
+//    }
+//  }
+}
+

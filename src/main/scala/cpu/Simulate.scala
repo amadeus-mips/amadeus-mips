@@ -20,8 +20,8 @@ import scala.util.control.NonFatal
   * }}}
   */
 object simulate {
-  val helptext = "usage: simulate <riscv binary> <CPU type>"
-
+//  val helptext = "usage: simulate <riscv binary> <CPU type>"
+  val helptext = "usage: simulate <CPU type>"
   // parse the elf file and output the hex file
   def elfToHex(filename: String, outfile: String) = {
     val elf = ElfFile.fromFile(new java.io.File(filename))
@@ -92,29 +92,38 @@ object simulate {
   }
 
   def main(args: Array[String]): Unit = {
-    require(args.length >= 2, "Error: Expected at least two argument\n" + helptext)
-
+//    require(args.length >= 2, "Error: Expected at least two argument\n" + helptext)
+    //   don't use the binary, manually load the mem file
+//    require(args.length >= 1, "Error: Expected at least 1 argument\n" + helptext)
     val optionsManager = new SimulatorOptionsManager
 
-    if (optionsManager.parser.parse(args)) {
-      optionsManager.setTargetDirName("simulator_run_dir")
-    } else {
-      None
-    }
+    // does the output directory exist: if not, create it
+//    if (optionsManager.parser.parse(args)) {
+//      optionsManager.setTargetDirName("simulator_run_dir")
+//    } else {
+//      None
+//    }
+
+//     see if this fix the bug saying
+//     Exactly one target directory must be specified, but found `simulator_run_dir, simulator_run_dir`
+//    optionsManager.setTargetDirName("./simulator_run_dir")
 
     // Get the name for the hex file
-    val hexName = optionsManager.targetDirName + "/executable.hex"
-
+    // the executable.hex in the target directory
+    val hexName = optionsManager.targetDirName + "/hexcode.txt"
+    println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
     val conf = new CPUConfig()
 
-    val params = args(1).split(":")
-    val cpuType =
-      if (params.length == 2) {
-        "pipelined-bp"
-      } else {
-        params(0)
-      }
+//    val params = args(1).split(":")
+    // pin the cpu type to single cycle
+    val cpuType = "single-cycle"
+//    val cpuType =
+//      if (params.length == 2) {
+//        "pipelined-bp"
+//      } else {
+//        params(0)
+//      }
 //
 //    val predictor =
 //      if (params.length == 2) {
@@ -132,8 +141,8 @@ object simulate {
 
     // Convert the binary to a hex file that can be loaded by treadle
     // (Do this after compiling the firrtl so the directory is created)
-    val endPC = elfToHex(args(0), hexName)
-
+//    val endPC = elfToHex(args(0), hexName)
+    val endPC = 0x0000000c
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
@@ -145,12 +154,16 @@ object simulate {
     val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 2000000
     // Simulate until the pc is the "endPC" or until max cycles has been reached
     println("Running...")
-    while (simulator.peek("cpu.pc") != endPC && cycles < maxCycles) {
+    // simulate until the max cycles are reached or the pc reaches the end pc
+    while (simulator.peek("cpu.reg_pc") != endPC && cycles < maxCycles) {
       simulator.step(1)
       cycles += 1
-      if (cycles % 10000 == 0) {
-        println(s"Simulated $cycles cycles")
-      }
+      // for small simulation, print pc every cycle
+      println(s"Simulated $cycles cycles")
+      println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
+//      if (cycles % 10000 == 0) {
+//        println(s"Simulated $cycles cycles")
+//      }
     }
     println(s"CYCLES: $cycles")
     //commented out for branch predictor
@@ -159,8 +172,10 @@ object simulate {
 //      val incorrect = simulator.peek("cpu.bpIncorrect")
 //      println(s"BP correct: $correct. incorrect: $incorrect")
 //    } catch { case NonFatal(t) => }
-    println(s"Verification: ${simulator.peek("cpu.registers.regs_10")}")
-    if (simulator.peek("cpu.registers.regs_10") != 12345678) {
+
+    // manually verify for now
+    println(s"Verification: ${simulator.peek("cpu.regFile.regs_10")}")
+    if (simulator.peek("cpu.regFile.regs_10") != 27) {
       println("VERIFICATION FAILED")
     }
   }
