@@ -345,14 +345,14 @@ null/
 project/build.properties
 project/metals.sbt
 project/plugins.sbt
-!/src/main/scala/cpu/GPATH
-!/src/main/scala/cpu/GRTAGS
-!/src/main/scala/cpu/GTAGS
-!/Top.DualPortedCombinMemory.memory.v
-!/Top.lo.fir
-!/Top.anno.json
-!/Top.fir
-!/Top.v
-!/firrtl_black_box_resource_files.f
-!/hexcode.txt
+src/main/scala/cpu/GPATH
+src/main/scala/cpu/GRTAGS
+src/main/scala/cpu/GTAGS
+Top.DualPortedCombinMemory.memory.v
+Top.lo.fir
+Top.anno.json
+Top.fir
+Top.v
+firrtl_black_box_resource_files.f
+hexcode.txt
 
