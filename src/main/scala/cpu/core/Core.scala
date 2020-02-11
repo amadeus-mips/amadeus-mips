@@ -22,6 +22,8 @@ package cpu.core {
   object CoreDriver extends App {
     //TODO: how to test with implicit
     implicit val conf = PhoenixConfiguration()
+    // this line would turn off all optimizations ( not recommended )
+    //chisel3.Driver.execute(Array("--target-dir", "generated","-X","mverilog"), () => new Core())
     chisel3.Driver.execute(Array("--target-dir", "generated"), () => new Core())
   }
 }
