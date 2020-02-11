@@ -1,4 +1,4 @@
-package cpu.core
+package cpu.components
 import chisel3._
 trait OpConstants {
 

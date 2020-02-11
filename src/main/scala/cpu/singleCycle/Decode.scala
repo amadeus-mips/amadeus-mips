@@ -1,9 +1,9 @@
-package cpu.core {
+package cpu.singleCycle {
   import chisel3._
   import chisel3.util._
-  import cpu.common._
-  import cpu.common.Instructions._
-  import cpu.core._
+  import cpu.components._
+  import cpu.components.Instructions._
+  import cpu.singleCycle._
 
   //TODO: decide on all kinds of control signals later on, we can always add support here
   /**

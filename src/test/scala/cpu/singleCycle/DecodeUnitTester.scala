@@ -1,4 +1,4 @@
-package cpu.core {
+package cpu.singleCycle {
 
   import chisel3.iotesters._
   class DecodeUnitTester(c : Decode) extends PeekPokeTester(c) {

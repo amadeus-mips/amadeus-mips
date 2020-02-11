@@ -1,9 +1,9 @@
-package cpu.core
+package cpu.singleCycle
 
 import chisel3._
-import cpu.common._
+import cpu.components._
 object DecodeMain extends App {
-  //run test:runMain cpu.core.DecodeMain in sbt
+  //run test:runMain cpu.singleCycle.DecodeMain in sbt
   //TODO: testing n implicit
   implicit val conf = PhoenixConfiguration()
   iotesters.Driver.execute(args, () => new Decode()){

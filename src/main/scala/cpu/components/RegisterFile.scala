@@ -1,42 +1,32 @@
-//**************************************************************************
-// RISCV Processor Register File
-//--------------------------------------------------------------------------
-//
+package cpu.components
 
-package cpu.core
-{
+import chisel3._
 
-  import cpu.common.PhoenixConfiguration
-
-  import chisel3._
-
-  // this is only here because of sodor, I don't have the remotest idea why this is here
-  // the io of the register file
-  class RegisterFileIO(implicit val conf: PhoenixConfiguration) extends Bundle()
+  class RegisterFileIO extends Bundle()
   {
     // register file serial port 1 address
     val rs1Addr = Input(UInt(5.W))
     // register file serial port 1 data
-    val rs1Data = Output(UInt(conf.regLen.W))
+    val rs1Data = Output(UInt(32.W))
     // register file serial port 2 address
     val rs2Addr = Input(UInt(5.W))
     // register file serial port 2 data
-    val rs2Data = Output(UInt(conf.regLen.W))
+    val rs2Data = Output(UInt(32.W))
 
     // register file write to address
     val writeAddr = Input(UInt(5.W))
     // register file write to data
-    val writeData = Input(UInt(conf.regLen.W))
+    val writeData = Input(UInt(32.W))
     // register file write enable signal
     val writeEnable= Input(Bool())
   }
 
   // the actual register file module
-  class RegisterFile(implicit val conf: PhoenixConfiguration) extends Module
+  class RegisterFile extends Module
   {
     val io = IO(new RegisterFileIO())
 
-    val registerFile = Mem(32,UInt(conf.regLen.W))
+    val registerFile = Mem(32,UInt(32.W))
 
     when (io.writeEnable && (io.writeAddr =/= 0.U))
     {
@@ -47,4 +37,3 @@ package cpu.core
     io.rs2Data := Mux((io.rs2Addr =/= 0.U), registerFile(io.rs2Addr), 0.U)
 
   }
-}

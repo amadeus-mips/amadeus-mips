@@ -28,7 +28,7 @@ def javacOptionsVersion(scalaVersion: String): Seq[String] = {
 
 name := "phoenix"
 
-version := "3.2.0"
+version := "0.0.1"
 
 scalaVersion := "2.12.10"
 
@@ -47,6 +47,9 @@ val defaultVersions = Map(
 
 libraryDependencies ++= Seq("chisel3","chisel-iotesters").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) }
+
+// for parsing elf files
+libraryDependencies += "net.fornwall.jelf" % "jelf" % "0.4.1"
 
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 
