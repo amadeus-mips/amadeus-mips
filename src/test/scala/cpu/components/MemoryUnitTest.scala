@@ -1,8 +1,7 @@
-package cpu.common{
+package cpu.components{
 
 
-  import chisel3.iotesters
-  import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
+  import chisel3.iotesters.PeekPokeTester
 
   class MemoryUnitTester(c : InstrMem) extends PeekPokeTester(c)  {
     def read(addr: Int, data: Int) : Boolean = {

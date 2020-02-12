@@ -1,7 +1,7 @@
-package cpu.core
+package cpu.singleCycle
 
 import chisel3._
-import cpu.common._
+import cpu.components._
 
 object CoreMain extends App {
   implicit val conf = PhoenixConfiguration()

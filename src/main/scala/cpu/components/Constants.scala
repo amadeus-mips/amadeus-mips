@@ -1,8 +1,7 @@
-package cpu.common
+package cpu.components
 {
 
   import chisel3._
-  import chisel3.util.Enum
 
   // Not used
   object MIPSConstants {
@@ -77,8 +76,8 @@ package cpu.common
     val MEM_WRITE_N = false.B
 
     // chooose the writeback select
-    val WB_ALU = true.B
-    val WB_MEM = false.B
+    val WB_MEM = true.B
+    val WB_ALU = false.B
   }
 
 }

@@ -1,4 +1,4 @@
-package cpu.common
+package cpu.components
 {
 
   case class PhoenixConfiguration() {
