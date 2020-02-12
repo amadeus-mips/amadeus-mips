@@ -111,6 +111,7 @@ object simulate {
     // Get the name for the hex file
     // the executable.hex in the target directory
     val hexName = optionsManager.targetDirName + "/hexcode.txt"
+//    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
     println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
     val conf = new CPUConfig()
@@ -142,41 +143,59 @@ object simulate {
     // Convert the binary to a hex file that can be loaded by treadle
     // (Do this after compiling the firrtl so the directory is created)
 //    val endPC = elfToHex(args(0), hexName)
-    val endPC = 0x0000000c
+
+
+    // this is working as expected in hex format
+    val endPC = 0x00000010
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
     // Make sure the system is in the reset state (5 cycles)
-    simulator.reset(5)
+    // for some reason, settings it back to 1 restores the initial PC to 0
+    simulator.reset(1)
 
     // This is the actual simulation
     var cycles = 0
     val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 2000000
+//    val maxCycles = 2000000
     // Simulate until the pc is the "endPC" or until max cycles has been reached
     println("Running...")
+    // print the pc initial position
+    println(s"the position of the initial PC is ${simulator.peek("cpu.reg_pc")}")
+
+
+//  memory peek helper
+//    for (i <- 0 until 8) {
+//      println(s"the instruction at position $i is ${simulator.peekMemory("mem.physicalMem", i)}")
+//    }
+
+
     // simulate until the max cycles are reached or the pc reaches the end pc
     while (simulator.peek("cpu.reg_pc") != endPC && cycles < maxCycles) {
       simulator.step(1)
       cycles += 1
+
       // for small simulation, print pc every cycle
-      println(s"Simulated $cycles cycles")
+      println(s"Simulation results for cycle $cycles")
       println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
-//      if (cycles % 10000 == 0) {
-//        println(s"Simulated $cycles cycles")
-//      }
-    }
-    println(s"CYCLES: $cycles")
-    //commented out for branch predictor
-//    try {
-//      val correct = simulator.peek("cpu.bpCorrect")
-//      val incorrect = simulator.peek("cpu.bpIncorrect")
-//      println(s"BP correct: $correct. incorrect: $incorrect")
-//    } catch { case NonFatal(t) => }
+      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
+      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
+      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
+      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
+      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
+      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
+//      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
+
+   }
+    println(s"TOTAL CYCLES: $cycles")
 
     // manually verify for now
-    println(s"Verification: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (simulator.peek("cpu.regFile.regs_10") != 27) {
+    println(s"Verification: ${simulator.peek("cpu.regFile.regs_11")}")
+    if (simulator.peek("cpu.regFile.regs_11") != 39) {
       println("VERIFICATION FAILED")
+    } else {
+      println("VERIFICATION SUCCEEDED")
     }
   }
 }

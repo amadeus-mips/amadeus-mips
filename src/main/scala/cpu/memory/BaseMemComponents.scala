@@ -3,8 +3,8 @@ package cpu.memory
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
-
 import cpu.memory.MemOperations._
+import firrtl.annotations.MemoryLoadFileType
 /**
   * Base class for all modular backing memories. Simply declares the IO and the memory file.
   */
@@ -38,8 +38,10 @@ abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
   io.imem.response <> 0.U.asTypeOf(Valid (new Response))
   io.dmem.response <> 0.U.asTypeOf(Valid (new Response))
 
-  val memory = Mem(math.ceil(size.toDouble/4).toInt, UInt(32.W))
-  loadMemoryFromFile(memory, memfile)
+  val physicalMem = Mem(math.ceil(size.toDouble/4).toInt, UInt(32.W))
+  // load hex mem
+  loadMemoryFromFile(physicalMem, memfile)
+
 }
 
 /**

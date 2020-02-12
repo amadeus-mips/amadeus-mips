@@ -32,7 +32,7 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
     // TODO: once CSR is integrated into CPU
     when (request.address < size.U) {
       io.imem.response.valid := true.B
-      io.imem.response.bits.data := memory(request.address >> 2)
+      io.imem.response.bits.data := physicalMem(request.address >> 2)
     } .otherwise {
       io.imem.response.valid := false.B
     }
@@ -56,12 +56,12 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
     assert (request.address < size.U)
 
     // Read path
-    io.dmem.response.bits.data := memory.read(memAddress >> 2)
+    io.dmem.response.bits.data := physicalMem.read(memAddress >> 2)
     io.dmem.response.valid := true.B
 
     // Write path
     when (request.operation === ReadWrite) {
-      memory(memAddress >> 2) := memWriteData
+      physicalMem(memAddress >> 2) := memWriteData
     }
   } .otherwise {
     io.dmem.response.valid := false.B

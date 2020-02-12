@@ -76,13 +76,9 @@ package cpu.components
     val MEM_WRITE_Y = true.B
     val MEM_WRITE_N = false.B
 
-    // whether do a read
-    val MEM_READ_Y = true.B
-    val MEM_READ_N = false.B
-
     // chooose the writeback select
-    val WB_ALU = true.B
-    val WB_MEM = false.B
+    val WB_MEM = true.B
+    val WB_ALU = false.B
   }
 
 }

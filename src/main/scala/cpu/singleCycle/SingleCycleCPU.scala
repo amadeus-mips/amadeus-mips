@@ -41,6 +41,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   val pc_next = Wire(UInt(32.W))
   val br_target = Wire(UInt(32.W))
   val j_target = Wire(UInt(32.W))
+
+
   pc_plus_four := reg_pc + 4.U
   // decide the next PC
   // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
@@ -54,7 +56,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   val wb_data = Wire(UInt(32.W))
   regFile.io.rs1Addr := rs_address
   regFile.io.rs2Addr := rt_address
-  regFile.io.writeAddr := Mux(controller.io.output.DstRegSelect, rt_address, rd_address)
+  regFile.io.writeAddr := Mux(controller.io.output.DstRegSelect, rd_address, rt_address)
   regFile.io.writeData := wb_data
   regFile.io.writeEnable := controller.io.output.WBEnable
 
@@ -76,7 +78,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // -------------------------memory stage---------------------
   io.dmem.address := aluOutput
   io.dmem.writedata := valRT
-  io.dmem.memread := controller.io.output.MemReadEnable
+  io.dmem.memread := controller.io.output.WBSelect
   io.dmem.memwrite := controller.io.output.MemWriteEnable
   // a valid interface
   io.dmem.valid := true.B
@@ -84,7 +86,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // in pipeline?
   val readData = Wire(UInt(32.W))
   readData := io.dmem.readdata
-  wb_data := Mux(controller.io.output.WBSelect, aluOutput, readData)
+  wb_data := Mux((controller.io.output.WBSelect),readData, aluOutput)
   //---------------write back stage-----------------------
   reg_pc := pc_next
 

@@ -30,7 +30,6 @@ class CPUConfig
   var memPortType = "combinational-port"
   /** The backing memory type */
   var memType = "combinational"
-  val config = "phoenix"
   /**
     * Returns the CPU that we will be elaborating
     *
@@ -70,7 +69,6 @@ class CPUConfig
     if (f.length == 0) {
       println("WARNING: No file will be loaded for data memory")
     }
-
     memType match {
       case "combinational"     => new DualPortedCombinMemory (minSize, memFile)
 //      non-comb prohibited, as they are not possible on FPGAs
