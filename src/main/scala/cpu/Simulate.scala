@@ -1,14 +1,13 @@
 package cpu
 
-import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
-import treadle.{HasTreadleOptions, TreadleOptionsManager, TreadleTester}
 import java.io.{File, PrintWriter, RandomAccessFile}
 
-import chisel3.{ChiselExecutionFailure,ChiselExecutionSuccess,HasChiselExecutionOptions}
+import chisel3.{ChiselExecutionSuccess, HasChiselExecutionOptions}
+import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 import net.fornwall.jelf.ElfFile
+import treadle.{HasTreadleOptions, TreadleOptionsManager, TreadleTester}
 
 import scala.collection.SortedMap
-import scala.util.control.NonFatal
 
 /**
   * Simple object with only a main function to run the treadle simulation.
@@ -155,6 +154,7 @@ object simulate {
     simulator.reset(1)
 
     // This is the actual simulation
+
     var cycles = 0
     val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 2000000
 //    val maxCycles = 2000000

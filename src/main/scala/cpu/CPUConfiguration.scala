@@ -1,10 +1,8 @@
 package cpu
-import cpu.memory._
-import cpu.components._
-import chisel3._
-import chisel3.util._
 import java.io.File
 
+import cpu.components._
+import cpu.memory._
 import cpu.singleCycle.SingleCycleCPU
 /**
   * This class configures all of the dinocpus. It takes parameters for the type of CPU model

@@ -1,6 +1,5 @@
 package cpu
 import chisel3._
-import chisel3.util._
 class Top(val conf: CPUConfig) extends Module{
   val io = IO(new Bundle {
     val success = Output(Bool())

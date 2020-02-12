@@ -1,7 +1,6 @@
 package cpu.memory
 
 import chisel3._
-import chisel3.util._
 import cpu.memory.MemOperations._
 /**
   * This is the actual memory. You should never directly use this in the CPU.

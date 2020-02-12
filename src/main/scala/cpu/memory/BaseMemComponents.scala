@@ -3,8 +3,6 @@ package cpu.memory
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
-import cpu.memory.MemOperations._
-import firrtl.annotations.MemoryLoadFileType
 /**
   * Base class for all modular backing memories. Simply declares the IO and the memory file.
   */

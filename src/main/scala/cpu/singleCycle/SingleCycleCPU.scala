@@ -3,8 +3,7 @@ package cpu.singleCycle
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.components.{BaseCPU, Controller, RegisterFile}
-import cpu.components._
+import cpu.components.{BaseCPU, Controller, RegisterFile, _}
 
 class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // initialize all the modules

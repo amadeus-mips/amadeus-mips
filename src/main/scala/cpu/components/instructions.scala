@@ -1,7 +1,6 @@
 // See README.md for license details.
 package cpu.components {
 
-  import chisel3._
   import chisel3.util.BitPat
 
   object Instructions {
