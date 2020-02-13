@@ -1,6 +1,7 @@
 package cpu.memory
 
 import chisel3._
+import chisel3.util.{Cat, Fill}
 import cpu.memory.MemOperations._
 
 /**
@@ -13,6 +14,7 @@ import cpu.memory.MemOperations._
   */
 class ICombinMemPort extends BaseIMemPort {
   // When the pipeline is supplying a high valid signal
+  // talk with the processor through pipeline
   when (io.pipeline.valid) {
     val request = Wire(new Request)
     request.address   := io.pipeline.address
@@ -36,17 +38,23 @@ class ICombinMemPort extends BaseIMemPort {
   * The I/O for this module is defined in [[DMemPortIO]].
   */
 class DCombinMemPort extends BaseDMemPort {
+  // combinational read: always ready
   io.pipeline.good := true.B
 
+  // when the input valid signal is high
   when (io.pipeline.valid && (io.pipeline.memread || io.pipeline.memwrite)) {
     // Check that we are not issuing a read and write at the same time
     assert(!(io.pipeline.memread && io.pipeline.memwrite))
 
+    // accept the memory transaction
     io.bus.request.bits.address := io.pipeline.address
     io.bus.request.valid := true.B
 
     when (io.pipeline.memwrite) {
       // We issue a ReadWrite to the backing memory.
+      // basically: to support subword write, this will read it out, change part of it, write it back
+      //TODO: this is stupid, change it
+
       // Basic run-down of the ReadWrite operation:
       // - DCombinMemPort sends a ReadWrite at a specific address, **addr**.
       // - Backing memory outputs the data at **addr** in io.response
@@ -67,63 +75,82 @@ class DCombinMemPort extends BaseDMemPort {
   // Response path
   when (io.bus.response.valid) {
     when (io.pipeline.memwrite) {
+      // when I'm writing, I don't care about sign extending
+
       // Perform writedata modification and send it down io.request.writedata.
       val writedata = Wire (UInt (32.W))
 
-//      // When not writing a whole word
-//      when (io.pipeline.maskmode =/= 2.U) {
-//        // Read in the existing piece of data at the address, so we "overwrite" only part of it
-//        val offset = io.pipeline.address (1, 0)
-//        val readdata = Wire (UInt (32.W))
-//
-//        readdata := io.bus.response.bits.data
-//
-//        val data = Wire (UInt (32.W))
-//        // Mask the portion of the existing data so it can be or'd with the writedata
-//        when (io.pipeline.maskmode === 0.U) {
-//          data := readdata & ~(0xff.U << (offset * 8.U))
-//        } .otherwise {
-//          data := readdata & ~(0xffff.U << (offset * 8.U))
-//        }
-//        writedata := data | (io.pipeline.writedata << (offset * 8.U))
-//      } .otherwise {
-//        // Write the entire word
-//        writedata := io.pipeline.writedata
-//      }
+      // When not writing a whole word
+      when (io.pipeline.maskmode =/= 2.U) {
+        // Read in the existing piece of data at the address, so we "overwrite" only part of it
+        val offset = io.pipeline.address (1, 0)
+        val readdata = Wire (UInt (32.W))
+
+        readdata := io.bus.response.bits.data
+
+        val data = Wire (UInt (32.W))
+        // Mask the portion of the existing data so it can be or'd with the writedata
+        when (io.pipeline.maskmode === 0.U) {
+          data := readdata & ~(0xff.U << (offset * 8.U))
+        } .otherwise {
+          // when mask mode is not 2 full word and byte, then it is a half word
+          // because the last bit is 0, this will only shift half word or don't shift
+          // this prepares for or-ing with the write data from the processor
+          // the data read from memory is and-ed with 0000ffff or ffff0000
+          data := readdata & ~(0xffff.U << (offset * 8.U))
+        }
+        writedata := data | (io.pipeline.writedata << (offset * 8.U))
+      } .otherwise {
+        // Write the entire word
+        writedata := io.pipeline.writedata
+      }
       // write the entire word ( without mask mode)
       writedata := io.pipeline.writedata
       io.bus.request.bits.writedata := writedata
     } .elsewhen (io.pipeline.memread) {
       // Perform normal masking and sign extension on the read data
       val readdata_mask      = Wire(UInt(32.W))
-      val readdata_mask_sext = Wire(UInt(32.W))
 
       val offset = io.pipeline.address(1,0)
-//      when (io.pipeline.maskmode === 0.U) {
-//        // Byte
-//        readdata_mask := (io.bus.response.bits.data >> (offset * 8.U)) & 0xff.U
-//      } .elsewhen (io.pipeline.maskmode === 1.U) {
-//        // Half-word
-//        readdata_mask := (io.bus.response.bits.data >> (offset * 8.U)) & 0xffff.U
-//      } .otherwise {
-//        readdata_mask := io.bus.response.bits.data
-//      }
-      readdata_mask := io.bus.response.bits.data
-//      when (io.pipeline.sext) {
+      when (io.pipeline.maskmode === 0.U) {
+        // Byte
+        readdata_mask := (io.bus.response.bits.data >> (offset * 8.U)) & 0xff.U
+      } .elsewhen (io.pipeline.maskmode === 1.U) {
+        // Half-word
+        readdata_mask := (io.bus.response.bits.data >> (offset * 8.U)) & 0xffff.U
+      } .otherwise {
+        readdata_mask := io.bus.response.bits.data
+      }
+
+      val readdata_mask_sext = Wire(UInt(32.W))
+      //TODO: sign extend not complete
+      when (io.pipeline.sext) {
+        when (io.pipeline.maskmode === 0.U) {
+          // Byte sign extension
+          readdata_mask_sext := Cat(Fill(24, readdata_mask(7)),  readdata_mask(7, 0))
+        } .elsewhen (io.pipeline.maskmode === 1.U) {
+          // Half-word sign extension
+          readdata_mask_sext := Cat(Fill(16, readdata_mask(15)), readdata_mask(15, 0))
+        } .otherwise {
+          // Word sign extension (does nothing)
+          readdata_mask_sext := readdata_mask
+        }
+      } .otherwise {
+        //TODO: is this really necessary
+        // when not sign extending, zero extend the result
 //        when (io.pipeline.maskmode === 0.U) {
 //          // Byte sign extension
-//          readdata_mask_sext := Cat(Fill(24, readdata_mask(7)),  readdata_mask(7, 0))
+//          readdata_mask_sext := Cat(Fill(24, 0.U(1.W)),  readdata_mask(7, 0))
 //        } .elsewhen (io.pipeline.maskmode === 1.U) {
 //          // Half-word sign extension
-//          readdata_mask_sext := Cat(Fill(16, readdata_mask(15)), readdata_mask(15, 0))
+//          readdata_mask_sext := Cat(Fill(16, 0.U(1.W)), readdata_mask(15, 0))
 //        } .otherwise {
 //          // Word sign extension (does nothing)
 //          readdata_mask_sext := readdata_mask
 //        }
-//      } .otherwise {
-//        readdata_mask_sext := readdata_mask
-//      }
-      readdata_mask_sext := readdata_mask
+        readdata_mask_sext := readdata_mask
+      }
+
       io.pipeline.readdata := readdata_mask_sext
     }
   }

@@ -109,7 +109,7 @@ object simulate {
 
     // Get the name for the hex file
     // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/hexcode.txt"
+    val hexName = optionsManager.targetDirName + "/testMemFile/sextMem/sextMem.txt"
 //    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
     println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
@@ -145,7 +145,7 @@ object simulate {
 
 
     // this is working as expected in hex format
-    val endPC = 0x00000020
+    val endPC = 0x00000014
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
@@ -165,6 +165,7 @@ object simulate {
 
 
 //  memory peek helper
+//     Note: this does work with written mem
 //    for (i <- 0 until 8) {
 //      println(s"the instruction at position $i is ${simulator.peekMemory("mem.physicalMem", i)}")
 //    }
@@ -177,28 +178,40 @@ object simulate {
       // for small simulation, print pc every cycle
       println(s"Simulation results for cycle $cycles")
       // this is becasue PC is updated at the end of every cycle
+
+      // print pc position
       println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
-      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
-      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
-      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
-      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
-      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
-      // warning: the register values will be updated on the next cycle
-      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
-      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+      // print loaded instruction
       println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
+      // print alu signals
+//      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
+//      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
+//      println(s"alu offset selection is ${simulator.peek("cpu.alu.io_input_inputB")}")
+      // print registers
+//      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
+//      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
+//      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
+//      // warning: the register values will be updated on the next cycle
+      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
+//      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
+//      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+//      println(s"the memory mask signal is ${simulator.peek("cpu.controller.io_output_MemMask")}")
+//      println(s"the memory sign extend is ${simulator.peek("cpu.controller.io_output_MemSext")}")
+
+      // advance the simulator
       simulator.step(1)
       cycles += 1
 
    }
+    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
     println(s"TOTAL CYCLES: $cycles")
 
     // manually verify for now
     // Note: verification should not be in the process of simulation, as this
     // reg files will not "poke" correctly on the same cycle
     //TODO: bridge an interface between simulation results and results from an actual simulator
-    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_11")}")
-    if (simulator.peek("cpu.regFile.regs_11") != 25) {
+    println(s"Register t5: ${simulator.peek("cpu.regFile.regs_10")}")
+    if (!(simulator.peek("cpu.regFile.regs_10") == 65535)) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")

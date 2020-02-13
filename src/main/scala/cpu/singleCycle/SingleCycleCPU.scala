@@ -79,6 +79,11 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   io.dmem.writedata := valRT
   io.dmem.memread := controller.io.output.WBSelect
   io.dmem.memwrite := controller.io.output.MemWriteEnable
+  //TODO: a design choice:
+  // if we are piping Op code through all stages, then there isn't any need for Masks
+  // However, if we are not piping op code through, then we definitely need a control signal
+  io.dmem.maskmode := controller.io.output.MemMask
+  io.dmem.sext := controller.io.output.MemSext
   // a valid interface
   io.dmem.valid := true.B
   //TODO: add a big mux to avoid waiting, though we can avoid this

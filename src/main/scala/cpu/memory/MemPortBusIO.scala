@@ -29,6 +29,10 @@ class Response extends Bundle {
   *         the bits in response.bits should only be treated as valid data when response.valid is high.
   */
 class MemPortBusIO extends Bundle {
+  // the request from the processor. Accept request as a sink.
+  // input: valid, bits
+  // output: ready
   val request  = Flipped(Decoupled (new Request))
+  // respond to the sink
   val response = Valid (new Response)
 }

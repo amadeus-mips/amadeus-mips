@@ -53,8 +53,8 @@ class DMemPortIO extends MemPortIO {
   val writedata = Input(UInt(32.W))
   val memread   = Input(Bool())
   val memwrite  = Input(Bool())
-//  val maskmode  = Input(UInt(2.W))
-//  val sext      = Input(Bool())
+  val maskmode  = Input(UInt(2.W))
+  val sext      = Input(Bool())
 
   val readdata  = Output(UInt(32.W))
 }

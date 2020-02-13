@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
 import firrtl.annotations.MemoryLoadFileType
-/**
+  /**
   * Base class for all modular backing memories. Simply declares the IO and the memory file.
   */
 abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
@@ -70,7 +70,9 @@ abstract class BaseIMemPort extends Module {
   */
 abstract class BaseDMemPort extends Module {
   val io = IO (new Bundle {
+    // pipeline taks to the actual pipeline
     val pipeline = new DMemPortIO
+    // the bus talks to the backing memory
     val bus = Flipped (new MemPortBusIO)
   })
 

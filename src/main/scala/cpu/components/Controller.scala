@@ -24,6 +24,10 @@ import cpu.components.Instructions._
     val OpBSelect = Output(Bool())
     // what is the ALU OP
     val AluOp = Output(UInt(4.W))
+    // memory mask mode
+    val MemMask = Output(UInt(2.W))
+    // memory sign extension
+    val MemSext = Output(Bool())
     // enable write to data memory
     val MemWriteEnable = Output(Bool())
     // select write back from read mem and alu output
@@ -48,28 +52,41 @@ import cpu.components.Instructions._
       ListLookup(io.input.instr,
         // if mem read is enabled, then there is no point reading from alu
         // in other words, memReadEnable = WB MemRead
-                   List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,           MEM_WRITE_N,   WB_ALU),
-        Array(           //branch,  jump,   dst reg, wb enable,ALU op b, A    LU func, mem         write enable,
-          NOP  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,           MEM_WRITE_N,   WB_ALU),
-          ADD  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_ADD,           MEM_WRITE_N,   WB_ALU),
+        //TODO: introduce don't care symbols
+                   List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
+        Array(           //branch,  jump,   dst reg, wb enable,ALU op b, A    LU func, mem   MEM_MASK_WORD,  MEM_SEXT_Y,      write enable,
+          NOP  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
+          ADD  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_ADD,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           // ADD rd, rs, rt
-          SUB  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_SUB,           MEM_WRITE_N,   WB_ALU),
+          SUB  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_SUB,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           // sub rd, rs, rt
-          AND  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_AND,           MEM_WRITE_N,   WB_ALU),
+          AND  ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_Y,     OPBRT,       ALU_AND,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           // AND rd, rs, rt
-          ADDI ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,           MEM_WRITE_N,   WB_ALU),
+          ADDI ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           // addi rt, rs, immediate
-          BEQ  ->  List(BRANCH_Y,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_CMP_EQ,        MEM_WRITE_N,   WB_ALU),
+          BEQ  ->  List(BRANCH_Y,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_CMP_EQ,   MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           //beq rs, rt, offset
-          J    ->  List(BRANCH_N,    JUMP_Y,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,           MEM_WRITE_N,   WB_ALU),
+          J    ->  List(BRANCH_N,    JUMP_Y,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_ALU),
           // J immediate
-          LW   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,           MEM_WRITE_N,   WB_MEM),
+          LW   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
           // lw rt, rs, immediate
-          SW   ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBRT,       ALU_NOP,           MEM_WRITE_Y,   WB_ALU)
+          SW   ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBOFFSET,   ALU_ADD,      MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_Y,   WB_ALU),
           // sw rt, rs, immediate
+          LH   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,      MEM_MASK_HALF,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
+          // lh rt, rs, immediate
+          LHU   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,     MEM_MASK_HALF,  MEM_SEXT_N,     MEM_WRITE_N,   WB_MEM),
+          // lhu rt, rs, immediate
+          SH   ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBOFFSET,   ALU_ADD,      MEM_MASK_HALF,  MEM_SEXT_Y,     MEM_WRITE_Y,   WB_ALU),
+          // sh rt, rs, immediate
+          LB   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,      MEM_MASK_BYTE,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
+          // lb rt, rs, immediate
+          LBU   ->  List(BRANCH_N,    JUMP_N,   DSTRT,   WB_Y,     OPBOFFSET,   ALU_ADD,     MEM_MASK_BYTE,  MEM_SEXT_N,     MEM_WRITE_N,   WB_MEM),
+          // lbu rt, rs, immediate
+          SB   ->  List(BRANCH_N,    JUMP_N,   DSTRD,   WB_N,     OPBOFFSET,   ALU_ADD,      MEM_MASK_BYTE,  MEM_SEXT_Y,     MEM_WRITE_Y,   WB_ALU)
+          // sb rt, rs ,immediate
         ))
 
-    val (cs_PC_isBranch: Bool) :: (cs_PC_isJump: Bool) :: (cs_DstRegSelect:Bool) :: (cs_WBEnable: Bool) :: (cs_OpBSelect: Bool) :: (cs_AluOp: UInt) :: (cs_MemWriteEnable: Bool) :: (cs_WBSelect: Bool) :: Nil = controlSignals
+    val (cs_PC_isBranch: Bool) :: (cs_PC_isJump: Bool) :: (cs_DstRegSelect:Bool) :: (cs_WBEnable: Bool) :: (cs_OpBSelect: Bool) :: (cs_AluOp: UInt) ::(cs_MemMask: UInt) :: (cs_MemSext: Bool) :: (cs_MemWriteEnable: Bool) :: (cs_WBSelect: Bool) :: Nil = controlSignals
     // branch logic
     val control_PC_isBranch = Mux((cs_PC_isBranch && io.input.alu_branch_take), BRANCH_Y, BRANCH_N)
 
@@ -79,6 +96,8 @@ import cpu.components.Instructions._
     io.output.WBEnable := cs_WBEnable
     io.output.OpBSelect := cs_OpBSelect
     io.output.AluOp := cs_AluOp
+    io.output.MemMask := cs_MemMask
+    io.output.MemSext := cs_MemSext
     io.output.MemWriteEnable := cs_MemWriteEnable
     io.output.WBSelect := cs_WBSelect
 
