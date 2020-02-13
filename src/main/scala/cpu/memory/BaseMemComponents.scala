@@ -3,6 +3,7 @@ package cpu.memory
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
+import firrtl.annotations.MemoryLoadFileType
 /**
   * Base class for all modular backing memories. Simply declares the IO and the memory file.
   */
@@ -36,9 +37,14 @@ abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
   io.imem.response <> 0.U.asTypeOf(Valid (new Response))
   io.dmem.response <> 0.U.asTypeOf(Valid (new Response))
 
+  //TODO: change this to syncmem?
+  //NOTICE: directly changing this to syncreadmem won't work
+  // need some work on the interface
   val physicalMem = Mem(math.ceil(size.toDouble/4).toInt, UInt(32.W))
   // load hex mem
-  loadMemoryFromFile(physicalMem, memfile)
+  // notice: memory are encoded in Hex
+  // alternatively: memory can also be loaded in binary format
+  loadMemoryFromFile(physicalMem, memfile,MemoryLoadFileType.Hex)
 
 }
 

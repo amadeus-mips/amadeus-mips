@@ -194,7 +194,10 @@ object simulate {
     println(s"TOTAL CYCLES: $cycles")
 
     // manually verify for now
-    println(s"Verification: ${simulator.peek("cpu.regFile.regs_11")}")
+    // Note: verification should not be in the process of simulation, as this
+    // reg files will not "poke" correctly on the same cycle
+    //TODO: bridge an interface between simulation results and results from an actual simulator
+    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_11")}")
     if (simulator.peek("cpu.regFile.regs_11") != 25) {
       println("VERIFICATION FAILED")
     } else {
