@@ -145,7 +145,7 @@ object simulate {
 
 
     // this is working as expected in hex format
-    val endPC = 0x00000010
+    val endPC = 0x00000020
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
@@ -172,27 +172,30 @@ object simulate {
 
     // simulate until the max cycles are reached or the pc reaches the end pc
     while (simulator.peek("cpu.reg_pc") != endPC && cycles < maxCycles) {
-      simulator.step(1)
-      cycles += 1
+
 
       // for small simulation, print pc every cycle
       println(s"Simulation results for cycle $cycles")
+      // this is becasue PC is updated at the end of every cycle
       println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
       println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
       println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
       println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
       println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
       println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
+      // warning: the register values will be updated on the next cycle
       println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
-//      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
       println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
+      simulator.step(1)
+      cycles += 1
 
    }
     println(s"TOTAL CYCLES: $cycles")
 
     // manually verify for now
     println(s"Verification: ${simulator.peek("cpu.regFile.regs_11")}")
-    if (simulator.peek("cpu.regFile.regs_11") != 39) {
+    if (simulator.peek("cpu.regFile.regs_11") != 25) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")
