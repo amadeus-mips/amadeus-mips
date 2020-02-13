@@ -145,7 +145,7 @@ object simulate {
 
 
     // this is working as expected in hex format
-    val endPC = 0x00000014
+    val endPC = 0x00000018
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
@@ -192,9 +192,16 @@ object simulate {
 //      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
 //      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
 //      // warning: the register values will be updated on the next cycle
-      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
+//      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
 //      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
 //      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+      println(s"response from actual mem signal is ${simulator.peek("dmem.io_bus_response_bits_data")}")
+      println(s"valid signal response from actual mem is ${simulator.peek("dmem.io_bus_response_valid")}")
+      println(s"operation signal is ${simulator.peek("dmem.io_bus_request_bits_operation")}")
+      println(s"memory mask is ${simulator.peek("dmem.io_pipeline_maskmode")}")
+      println(s"data passed to it is ${simulator.peek("dmem.io_pipeline_writedata")}")
+      println(s"sext is ${simulator.peek("dmem.io_pipeline_sext")}")
+//      println(s"memory write data is ${simulator.peek("dmem.io_pipeline_mask")}")
 //      println(s"the memory mask signal is ${simulator.peek("cpu.controller.io_output_MemMask")}")
 //      println(s"the memory sign extend is ${simulator.peek("cpu.controller.io_output_MemSext")}")
 

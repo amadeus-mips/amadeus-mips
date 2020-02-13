@@ -55,6 +55,7 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
     assert (request.address < size.U)
 
     // Read path
+    //TODO: read address is byte aligned, acutal reference address for mem is word aligned
     io.dmem.response.bits.data := physicalMem.read(memAddress >> 2)
     io.dmem.response.valid := true.B
 
