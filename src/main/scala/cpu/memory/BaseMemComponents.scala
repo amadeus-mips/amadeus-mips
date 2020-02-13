@@ -44,7 +44,7 @@ abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
   // load hex mem
   // notice: memory are encoded in Hex
   // alternatively: memory can also be loaded in binary format
-  loadMemoryFromFile(physicalMem, memfile,MemoryLoadFileType.Hex)
+  loadMemoryFromFile(physicalMem, memfile, MemoryLoadFileType.Hex)
 
 }
 
