@@ -96,11 +96,11 @@ class Control extends Module {
       ERET      -> List(Y , OP1_N  , OP2_N  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
 
       // 访存指令
-      LB        -> List(Y , OP1_RS , OP2_IMM, INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_LSE),
-      LBU       -> List(Y , OP1_RS , OP2_IMM, INST_MEM, MEM_LBU , WR_Y  , WRA_T2 , IMM_LSE),
-      LH        -> List(Y , OP1_RS , OP2_IMM, INST_MEM, MEM_LH  , WR_Y  , WRA_T2 , IMM_LSE),
-      LHU       -> List(Y , OP1_RS , OP2_IMM, INST_MEM, MEM_LHU , WR_Y  , WRA_T2 , IMM_LSE),
-      LW        -> List(Y , OP1_RS , OP2_IMM, INST_MEM, MEM_LW  , WR_Y  , WRA_T2 , IMM_LSE),
+      LB        -> List(Y , OP1_RS , OP2_N  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_LSE),
+      LBU       -> List(Y , OP1_RS , OP2_N  , INST_MEM, MEM_LBU , WR_Y  , WRA_T2 , IMM_LSE),
+      LH        -> List(Y , OP1_RS , OP2_N  , INST_MEM, MEM_LH  , WR_Y  , WRA_T2 , IMM_LSE),
+      LHU       -> List(Y , OP1_RS , OP2_N  , INST_MEM, MEM_LHU , WR_Y  , WRA_T2 , IMM_LSE),
+      LW        -> List(Y , OP1_RS , OP2_N  , INST_MEM, MEM_LW  , WR_Y  , WRA_T2 , IMM_LSE),
       SB        -> List(Y , OP1_RS , OP2_RS , INST_MEM, MEM_SB  , WR_N  , WRA_X  , IMM_LSE),
       SH        -> List(Y , OP1_RS , OP2_RS , INST_MEM, MEM_SH  , WR_N  , WRA_X  , IMM_LSE),
       SW        -> List(Y , OP1_RS , OP2_RS , INST_MEM, MEM_SW  , WR_N  , WRA_X  , IMM_LSE),

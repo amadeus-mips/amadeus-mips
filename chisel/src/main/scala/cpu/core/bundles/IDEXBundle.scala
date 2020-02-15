@@ -16,5 +16,4 @@ class IDEXBundle extends Bundle {
   val imm26 = UInt(26.W)
   val pcPlus4 = UInt(addrLen.W)
   val inDelaySlot = Bool()
-  val nextInstInDelaySlot = Bool()
 }
