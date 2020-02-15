@@ -37,7 +37,6 @@ import cpu.components.Instructions._
 
   class ControllerInIO extends Bundle() {
     val instr = Input(UInt(32.W))
-    val alu_branch_take = Input(Bool())
   }
 
 
@@ -46,6 +45,7 @@ import cpu.components.Instructions._
       val input = new ControllerInIO
       val output = new ControllerOutIO
     })
+    // intentional dontcare to connect in other modules
     io := DontCare
 
     val controlSignals =
@@ -88,10 +88,9 @@ import cpu.components.Instructions._
 
     val (cs_PC_isBranch: Bool) :: (cs_PC_isJump: Bool) :: (cs_DstRegSelect:Bool) :: (cs_WBEnable: Bool) :: (cs_OpBSelect: Bool) :: (cs_AluOp: UInt) ::(cs_MemMask: UInt) :: (cs_MemSext: Bool) :: (cs_MemWriteEnable: Bool) :: (cs_WBSelect: Bool) :: Nil = controlSignals
     // branch logic
-    val control_PC_isBranch = Mux((cs_PC_isBranch && io.input.alu_branch_take), BRANCH_Y, BRANCH_N)
 
     io.output.PC_isJump := cs_PC_isJump
-    io.output.PC_isBranch := control_PC_isBranch
+    io.output.PC_isBranch := cs_PC_isBranch
     io.output.DstRegSelect := cs_DstRegSelect
     io.output.WBEnable := cs_WBEnable
     io.output.OpBSelect := cs_OpBSelect

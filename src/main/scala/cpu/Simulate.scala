@@ -107,7 +107,7 @@ object simulate {
 
     // Get the name for the hex file
     // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/../testMemFile/subwordTest/subword.txt"
+    val hexName = optionsManager.targetDirName + "/../testMemFile/branch/branch.txt"
 //    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
 //    println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
@@ -143,7 +143,7 @@ object simulate {
 
 
     // this is working as expected in hex format
-    val endPC = 0x00000018
+    val endPC = 0x00000020
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
@@ -215,8 +215,8 @@ object simulate {
     // Note: verification should not be in the process of simulation, as this
     // reg files will not "poke" correctly on the same cycle
     //TODO: bridge an interface between simulation results and results from an actual simulator
-    println(s"Register t5: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (!(simulator.peek("cpu.regFile.regs_10") == 4294967295L)) {
+    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
+    if (!(simulator.peek("cpu.regFile.regs_10") == 20)) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")
