@@ -5,7 +5,7 @@ package cpu.core.bundles
 import chisel3._
 import cpu.core.Constants._
 
-class IDEXBundle extends Bundle {
+class IDEXEBundle extends Bundle {
   val instType = UInt(instTypeLen.W)
   val operation = UInt(opLen.W)
   val op1 = UInt(dataLen.W)

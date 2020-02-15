@@ -5,7 +5,7 @@ package cpu.core.decode
 import chisel3._
 import chisel3.util._
 import cpu.core.Constants._
-import cpu.core.bundles.{CPControlBundle, IDEXBundle, IFIDBundle, ReadIO, WriteBundle, WriteControlBundle}
+import cpu.core.bundles.{CPControlBundle, IDEXEBundle, IFIDBundle, ReadIO, WriteBundle, WriteControlBundle}
 import common.Util._
 
 class Decode extends Module {

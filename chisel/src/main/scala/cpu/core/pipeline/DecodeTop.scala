@@ -4,7 +4,7 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.ValidIO
-import cpu.core.bundles.{IDEXBundle, IFIDBundle, WriteBundle}
+import cpu.core.bundles.{IDEXEBundle, IFIDBundle, WriteBundle}
 import cpu.core.decode._
 import cpu.core.Constants._
 import cpu.core.execute.components.Branch
@@ -19,7 +19,7 @@ class DecodeTop extends Module {
     val rtData = Input(UInt(dataLen.W)) // ^
     val inDelaySlot = Input(Bool())     // get from `IDEX`
 
-    val out = Output(new IDEXBundle)
+    val out = Output(new IDEXEBundle)
     val nextInstInDelaySlot = Output(Bool())
     val branch = Output(new ValidIO(UInt(addrLen.W))) // back to `Fetch`
     val stallReq = Output(Bool())       // to pipeLine control

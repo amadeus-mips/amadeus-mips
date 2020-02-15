@@ -11,7 +11,7 @@ import cpu.core.execute.components._
 
 class ExecuteTop extends Module {
   val io = IO(new Bundle {
-    val in = Input(new IDEXBundle)
+    val in = Input(new IDEXEBundle)
 
     /** For multi-cycle multiplication and division. */
     val flush = Input(Bool())
