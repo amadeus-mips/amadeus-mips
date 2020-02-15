@@ -7,7 +7,6 @@ import cpu.components.{BaseCPU, Controller, RegisterFile, _}
 
 class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // initialize all the modules
-  //TODO: which mem address to initialize it to
   val reg_pc = RegInit(0.U(32.W))
   val controller = Module(new Controller)
   val regFile = Module(new RegisterFile)
@@ -36,18 +35,15 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   //TODO: optimized the bit pattern, reduce bandwidth
   controller.io.input.instr := instruction
 
-  val pc_plus_four = Wire(UInt(32.W))
-  val pc_next = Wire(UInt(32.W))
   val br_target = Wire(UInt(32.W))
   val j_target = Wire(UInt(32.W))
 
 
-  pc_plus_four := reg_pc + 4.U
   // decide the next PC
   // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
   j_target := Cat(reg_pc(31,28),address,Fill(2,0.U))
-  br_target := extendedImmediate + pc_plus_four
-  pc_next := MuxCase(pc_plus_four, Array(
+  br_target := extendedImmediate + reg_pc + 4.U
+  reg_pc := MuxCase((reg_pc + 4.U), Array(
     (controller.io.output.PC_isBranch) -> br_target,
     (controller.io.output.PC_isJump) -> j_target
   ))
@@ -92,7 +88,6 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   readData := io.dmem.readdata
   wb_data := Mux((controller.io.output.WBSelect),readData, aluOutput)
   //---------------write back stage-----------------------
-  reg_pc := pc_next
 
 }
 
