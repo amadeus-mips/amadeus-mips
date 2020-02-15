@@ -14,7 +14,8 @@
 ** J type
 | opcode | address |
 *** J target
-** Mem 
+** DONE all mem instructions
+   CLOSED: [2020-02-13 Thu 21:31]
 format similar as I type
 | opcode | rs | rt | offset |
 *** lw rt, offset(base)

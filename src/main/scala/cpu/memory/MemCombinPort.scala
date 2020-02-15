@@ -128,19 +128,20 @@ class DCombinMemPort extends BaseDMemPort {
           readdata_mask_sext := readdata_mask
         }
       } .otherwise {
-        //TODO: is this really necessary
-        // when not sign extending, zero extend the result
-        when (io.pipeline.maskmode === 0.U) {
-          // Byte sign extension
-          readdata_mask_sext := Cat(Fill(24, 0.U(1.W)),  readdata_mask(7, 0))
-        } .elsewhen (io.pipeline.maskmode === 1.U) {
-          // Half-word sign extension
-          readdata_mask_sext := Cat(Fill(16, 0.U(1.W)), readdata_mask(15, 0))
-        } .otherwise {
-          // Word sign extension (does nothing)
-          readdata_mask_sext := readdata_mask
-        }
-//        readdata_mask_sext := readdata_mask
+//        //DONE: is this really necessary
+          // no, not necessay, will automatically zero extend the result as it is unsigned
+//        // when not sign extending, zero extend the result
+//        when (io.pipeline.maskmode === 0.U) {
+//          // Byte sign extension
+//          readdata_mask_sext := Cat(Fill(24, 0.U(1.W)),  readdata_mask(7, 0))
+//        } .elsewhen (io.pipeline.maskmode === 1.U) {
+//          // Half-word sign extension
+//          readdata_mask_sext := Cat(Fill(16, 0.U(1.W)), readdata_mask(15, 0))
+//        } .otherwise {
+//          // Word sign extension (does nothing)
+//          readdata_mask_sext := readdata_mask
+//        }
+        readdata_mask_sext := readdata_mask
       }
 
       io.pipeline.readdata := readdata_mask_sext

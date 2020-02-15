@@ -74,8 +74,6 @@ object simulate {
 
   def build(optionsManager: SimulatorOptionsManager, conf: CPUConfig): String = {
     optionsManager.firrtlOptions = optionsManager.firrtlOptions.copy(compilerName = "low")
-    val annos = firrtl.Driver.getAnnotations(optionsManager)
-    optionsManager.firrtlOptions = optionsManager.firrtlOptions.copy(annotations = annos.toList)
 
     chisel3.Driver.execute(optionsManager, () => new Top(conf)) match {
       case ChiselExecutionSuccess(Some(_), _, Some(firrtlExecutionResult)) =>
@@ -105,13 +103,13 @@ object simulate {
 
 //     see if this fix the bug saying
 //     Exactly one target directory must be specified, but found `simulator_run_dir, simulator_run_dir`
-//    optionsManager.setTargetDirName("./simulator_run_dir")
+    optionsManager.setTargetDirName("./simulator_run_dir")
 
     // Get the name for the hex file
     // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/testMemFile/sextMem/sextMem.txt"
+    val hexName = optionsManager.targetDirName + "/../testMemFile/subwordTest/subword.txt"
 //    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
-    println(s"hexName is $hexName")
+//    println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
     val conf = new CPUConfig()
 
@@ -210,7 +208,7 @@ object simulate {
       cycles += 1
 
    }
-    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
+//    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
     println(s"TOTAL CYCLES: $cycles")
 
     // manually verify for now
@@ -218,7 +216,7 @@ object simulate {
     // reg files will not "poke" correctly on the same cycle
     //TODO: bridge an interface between simulation results and results from an actual simulator
     println(s"Register t5: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (!(simulator.peek("cpu.regFile.regs_10") == 65535)) {
+    if (!(simulator.peek("cpu.regFile.regs_10") == 4294967295L)) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")
