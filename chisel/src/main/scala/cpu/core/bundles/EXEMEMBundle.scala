@@ -5,7 +5,7 @@ package cpu.core.bundles
 import chisel3._
 import cpu.core.Constants._
 
-class EXMEMBundle extends Bundle {
+class EXEMEMBundle extends Bundle {
   val write = new WriteBundle
   val cp0 = new CPBundle
   val hilo = new HILOValidBundle

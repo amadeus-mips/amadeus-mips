@@ -24,7 +24,7 @@ class ExecuteTop extends Module {
     val memCP0 = Input(new CPBundle)
     val wbCP0 = Input(new CPBundle)
 
-    val out = Output(new EXMEMBundle)
+    val out = Output(new EXEMEMBundle)
     val stallReq = Output(Bool())
   })
 
