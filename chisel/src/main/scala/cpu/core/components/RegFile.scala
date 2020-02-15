@@ -1,11 +1,11 @@
 // See README.md for license details.
 
-package cpu.core.execute
+package cpu.core.components
 
 import chisel3._
 
-class ALU extends Module {
+class RegFile extends Module {
   val io = IO(new Bundle {
-
+    
   })
 }

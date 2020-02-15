@@ -3,6 +3,7 @@
 package cpu.core
 
 import chisel3._
+import common.Util
 import cpu.common.{DefaultConfig, DefaultWireLength, Instructions}
 
 trait opConstants {
@@ -10,33 +11,6 @@ trait opConstants {
   // 指令是否有效
   val Y       = true.B
   val N       = true.B
-
-  // 是否为链接跳转 BRanch Link
-  val BRL_Y   = true.B        // 仅当为链接跳转指令时
-  val BRL_N   = false.B
-  val BRL_X   = false.B       // not care
-  private val BL = 4          // BR type length
-  // 跳转指令类型 BRanch
-  val BR_N      = 0.U(BL.W)   // not branch
-  val BR_JR     = 1.U(BL.W)   // Jump Register
-  val BR_J      = 2.U(BL.W)   // Jump
-  val BR_EQ     = 3.U(BL.W)   // Branch on Equal
-  val BR_NE     = 4.U(BL.W)   // Branch on Not Equal
-  val BR_GTZ    = 5.U(BL.W)   // Branch on Greater Than Zero
-  val BR_GEZ    = 6.U(BL.W)   // Branch on Greater/Equal Than Zero
-  val BR_LTZ    = 7.U(BL.W)   // Branch on Less Than Zero
-  val BR_LEZ    = 8.U(BL.W)   // Branch on Less/Equal Than Zero
-
-  // 指令例外类型 Except  (不包括未定义指令例外）
-  val EXC_N     = 0.U(2.W)    // 无指令例外
-  val EXC_SC    = 1.U(2.W)    // syscall 系统调用
-  val EXC_ER    = 2.U(2.W)    // eret 返回
-  val EXC_BR    = 3.U(2.W)    // break 中断
-
-  // 是否为无符号运算（ALU与MEM） UnSigned
-  val US_U      = true.B      // Unsigned
-  val US_S      = false.B     // Signed
-  val US_X      = true.B      // not care
 
   // OP1
   val OP1_RS    = 0.U(2.W)    // regfile
@@ -48,47 +22,88 @@ trait opConstants {
   val OP2_IMM   = 1.U(2.W)    // 立即数
   val OP2_N     = 2.U(2.W)    // 不需要
 
-  // ALU 类型
-  private val AL = DefaultConfig.aluOpLen
-  val ALU_N     = 0.U(AL.W)   // 无ALU
-  val ALU_OR    = 1.U(AL.W)   // OR
-  val ALU_AND   = 2.U(AL.W)
-  val ALU_XOR   = 3.U(AL.W)   // 位异或
-  val ALU_NOR   = 4.U(AL.W)   // 位或非
-  val ALU_SLL   = 5.U(AL.W)   // 逻辑左移
-  val ALU_SRL   = 6.U(AL.W)   // 逻辑右移
-  val ALU_SRA   = 7.U(AL.W)   // 运算右移
-  val ALU_MFHI  = 8.U(AL.W)   // 从HI寄存器读取
-  val ALU_MFLO  = 9.U(AL.W)   // ^
-  val ALU_MTHI  = 10.U(AL.W)  // ^
-  val ALU_MTLO  = 11.U(AL.W)  // ^
-  val ALU_SLT   = 12.U(AL.W)  // 小于则置为1
-  val ALU_ADD   = 13.U(AL.W)
-  val ALU_SUB   = 14.U(AL.W)
-  val ALU_MULT  = 15.U(AL.W)  // 乘
-  val ALU_DIV   = 16.U(AL.W)  // 除
-  val ALU_MFC0  = 17.U(AL.W)
-  val ALU_MTC0  = 18.U(AL.W)
-  val ALU_MEM   = 19.U(AL.W)
+  // 指令类型（判断执行阶段写入寄存器结果的来源 ALU, CP0...）
+  val instTypeLen = 3
+  val INST_N      = 0.U(instTypeLen.W)
+  val INST_ALU    = 1.U(instTypeLen.W)    // 普通ALU,
+  val INST_MV     = 2.U(instTypeLen.W)    // Move（包括hilo, cp0)
+  val INST_WO     = 3.U(instTypeLen.W)    // 写入其它寄存器（hilo, cp0)
+  val INST_MEM    = 4.U(instTypeLen.W)    // 访存
+  val INST_BR     = 5.U(instTypeLen.W)    // 跳转指令
+  val INST_EXC    = 6.U(instTypeLen.W)    // 例外指令
 
+  val opLen = 6
+  val OP_N     = 0.U(opLen.W)   // 无操作
+  // ALU 类型
+  val ALU_OR    = 1.U(opLen.W)    // OR
+  val ALU_AND   = 2.U(opLen.W)
+  val ALU_XOR   = 3.U(opLen.W)    // 位异或
+  val ALU_NOR   = 4.U(opLen.W)    // 位或非
+  val ALU_SLL   = 5.U(opLen.W)    // 逻辑左移
+  val ALU_SRL   = 6.U(opLen.W)    // 逻辑右移
+  val ALU_SRA   = 7.U(opLen.W)    // 运算右移
+  val ALU_SLT   = 8.U(opLen.W)    // 小于则置为1
+  val ALU_SLTU  = 9.U(opLen.W)    // 小于则置为1（无符号）
+  val ALU_ADD   = 10.U(opLen.W)
+  val ALU_ADDU  = 11.U(opLen.W)
+  val ALU_SUB   = 12.U(opLen.W)
+  val ALU_SUBU  = 13.U(opLen.W)
+  // Move
+  val MV_MFHI   = 14.U(opLen.W)
+  val MV_MFLO   = 15.U(opLen.W)
+  val MV_MFC0   = 16.U(opLen.W)
+  // write to other 类型
+  val WO_MTC0   = 17.U(opLen.W)    // only used in decode
+  val WO_MTLO   = 18.U(opLen.W)
+  val WO_MTHI   = 19.U(opLen.W)
+  val WO_MULT   = 20.U(opLen.W)
+  val WO_MULTU  = 21.U(opLen.W)
+  val WO_DIV    = 22.U(opLen.W)
+  val WO_DIVU   = 23.U(opLen.W)
   // 访存类型 Memory
-  private val ML = DefaultConfig.memOpLen
-  val MEM_N     = 0.U(ML.W)   // 无访存
-  val MEM_LB    = 1.U(ML.W)
-  val MEM_LH    = 2.U(ML.W)
-  val MEM_LW    = 3.U(ML.W)
-  val MEM_SB    = 4.U(ML.W)
-  val MEM_SH    = 5.U(ML.W)
-  val MEM_SW    = 6.U(ML.W)
+  val MEM_LB    = 24.U(opLen.W)
+  val MEM_LBU   = 25.U(opLen.W)
+  val MEM_LH    = 26.U(opLen.W)
+  val MEM_LHU   = 27.U(opLen.W)
+  val MEM_LW    = 28.U(opLen.W)
+  val MEM_SB    = 29.U(opLen.W)
+  val MEM_SH    = 30.U(opLen.W)
+  val MEM_SW    = 31.U(opLen.W)
+  // 跳转指令类型 BRanch
+  val BR_JR     = 32.U(opLen.W)   // Jump Register
+  val BR_JALR   = 33.U(opLen.W)   // Jump Register and Link
+  val BR_J      = 34.U(opLen.W)   // Jump
+  val BR_JAL    = 35.U(opLen.W)   // Jump and Link
+  val BR_EQ     = 36.U(opLen.W)   // Branch on Equal
+  val BR_NE     = 37.U(opLen.W)   // Branch on Not Equal
+  val BR_GTZ    = 38.U(opLen.W)   // Branch on Greater Than Zero
+  val BR_GEZ    = 39.U(opLen.W)   // Branch on Greater/Equal Than Zero
+  val BR_GEZAL  = 40.U(opLen.W)   // Branch on Greater/Equal Than Zero and Link
+  val BR_LTZ    = 41.U(opLen.W)   // Branch on Less Than Zero
+  val BR_LTZAL  = 42.U(opLen.W)   // Branch on Less Than Zero and Link
+  val BR_LEZ    = 43.U(opLen.W)   // Branch on Less/Equal Than Zero
+  // 指令例外类型 Except  (不包括未定义指令例外）
+  val EXC_SC    = 44.U(opLen.W)   // syscall 系统调用
+  val EXC_ER    = 45.U(opLen.W)   // eret 返回
+  val EXC_BR    = 46.U(opLen.W)   // break 中断
+
+  /** judge if op is to load data from memory */
+  def opIsLoad(op: UInt): Bool = {
+    Util.listHasElement(List(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW), op)
+  }
+  /** judge if op is branch. */
+  def opIsBBranch(op: UInt): Bool = {
+    Util.listHasElement(List(BR_EQ, BR_NE, BR_GTZ, BR_GEZ, BR_GEZAL, BR_LTZ, BR_LTZAL, BR_LEZ), op)
+  }
 
   // 是否写regfile, Write Register
   val WR_Y      = true.B
   val WR_N      = false.B
-  // 写寄存器目标 Write Register Target
-  val WRT_T1    = 0.U(2.W)    // 取inst(15,11)
-  val WRT_T2    = 1.U(2.W)    // 取inst(20,16)
-  val WRT_T3    = 2.U(2.W)    // 取"b11111", 即31号寄存器
-  val WRT_X     = 0.U(2.W)    // not care
+  // 写寄存器目标 Write Register Address type
+  val WRA_T1    = 0.U(2.W)    // 取inst(15,11)
+  val WRA_T2    = 1.U(2.W)    // 取inst(20,16)
+  val WRA_T3    = 2.U(2.W)    // 取"b11111", 即31号寄存器
+  val WRA_X     = 0.U(2.W)    // not care
 
   // 立即数类型
   private val IL = 3
@@ -101,7 +116,8 @@ trait opConstants {
 }
 
 trait valueConstants {
-  val zeroWord = 0.U(Constants.dataLen.W)
+  val startPC = "hbfbffffc".U(32.W)
+  val zeroWord = 0.U(32.W)
   val GPR31 = "b11111".U(5.W)
 }
 

@@ -1,25 +1,22 @@
 // See README.md for license details.
 
-package cpu.core
+package cpu.core.fetch
 
 import chisel3._
+import chisel3.util.ValidIO
 import cpu.core.Constants._
 import cpu.core.bundles.IFIDBundle
 
-object InstFetch {
-  val startPC = "hbfbffffc".U(32.W)
-}
-
-class InstFetch extends Module {
+class Fetch extends Module {
   val io = IO(new Bundle {
     // from ctrl module
     val stall = Input(UInt(cpuStallLen.W))
     val flush = Input(Bool())
-    val flushPC = Input(UInt(addressLen.W))
+    val flushPC = Input(UInt(addrLen.W))
 
     // from id module
     val branchFlag = Input(Bool())
-    val branchTarget = Input(UInt(addressLen.W))
+    val branchTarget = Input(UInt(addrLen.W))
 
     // from ram
     val inst = Input(UInt(dataLen.W))
@@ -28,9 +25,9 @@ class InstFetch extends Module {
     // to IFID
     val out = Output(new IFIDBundle)
     // to ram
-    val outputPCValid = Output(Bool())
+    val outPCValid = Output(Bool())
     // to ctrl
-    val outputStallReq = Output(Bool())
+    val outStallReq = Output(Bool())
   })
 
   /**
@@ -38,14 +35,18 @@ class InstFetch extends Module {
    */
   val instFetchExcept = RegInit(false.B)
 
-  val pc = RegInit(InstFetch.startPC)
-  val pcValid = RegInit(false.B)
+  val pc = RegInit({
+    val bundle = Wire(new ValidIO(UInt(dataLen.W)))
+    bundle.bits := startPC
+    bundle.valid := false.B
+    bundle
+  })
 
   /**
    * 是否需要暂停流水线，
    * 若pc有效但指令无效则请求暂停流水线
    */
-  val stallReq = pcValid && !io.instValid
+  val stallReq = pc.valid && !io.instValid
 
   /**
     * 流水线是否被<b>其它模块</b>暂停
@@ -67,10 +68,10 @@ class InstFetch extends Module {
   instBuffer := Mux(stalledByOthers && !useIBuffer, io.inst, instBuffer)
 
   io.out.instFetchExcept := instFetchExcept
-  io.out.pc := pc
+  io.out.pc := pc.bits
   io.out.inst := Mux(useIBuffer, instBuffer, io.inst)
-  io.outputPCValid := pcValid
-  io.outputStallReq := stallReq
+  io.outPCValid := pc.valid
+  io.outStallReq := stallReq
 
   /**
    * 判断是否会发生取指异常
@@ -83,19 +84,19 @@ class InstFetch extends Module {
 
   when(io.flush) {
     // 刷新流水线
-    pc := io.flushPC
-    pcValid := !addressMisalignment(io.flushPC)
+    pc.bits := io.flushPC
+    pc.valid := !addressMisalignment(io.flushPC)
     instFetchExcept := addressMisalignment(io.flushPC)
   }.elsewhen(!io.stall(0)) {
     // 流水线未暂停，pc+=4，或为跳转指令指定的pc
     // 非跳转指令默认不会产生指令地址未对齐异常
-    pc := Mux(io.branchFlag, io.branchTarget, pc + 4.U)
-    pcValid := !io.branchFlag || !addressMisalignment(io.branchTarget)
+    pc.bits := Mux(io.branchFlag, io.branchTarget, pc.bits + 4.U)
+    pc.valid := !io.branchFlag || !addressMisalignment(io.branchTarget)
     instFetchExcept := io.branchFlag && addressMisalignment(io.branchTarget)
   }.otherwise {
     // 流水线被暂停
-    pc := pc
-    pcValid := stallReq
+    pc.bits := pc.bits
+    pc.valid := stallReq
     instFetchExcept := false.B
   }
 }

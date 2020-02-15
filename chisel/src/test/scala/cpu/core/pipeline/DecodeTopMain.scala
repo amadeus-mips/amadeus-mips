@@ -1,14 +1,12 @@
-// See README.md for license details.
+package cpu.core.pipeline
 
-package cpu.core
-
-import chisel3._
+import chisel3.Driver
 
 /**
  * Only produce verilog file to ./out
  */
-object InstFetchMain extends App {
+object DecodeTopMain extends App {
   // Vivado 不认识非ASCII码，因此去掉了toString方法产生的"$@"
   val outDir: String = "./out/" + toString.replaceAll("\\$@", "")
-  Driver.execute(Array("-td", outDir),  () => new InstFetch)
+  Driver.execute(Array("-td", outDir),  () => new DecodeTop)
 }

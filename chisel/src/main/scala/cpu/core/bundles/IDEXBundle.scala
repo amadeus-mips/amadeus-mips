@@ -6,11 +6,15 @@ import chisel3._
 import cpu.core.Constants._
 
 class IDEXBundle extends Bundle {
-  val aluOp = UInt(aluOpLen.W)
-  val memOp = UInt(memOpLen.W)
-  val aluSigned = Bool()
-  val reg1 = UInt(dataLen.W)
-  val reg2 = UInt(dataLen.W)
-  val writeRegister = new WriteRegisterBundle(hasData = false)
-  val inst = UInt(dataLen.W)
+  val instType = UInt(instTypeLen.W)
+  val operation = UInt(opLen.W)
+  val op1 = UInt(dataLen.W)
+  val op2 = UInt(dataLen.W)
+  val write = new WriteControlBundle
+  val cp0Control = new CPControlBundle
+  val except = Vec(exceptionTypeAmount, Bool())
+  val imm26 = UInt(26.W)
+  val pcPlus4 = UInt(addrLen.W)
+  val inDelaySlot = Bool()
+  val nextInstInDelaySlot = Bool()
 }

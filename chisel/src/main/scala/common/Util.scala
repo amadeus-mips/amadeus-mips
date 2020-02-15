@@ -4,6 +4,10 @@ import chisel3._
 import chisel3.util._
 
 object Util {
+  def listHasElement(list: Seq[UInt], element: UInt): Bool = {
+    list.foldLeft(true.B)((r, e) => r || (e === element))
+  }
+
   def unsignedToSigned(s: BigInt, width: Int = 32): BigInt = {
     val m = Limits.MAXnBIT(width - 1)
     if(s >= m) s - 2 * m
