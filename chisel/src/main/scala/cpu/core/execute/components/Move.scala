@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package cpu.core.execute.data
+package cpu.core.execute.components
 
 import chisel3._
 import chisel3.util._

@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package cpu.core.execute.data
+package cpu.core.execute.components
 
 import chisel3._
 import cpu.core.Constants._
@@ -22,33 +22,37 @@ class WriteOther extends Module {
     val inCP0Control = Input(new CPControlBundle)
 
     val outCP0 = Output(new CPBundle)
-    val hiloOut = Output(new HILOValidBundle)
+    val outHILO = Output(new HILOValidBundle)
     val stallReq = Output(Bool())
 
-    val div = Flipped(new MultDivIO)
     val mult = Flipped(new MultDivIO)
+    val div = Flipped(new MultDivIO)
   })
 
   io.outCP0.control <> io.inCP0Control
   io.outCP0.data := io.op2
 
-  io.hiloOut.hi.valid := io.operation === WO_MTHI
-  io.hiloOut.hi.bits := io.op1
-  io.hiloOut.lo.valid := io.operation === WO_MTLO
-  io.hiloOut.lo.bits := io.op1
+  io.outHILO.hi.valid := io.operation === WO_MTHI
+  io.outHILO.hi.bits := io.op1
+  io.outHILO.lo.valid := io.operation === WO_MTLO
+  io.outHILO.lo.bits := io.op1
 
   io.mult.op1 := io.op1
   io.mult.op2 := io.op2
+  io.mult.enable := false.B
+  io.mult.signed := io.operation === WO_MULT
   io.div.op1 := io.op1
   io.div.op2 := io.op2
-  io.mult.signed := io.operation === WO_MULT || io.operation === WO_DIV
+  io.div.enable := false.B
+  io.div.signed := io.operation === WO_DIV
+  io.stallReq := false.B
   when(io.operation === WO_MULT || io.operation === WO_MULTU){
     io.mult.enable := !io.mult.result.hi.valid
     io.stallReq := !io.mult.result.hi.valid
-    io.hiloOut <> io.mult
-  }.elsewhen(io.operation === WO_DIV || io.operation === DIVU){
+    io.outHILO <> io.mult.result
+  }.elsewhen(io.operation === WO_DIV || io.operation === WO_DIVU){
     io.div.enable := !io.div.result.hi.valid
     io.stallReq := !io.div.result.hi.valid
-    io.hiloOut <> io.div
+    io.outHILO <> io.div.result
   }
 }

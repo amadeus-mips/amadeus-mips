@@ -11,9 +11,12 @@ class IDEX extends Module {
   val io = IO(new Bundle {
     val stall = Input(UInt(cpuStallLen.W))
     val flush = Input(Bool())
+
     val in = Input(new IDEXBundle)
-    val inDelaySlot = Output(Bool())  // back to Decode
+    val nextInstInDelaySlot = Input(Bool())
+
     val out = Output(new IDEXBundle)  // to Execute
+    val inDelaySlot = Output(Bool())  // back to Decode
   })
 
   val inDelaySlot = RegInit(false.B)
@@ -29,7 +32,7 @@ class IDEX extends Module {
     Array(
       io.flush -> false.B,
       stallEnd -> inDelaySlot,
-      !io.stall(2) -> io.in.nextInstInDelaySlot
+      !io.stall(2) -> io.nextInstInDelaySlot
     )
   )
   io.inDelaySlot := inDelaySlot

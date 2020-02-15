@@ -127,6 +127,9 @@ trait exceptConstants {
   val EXCEPT_INST_INVALID = 2
   val EXCEPT_BREAK = 3
   val EXCEPT_SYSCALL = 4
+  val EXCEPT_OVERFLOW = 5
+  val EXCEPT_LOAD = 6
+  val EXCEPT_SAVE = 7
 }
 
 object Constants extends
