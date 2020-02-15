@@ -45,6 +45,7 @@ import cpu.components.Instructions._
       val input = new ControllerInIO
       val output = new ControllerOutIO
     })
+    // intentional dontcare to connect in other modules
     io := DontCare
 
     val controlSignals =

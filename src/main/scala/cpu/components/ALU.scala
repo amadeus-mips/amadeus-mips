@@ -11,7 +11,7 @@ import chisel3.util._
     val inputA = Input(UInt(32.W))
     val inputB = Input(UInt(32.W))
     // the width of control signal should be equal to the log2 ceil number of instructions
-    val controlSignal = Input(UInt(4.W))
+    val aluOp = Input(UInt(4.W))
   }
 
   class ALUOutputIO extends Bundle {
@@ -36,19 +36,13 @@ import chisel3.util._
          })
 
     // omitting nop and passthrough, as they are the default: input A
-    io.output.aluOutput := MuxLookup(io.input.controlSignal, io.input.inputA,Array(
+    io.output.aluOutput := MuxLookup(io.input.aluOp, io.input.inputA,Array(
       add -> (io.input.inputA + io.input.inputB),
       sub -> (io.input.inputA - io.input.inputB),
       and -> (io.input.inputA & io.input.inputB),
-      comp_is_equal -> DontCare,
-      comp_not_equal -> DontCare,
-      comp_greater_than_z -> DontCare,
-      comp_greater_than_or_e_z -> DontCare,
-      comp_less_than_z -> DontCare,
-      comp_less_than_or_e_z -> DontCare
     ))
 
-    io.output.branchTake := MuxLookup(io.input.controlSignal, false.B, Array(
+    io.output.branchTake := MuxLookup(io.input.aluOp, false.B, Array(
       comp_is_equal -> (io.input.inputA === io.input.inputB),
       comp_not_equal -> !(io.input.inputA === io.input.inputB),
       comp_greater_than_z -> (io.input.inputA > 0.U) ,
