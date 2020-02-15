@@ -29,7 +29,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   val rd_address = instruction(15,11)
   val immediate = instruction(15,0)
   val address = instruction(25,0)
-  val extendedImmediate = Cat(Fill(16,immediate(15)),immediate)
+  val extendedImmediateData = Cat(Fill(16,immediate(15)),immediate)
+  val extendedImmediateAddr = Cat(Fill(14,immediate(15)), Cat(immediate, Fill(2,0.U)))
 
   // feed the instruction into the controller
   //TODO: optimized the bit pattern, reduce bandwidth
@@ -40,7 +41,18 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   val br_target = Wire(UInt(32.W))
   val j_target = Wire(UInt(32.W))
   val is_Branch = Wire(Bool())
+  is_Branch := (controller.io.output.PC_isBranch & alu.io.output.branchTake)
 
+  pc_plus_four := reg_pc + 4.U
+  // decide the next PC
+  // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
+  j_target := Cat(reg_pc(31,28),address,Fill(2,0.U))
+  br_target := extendedImmediateAddr + pc_plus_four
+  pc_next := MuxCase(pc_plus_four, Array(
+    (is_Branch) -> br_target,
+    (controller.io.output.PC_isJump) -> j_target
+  ))
+  reg_pc := pc_next
   // initialize the wire for write back data
   val wb_data = Wire(UInt(32.W))
   regFile.io.rs1Addr := rs_address
@@ -57,8 +69,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // -----------------execute stage----------------------
   alu.io.input.inputA := valRS
   // if OpBSelect is true, select rb; otherwise select sign extended immediate
-  alu.io.input.inputB := Mux(controller.io.output.OpBSelect, valRT, extendedImmediate)
-  alu.io.input.controlSignal := controller.io.output.AluOp
+  alu.io.input.inputB := Mux(controller.io.output.OpBSelect, valRT, extendedImmediateData)
+  alu.io.input.aluOp := controller.io.output.AluOp
 
   val aluOutput = Wire(UInt(32.W))
   aluOutput := alu.io.output.aluOutput
@@ -81,18 +93,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   readData := io.dmem.readdata
   wb_data := Mux((controller.io.output.WBSelect),readData, aluOutput)
   //---------------write back stage-----------------------
-  is_Branch := controller.cs_PC_isBranch & alu.io.output.branchTake
 
-  pc_plus_four := reg_pc + 4.U
-  // decide the next PC
-  // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
-  j_target := Cat(reg_pc(31,28),address,Fill(2,0.U))
-  br_target := extendedImmediate + pc_plus_four
-  pc_next := MuxCase(pc_plus_four, Array(
-    (is_Branch) -> br_target,
-    (controller.io.output.PC_isJump) -> j_target
-  ))
-  reg_pc := pc_next
 
 }
 
