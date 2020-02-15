@@ -38,6 +38,8 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   val br_target = Wire(UInt(32.W))
   val j_target = Wire(UInt(32.W))
   val is_Branch = Wire(Bool())
+  val pc_plus_four = Wire(UInt(32.W))
+  val pc_next = Wire(UInt(32.W))
   is_Branch := (controller.io.output.PC_isBranch & alu.io.output.branchTake)
 
 
