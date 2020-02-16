@@ -99,16 +99,16 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // initialize the wire for write back data
   // this wire should be assigned at the write back stage
-  val wbDataToReg = Wire(UInt(32.W))
   val wbEnableToReg = Wire(Bool())
-  val dstRegSelectToReg = Wire(Bool())
+  val wbDataToReg = Wire(UInt(32.W))
+  val wbAddrToReg = Wire(UInt(5.W))
   val rtAddrToReg = Wire(UInt(5.W))
   val rdAddrToReg = Wire(UInt(5.W))
   regFile.io.rs1Addr := rsAddressID
   regFile.io.rs2Addr := rtAddressID
-  regFile.io.writeData := wbDataToReg
-  regFile.io.writeAddr := Mux(dstRegSelectToReg, rdAddrToReg, rtAddrToReg)
   regFile.io.writeEnable := wbEnableToReg
+  regFile.io.writeData := wbDataToReg
+  regFile.io.writeAddr := wbAddrToReg
 
   branchUnit.io.input.regRs := regFile.io.rs1Data
   branchUnit.io.input.regRt := regFile.io.rs2Data
@@ -127,9 +127,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEx.io.pipeIn.data.valRs := regFile.io.rs1Data
   idToEx.io.pipeIn.data.valRt := regFile.io.rs2Data
   idToEx.io.pipeIn.data.immediate := immediateID
-
-  idToEx.io.pipeIn.data.rtAddr := rtAddressID
-  idToEx.io.pipeIn.data.rdAddr := rdAddressID
+  idToEx.io.pipeIn.data.regWriteAddr := Mux(controller.io.output.DstRegSelect, rdAddressID, rtAddressID)
 
 
   // here are the control signals
@@ -142,7 +140,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEx.io.pipeIn.control.memWriteEnable := controller.io.output.MemWriteEnable
   idToEx.io.pipeIn.control.wBSelect := controller.io.output.WBSelect
   // -----------------------------write back stage--------------------------
-  idToEx.io.pipeIn.control.dstRegSelect := controller.io.output.DstRegSelect
   idToEx.io.pipeIn.control.wBEnable := controller.io.output.WBEnable
 
   //---------------------------------------------------------------------------------
@@ -185,8 +182,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // here are the data values to pipe in
   exToMem.io.pipeIn.data.aluOutput := aluOutputEx
   exToMem.io.pipeIn.data.writeData := valRtEX
-  exToMem.io.pipeIn.data.rdAddr := idToEx.io.pipeOut.data.rdAddr
-  exToMem.io.pipeIn.data.rtAddr := idToEx.io.pipeOut.data.rtAddr
+  exToMem.io.pipeIn.data.regWriteAddr := idToEx.io.pipeOut.data.regWriteAddr
 
   // pass along the control signals
   //--------------------------memory stage--------------------------
@@ -195,7 +191,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   exToMem.io.pipeIn.control.memWriteEnable := idToEx.io.pipeOut.control.memWriteEnable
   exToMem.io.pipeIn.control.wBSelect := idToEx.io.pipeOut.control.wBSelect
   //--------------------------write back stage--------------------------
-  exToMem.io.pipeIn.control.dstRegSelect := idToEx.io.pipeOut.control.dstRegSelect
   exToMem.io.pipeIn.control.wBEnable := idToEx.io.pipeOut.control.wBEnable
 
   //---------------------------------------------------------------------------------
@@ -253,12 +248,10 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // pipe in the data values
   memToWb.io.pipeIn.data.wbData := wbDataMem
-  memToWb.io.pipeIn.data.rtAddr := exToMem.io.pipeOut.data.rtAddr
-  memToWb.io.pipeIn.data.rdAddr := exToMem.io.pipeOut.data.rdAddr
+  memToWb.io.pipeIn.data.regWriteAddr := exToMem.io.pipeOut.data.regWriteAddr
 
 
   // pipe in the control signals
-  memToWb.io.pipeIn.control.dstRegSelect := exToMem.io.pipeOut.control.dstRegSelect
   memToWb.io.pipeIn.control.wBEnable := exToMem.io.pipeOut.control.wBEnable
 
   //---------------------------------------------------------------------------------
@@ -267,10 +260,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
 
-  wbDataToReg := memToWb.io.pipeOut.data.wbData
-  rdAddrToReg := memToWb.io.pipeOut.data.rdAddr
-  rtAddrToReg := memToWb.io.pipeOut.data.rtAddr
   wbEnableToReg := memToWb.io.pipeOut.control.wBEnable
-  dstRegSelectToReg := memToWb.io.pipeOut.control.dstRegSelect
+  wbDataToReg := memToWb.io.pipeOut.data.wbData
+  wbAddrToReg := memToWb.io.pipeOut.data.regWriteAddr
 
 }

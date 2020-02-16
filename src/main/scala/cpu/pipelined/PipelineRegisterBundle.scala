@@ -50,9 +50,8 @@ class IDEXDataBundle extends Bundle {
   // don't pass through the extended immediate
   val immediate = UInt(16.W)
 
-  // for write back stage
-  val rdAddr = UInt(5.W)
-  val rtAddr = UInt(5.W)
+  // register write address
+  val regWriteAddr = UInt(5.W)
 
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
@@ -63,9 +62,8 @@ class IDEXDataBundle extends Bundle {
 class EXMEMDataBundle extends Bundle {
   val aluOutput = UInt(32.W)
   val writeData = UInt(32.W)
-  // for write back stage
-  val rdAddr = UInt(5.W)
-  val rtAddr = UInt(5.W)
+  // register write address
+  val regWriteAddr = UInt(5.W)
 }
 
 // io bundle for data path from memory stage to write
@@ -73,9 +71,8 @@ class EXMEMDataBundle extends Bundle {
 class MEMWBDataBundle extends Bundle {
   // actually, you can select which data to write at the memory stage
   val wbData = UInt(32.W)
-  // for write back stage
-  val rdAddr = UInt(5.W)
-  val rtAddr = UInt(5.W)
+  // register write address
+  val regWriteAddr = UInt(5.W)
 }
 
 // io bundle from instruction decode stage
@@ -108,10 +105,6 @@ class IDEXControlBundle extends Bundle {
 
   //--------------------------WB stage----------------------------
 
-  // which is the dst register, rd or rt
-  // false is rt, true is rd
-  val dstRegSelect = Output(Bool())
-
   // whether write to the regfile
   // true is write back, false is don't write back
   val wBEnable = Output(Bool())
@@ -138,9 +131,6 @@ class EXMEMControlBundle extends Bundle {
 
   //--------------------------WB stage----------------------------
 
-  // which is the dst register, rd or rt
-  // false is rt, true is rd
-  val dstRegSelect = Output(Bool())
 
   // whether write to the regfile
   // true is write back, false is don't write back
@@ -153,10 +143,6 @@ class EXMEMControlBundle extends Bundle {
 class MEMWBControlBundle extends Bundle {
 
   //--------------------------WB stage----------------------------
-
-  // which is the dst register, rd or rt
-  // false is rt, true is rd
-  val dstRegSelect = Output(Bool())
 
   // whether write to the regfile
   // true is write back, false is don't write back
