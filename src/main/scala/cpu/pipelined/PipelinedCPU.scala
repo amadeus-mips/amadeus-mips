@@ -232,9 +232,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // make it valid if I'm either reading or writing
   io.dmem.valid := (memWriteEnable | wbSelect)
 
-  //TODO: make this more efficient, don't pass in values when
-  // neither reading or writing
+  //TODO:
   // this is not working correctly
+  // Only supports combinational memory for now
   val wbDataMem = Wire(UInt(32.W))
   when(wbSelect && io.dmem.good) {
     // If I'm doing a read, write back memory
