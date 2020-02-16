@@ -15,5 +15,7 @@ class HazardControlUnitIO extends Bundle {
 }
 
 class HazardControlUnit extends Module{
-
+  val io = IO(new HazardControlUnitIO)
+  //TODO: for testing purpose, to change
+  io := DontCare
 }

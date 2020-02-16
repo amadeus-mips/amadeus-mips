@@ -34,7 +34,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   if_id.io.valid := true.B
 
   //TODO: support for jumps and branches
-  reg_pc := MuxCase((reg_pc + 4.U), Array(
+  reg_pc := MuxCase(pc_plus_four, Array(
     (controller.io.output.PC_isBranch) -> br_target,
     (controller.io.output.PC_isJump) -> j_target
   ))
