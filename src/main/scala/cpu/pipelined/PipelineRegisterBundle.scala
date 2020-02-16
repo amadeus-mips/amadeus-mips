@@ -101,13 +101,13 @@ class IDEXControlBundle extends Bundle {
 
   // select write back from read mem and alu output
   // if true, select from alu; if false, select from memory
-  val wBSelect = Output(Bool())
+  val wbSelect = Output(Bool())
 
   //--------------------------WB stage----------------------------
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wBEnable = Output(Bool())
+  val wbEnable = Output(Bool())
 
 }
 
@@ -127,14 +127,14 @@ class EXMEMControlBundle extends Bundle {
 
   // select write back from read mem and alu output
   // if true, select from alu; if false, select from memory
-  val wBSelect = Output(Bool())
+  val wbSelect = Output(Bool())
 
   //--------------------------WB stage----------------------------
 
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wBEnable = Output(Bool())
+  val wbEnable = Output(Bool())
 
 }
 
@@ -146,7 +146,7 @@ class MEMWBControlBundle extends Bundle {
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wBEnable = Output(Bool())
+  val wbEnable = Output(Bool())
 
 }
 

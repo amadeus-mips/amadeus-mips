@@ -17,11 +17,15 @@ class StageRegisterIO[+T <: Data](gen: T) extends Bundle {
   // essentially a generator for stage register
   override def cloneType: this.type = StageRegisterIO (gen).asInstanceOf[this.type]
 }
+
 // this is the stage register for pipelined CPU
 object StageRegisterIO {
   def apply[T <: Data](gen: T): StageRegisterIO[T] = new StageRegisterIO(gen)
 }
 
+// bubble: flush = 0, valid = 0
+// flush: flush = 1, valid = X
+// update: flush = 0, valid = 1
 class StageRegister[+T <: Data](private val gen: T) extends Module {
   val io = IO(new StageRegisterIO[T](gen))
   // intentional Dontcare:

@@ -8,34 +8,34 @@ import cpu.components.Instructions._
   class ControllerOutIO extends Bundle(){
     // whether the PC takes the branch
     // true is take the branch, false is don't take the branch
-    val PC_isBranch = Output(Bool())
+    val pcIsBranch= Output(Bool())
     // whether the PC takes the jump
     // true is take the jump, false is don't take the jump
     // case when isJump and isBranch is undefined, should not happen
-    val PC_isJump = Output(Bool())
+    val pcIsJump = Output(Bool())
     // which is the dst register, rd or rt
     // false is rt, true is rd
-    val DstRegSelect = Output(Bool())
+    val dstRegSelect = Output(Bool())
     // whether write to the regfile
     // true is write back, false is don't write back
-    val WBEnable = Output(Bool())
+    val wbEnable = Output(Bool())
     // the branching operator
     // used for the branch unit
-    val BranchOp = Output(UInt(3.W))
+    val branchOp = Output(UInt(3.W))
     // select the operand B
     // true is Reg(rt), false is sign extended offset(16bit)
-    val OpBSelect = Output(Bool())
+    val opBSelect = Output(Bool())
     // what is the ALU OP
-    val AluOp = Output(UInt(3.W))
+    val aluOp = Output(UInt(3.W))
     // memory mask mode
-    val MemMask = Output(UInt(2.W))
+    val memMask = Output(UInt(2.W))
     // memory sign extension
-    val MemSext = Output(Bool())
+    val memSext = Output(Bool())
     // enable write to data memory
-    val MemWriteEnable = Output(Bool())
+    val memWriteEnable = Output(Bool())
     // select write back from read mem and alu output
     // if true, select from alu; if false, select from memory
-    val WBSelect = Output(Bool())
+    val wbSelect = Output(Bool())
   }
 
   class ControllerInIO extends Bundle() {
@@ -89,19 +89,19 @@ import cpu.components.Instructions._
           // sb rt, rs ,immediate
         ))
 
-    val (cs_PC_isBranch: Bool) :: (cs_PC_isJump: Bool) :: (cs_DstRegSelect:Bool) :: (cs_WBEnable: Bool) :: (cs_BranchOp: UInt) :: (cs_OpBSelect: Bool) :: (cs_AluOp: UInt) ::(cs_MemMask: UInt) :: (cs_MemSext: Bool) :: (cs_MemWriteEnable: Bool) :: (cs_WBSelect: Bool) :: Nil = controlSignals
+    val (csPcIsBranch: Bool) :: (csPcIsJump: Bool) :: (csDstRegSelect:Bool):: (csWBEnable:Bool) :: (csBranchOp: UInt) :: (csOpBSelect : Bool) :: (csAluOp : UInt) :: (csMemMask : UInt)::(csMemSext:Bool)::(csMemWriteEnable:Bool):: (csWBSelect: Bool) :: Nil = controlSignals
     // branch logic
 
-    io.output.PC_isJump := cs_PC_isJump
-    io.output.PC_isBranch := cs_PC_isBranch
-    io.output.DstRegSelect := cs_DstRegSelect
-    io.output.WBEnable := cs_WBEnable
-    io.output.BranchOp := cs_BranchOp
-    io.output.OpBSelect := cs_OpBSelect
-    io.output.AluOp := cs_AluOp
-    io.output.MemMask := cs_MemMask
-    io.output.MemSext := cs_MemSext
-    io.output.MemWriteEnable := cs_MemWriteEnable
-    io.output.WBSelect := cs_WBSelect
+    io.output.pcIsJump := csPcIsJump
+    io.output.pcIsBranch := csPcIsBranch
+    io.output.dstRegSelect := csDstRegSelect
+    io.output.wbEnable := csWBEnable
+    io.output.branchOp := csBranchOp
+    io.output.opBSelect := csOpBSelect
+    io.output.aluOp := csAluOp
+    io.output.memMask := csMemMask
+    io.output.memSext := csMemSext
+    io.output.memWriteEnable := csMemWriteEnable
+    io.output.wbSelect := csWBSelect
 
   }

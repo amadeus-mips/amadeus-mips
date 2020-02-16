@@ -1,10 +1,11 @@
 package cpu.components
 
 import chisel3._
+import chisel3.util._
 
 class HazardControlUnitIO extends Bundle {
   // input: when an exception occurs
-  val overflow = Input(Bool())
+
 
   // output the hazard control signals
   val pcSelect = Output(UInt(2.W))
