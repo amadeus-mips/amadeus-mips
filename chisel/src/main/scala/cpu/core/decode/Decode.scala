@@ -4,9 +4,9 @@ package cpu.core.decode
 
 import chisel3._
 import chisel3.util._
-import cpu.core.Constants._
-import cpu.core.bundles.{CPControlBundle, IDEXEBundle, IFIDBundle, ReadIO, WriteBundle, WriteControlBundle}
 import common.Util._
+import cpu.core.Constants._
+import cpu.core.bundles.{CPControlBundle, WriteControlBundle}
 
 class Decode extends Module {
   val io = IO(new Bundle {

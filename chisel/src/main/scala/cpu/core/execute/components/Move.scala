@@ -5,7 +5,7 @@ package cpu.core.execute.components
 import chisel3._
 import chisel3.util._
 import cpu.core.Constants._
-import cpu.core.bundles.{CPBundle, HILOBundle, HILOValidBundle}
+import cpu.core.bundles.HILOBundle
 
 /**
  * some Move instruction, include MFC0, MFHI, MFLO

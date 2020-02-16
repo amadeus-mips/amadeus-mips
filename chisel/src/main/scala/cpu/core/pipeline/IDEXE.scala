@@ -4,7 +4,7 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.MuxCase
-import cpu.core.bundles.IDEXEBundle
+import cpu.core.bundles.stage.IDEXEBundle
 import cpu.core.components.{Stage, StageIO}
 
 private class IDEXEIO extends StageIO(new IDEXEBundle) {

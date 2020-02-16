@@ -1,9 +1,10 @@
 // See README.md for license details.
 
-package cpu.core.bundles
+package cpu.core.bundles.stage
 
 import chisel3._
 import cpu.core.Constants._
+import cpu.core.bundles.{CPControlBundle, WriteControlBundle}
 
 class IDEXEBundle extends Bundle {
   val instType = UInt(instTypeLen.W)

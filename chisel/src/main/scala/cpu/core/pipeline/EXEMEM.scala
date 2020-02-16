@@ -2,7 +2,7 @@
 
 package cpu.core.pipeline
 
-import cpu.core.bundles.EXEMEMBundle
+import cpu.core.bundles.stage.EXEMEMBundle
 import cpu.core.components.Stage
 
 /**

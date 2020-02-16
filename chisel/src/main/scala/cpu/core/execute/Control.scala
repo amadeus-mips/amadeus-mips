@@ -5,7 +5,7 @@ package cpu.core.execute
 import chisel3._
 import chisel3.util.MuxLookup
 import cpu.core.Constants._
-import cpu.core.bundles.{IDEXEBundle, WriteBundle, WriteControlBundle}
+import cpu.core.bundles.{WriteBundle, WriteControlBundle}
 
 class Control extends Module {
   val io = IO(new Bundle {

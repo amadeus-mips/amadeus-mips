@@ -10,7 +10,7 @@ object Util {
 
   def unsignedToSigned(s: BigInt, width: Int = 32): BigInt = {
     val m = Limits.MAXnBIT(width - 1)
-    if(s >= m) s - 2 * m
+    if (s >= m) s - 2 * m
     else s
   }
 
