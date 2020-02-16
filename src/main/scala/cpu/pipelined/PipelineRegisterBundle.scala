@@ -39,6 +39,7 @@ class MEMWBBundle extends Bundle {
 // fetch stage to instruction decode stage
 class IFIDDataBundle extends Bundle {
   val instruction = UInt(32.W)
+  val pc = UInt(32.W)
 }
 
 // io bundle for data path from instruction decode stage

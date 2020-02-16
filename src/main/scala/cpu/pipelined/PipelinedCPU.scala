@@ -28,23 +28,28 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val if_instruction = Wire(UInt(32.W))
   if_instruction := io.imem.instruction
   // fetch the instruction
-  if_id.io.pipeIn.data.instruction := if_instruction
 
   // make it valid
   //TODO: add support for stall
   if_id.io.valid := true.B
 
+  //TODO: support for jumps and branches
   reg_pc := MuxCase((reg_pc + 4.U), Array(
     (controller.io.output.PC_isBranch) -> br_target,
     (controller.io.output.PC_isJump) -> j_target
   ))
+
+  // pipe the instruction into the pipeline status register
+  if_id.io.pipeIn.data.instruction := if_instruction
+  if_id.io.pipeIn.data.pc := reg_pc
   //---------------------------------------------------------------------------------
   // -----------------------------instruction decode--------------------
   //---------------------------------------------------------------------------------
 
   val id_instruction = Wire(UInt(32.W))
-
+  val pc_plus_four = Wire(UInt(32.W))
   id_instruction := if_id.io.pipeOut.data.instruction
+  pc_plus_four := if_id.io.pipeOut.data.pc + 4.U
   // set up all the immediate
   //TODO: delete the unused ones
   val rs_address = id_instruction(25,21)
@@ -52,7 +57,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val rd_address = id_instruction(15,11)
   val immediate = id_instruction(15,0)
   val address = id_instruction(25,0)
-  val extendedImmediate = Cat(Fill(16,immediate(15)),immediate)
+  val extendedImmediateData = Cat(Fill(16,immediate(15)),immediate)
+  val extendedImmediateAddr = Cat(Fill(14,immediate(15)), Cat(immediate, Fill(2,0.U)))
 
   controller.io.input.instr := id_instruction
     
@@ -63,7 +69,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // decide the next PC
   // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
   j_target := Cat(reg_pc(31,28),address,Fill(2,0.U))
-  br_target := extendedImmediate + reg_pc + 4.U
+  br_target := extendedImmediateAddr + pc_plus_four
 
   // initialize the wire for write back data
   val wb_data = Wire(UInt(32.W))
@@ -83,12 +89,11 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
   alu.io.input.inputA := valRS
   // if OpBSelect is true, select rb; otherwise select sign extended immediate
-  alu.io.input.inputB := Mux(controller.io.output.OpBSelect, valRT, extendedImmediate)
-  alu.io.input.controlSignal := controller.io.output.AluOp
+  alu.io.input.inputB := Mux(controller.io.output.OpBSelect, valRT, extendedImmediateData)
+  alu.io.input.aluOp := controller.io.output.AluOp
 
   val aluOutput = Wire(UInt(32.W))
   aluOutput := alu.io.output.aluOutput
-  controller.io.input.alu_branch_take := alu.io.output.branchTake
 
   //---------------------------------------------------------------------------------
   // -------------------------memory stage---------------------
