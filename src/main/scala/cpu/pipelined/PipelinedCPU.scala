@@ -3,120 +3,274 @@ package cpu.pipelined
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.components.{ALU, BaseCPU, Controller, RegisterFile, StageRegister}
+import cpu.components.{ALU, BaseCPU, BranchUnit, Controller, RegisterFile, StageRegister}
 
 class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
+  //---------------------------------------------------------------------------------
+  //---------------------------------------------------------------------------------
+  //-------------------------------initialize the modules and hardware components---------------------------
+  //---------------------------------------------------------------------------------
+  //---------------------------------------------------------------------------------
+
   // initialize the data path modules
-  val reg_pc = RegInit(0.U(32.W))
+  val regPc = RegInit(0.U(32.W))
   val controller = Module(new Controller)
   val regFile = Module(new RegisterFile)
+  val branchUnit = Module(new BranchUnit)
   val alu = Module(new ALU)
 
   // initialize the pipeline stage registers
-  val if_id = Module(new StageRegister(new IFIDBundle))
-  val id_ex = Module(new StageRegister(new IDEXBundle))
-  val ex_mem = Module(new StageRegister(new EXMEMBundle))
-  val mem_wb = Module(new StageRegister(new MEMWBBundle))
+  // instruction fetch to instruction decode
+  val ifToId = Module(new StageRegister(new IFIDBundle))
+  // instruction decode to execute
+  val idToEx = Module(new StageRegister(new IDEXBundle))
+  // execute to memory access
+  val exToMem = Module(new StageRegister(new EXMEMBundle))
+  // memory access to write back stage
+  val memToWb = Module(new StageRegister(new MEMWBBundle))
+
+  //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   //-------------------------------instruction fetch stage---------------------------
   //---------------------------------------------------------------------------------
+  //---------------------------------------------------------------------------------
 
   // fetch the instruction from here
-  io.imem.address := reg_pc
+  io.imem.address := regPc
   io.imem.valid := true.B
 
-  val if_instruction = Wire(UInt(32.W))
-  if_instruction := io.imem.instruction
-  // fetch the instruction
+  val pcPlusFourIF = Wire(UInt(32.W))
+  pcPlusFourIF := (regPc + 4.U)
 
-  // make it valid
-  //TODO: add support for stall
-  if_id.io.valid := true.B
-
-  //TODO: support for jumps and branches
-  reg_pc := MuxCase(pc_plus_four, Array(
-    (controller.io.output.PC_isBranch) -> br_target,
-    (controller.io.output.PC_isJump) -> j_target
-  ))
-
+  // when the result from instruction memory is good
   // pipe the instruction into the pipeline status register
-  if_id.io.pipeIn.data.instruction := if_instruction
-  if_id.io.pipeIn.data.pc := reg_pc
+  //TODO: add support for stall
+  when(io.imem.good) {
+    ifToId.io.valid := true.B
+    ifToId.io.pipeIn.data.instruction := io.imem.instruction
+    ifToId.io.pipeIn.data.nextPc := pcPlusFourIF
+  }
+
+  //TODO: how does the PC register change?
+
+  // the branch target and jump target wires are connected from ID
+  // target for branching and jump
+  val brTarget = Wire(UInt(32.W))
+  val jTarget = Wire(UInt(32.W))
+  val isBranchToPC = Wire(Bool())
+  val isJumpToPC = Wire(Bool())
+
+  regPc := MuxCase(pcPlusFourIF, Array(
+    (isBranchToPC) -> brTarget,
+    (isJumpToPC) -> jTarget
+  ))
+  //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   // -----------------------------instruction decode--------------------
   //---------------------------------------------------------------------------------
+  //---------------------------------------------------------------------------------
 
-  val id_instruction = Wire(UInt(32.W))
-  val pc_plus_four = Wire(UInt(32.W))
-  id_instruction := if_id.io.pipeOut.data.instruction
-  pc_plus_four := if_id.io.pipeOut.data.pc + 4.U
+  // wire for the instruction
+  val instructionID = Wire(UInt(32.W))
+  // wire for the next PC
+  val pcPlusFourID = Wire(UInt(32.W))
+
+  // assign the wires from the state registers
+  instructionID := ifToId.io.pipeOut.data.instruction
+  pcPlusFourID := ifToId.io.pipeOut.data.nextPc
+
   // set up all the immediate
-  //TODO: delete the unused ones
-  val rs_address = id_instruction(25,21)
-  val rt_address = id_instruction(20,16)
-  val rd_address = id_instruction(15,11)
-  val immediate = id_instruction(15,0)
-  val address = id_instruction(25,0)
-  val extendedImmediateData = Cat(Fill(16,immediate(15)),immediate)
-  val extendedImmediateAddr = Cat(Fill(14,immediate(15)), Cat(immediate, Fill(2,0.U)))
+  val rsAddressID = instructionID(25, 21)
+  val rtAddressID = instructionID(20, 16)
+  val rdAddressID = instructionID(15, 11)
+  val immediateID = instructionID(15, 0)
+  val addressID = instructionID(25, 0)
+  // the immediate for an ALU operation
+  // extend the address for a branch operation
+  val extendedImmediateAddrID = Cat(Fill(14, immediateID(15)), Cat(immediateID, Fill(2, 0.U)))
 
-  controller.io.input.instr := id_instruction
-    
-  val br_target = Wire(UInt(32.W))
-  val j_target = Wire(UInt(32.W))
-
+  // feed the instruction into the controller
+  controller.io.input.instr := instructionID
 
   // decide the next PC
   // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
-  j_target := Cat(reg_pc(31,28),address,Fill(2,0.U))
-  br_target := extendedImmediateAddr + pc_plus_four
+  jTarget := Cat(pcPlusFourID(31, 28), addressID, Fill(2, 0.U))
+  brTarget := pcPlusFourID + extendedImmediateAddrID
 
   // initialize the wire for write back data
-  val wb_data = Wire(UInt(32.W))
-  regFile.io.rs1Addr := rs_address
-  regFile.io.rs2Addr := rt_address
-  regFile.io.writeAddr := Mux(controller.io.output.DstRegSelect, rd_address, rt_address)
-  regFile.io.writeData := wb_data
-  regFile.io.writeEnable := controller.io.output.WBEnable
+  // this wire should be assigned at the write back stage
+  val wbDataToReg = Wire(UInt(32.W))
+  val wbEnableToReg = Wire(Bool())
+  val dstRegSelectToReg = Wire(Bool())
+  val rtAddrToReg = Wire(UInt(5.W))
+  val rdAddrToReg = Wire(UInt(5.W))
+  regFile.io.rs1Addr := rsAddressID
+  regFile.io.rs2Addr := rtAddressID
+  regFile.io.writeData := wbDataToReg
+  regFile.io.writeAddr := Mux(dstRegSelectToReg, rdAddrToReg, rtAddrToReg)
+  regFile.io.writeEnable := wbEnableToReg
 
-  val valRS = Wire(UInt(32.W))
-  val valRT = Wire(UInt(32.W))
-  valRS := regFile.io.rs1Data
-  valRT := regFile.io.rs2Data
+  branchUnit.io.input.regRs := regFile.io.rs1Data
+  branchUnit.io.input.regRt := regFile.io.rs2Data
+  branchUnit.io.input.branchOp := controller.io.output.BranchOp
 
+  isBranchToPC :=  (controller.io.output.PC_isBranch & branchUnit.io.output.branchTake)
+  isJumpToPC := controller.io.output.PC_isJump
+
+  // pipe the values to the state registers
+  //TODO: when is this not valid
+
+
+  idToEx.io.valid := true.B
+
+  // here are the data values
+  idToEx.io.pipeIn.data.valRs := regFile.io.rs1Data
+  idToEx.io.pipeIn.data.valRt := regFile.io.rs2Data
+  idToEx.io.pipeIn.data.immediate := immediateID
+
+  idToEx.io.pipeIn.data.rtAddr := rtAddressID
+  idToEx.io.pipeIn.data.rdAddr := rdAddressID
+
+
+  // here are the control signals
+  // -----------------------------execute stage--------------------------
+  idToEx.io.pipeIn.control.opBSelect := controller.io.output.OpBSelect
+  idToEx.io.pipeIn.control.aluOp := controller.io.output.AluOp
+  // -----------------------------memory stage--------------------------
+  idToEx.io.pipeIn.control.memMask := controller.io.output.MemMask
+  idToEx.io.pipeIn.control.memSext := controller.io.output.MemSext
+  idToEx.io.pipeIn.control.memWriteEnable := controller.io.output.MemWriteEnable
+  idToEx.io.pipeIn.control.wBSelect := controller.io.output.WBSelect
+  // -----------------------------write back stage--------------------------
+  idToEx.io.pipeIn.control.dstRegSelect := controller.io.output.DstRegSelect
+  idToEx.io.pipeIn.control.wBEnable := controller.io.output.WBEnable
+
+  //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   // -----------------execute stage----------------------
   //---------------------------------------------------------------------------------
-  alu.io.input.inputA := valRS
+  //---------------------------------------------------------------------------------
+
+  // create the wires for reading from last pipeline registers
+  val valRsEX = Wire(UInt(32.W))
+  val valRtEX = Wire(UInt(32.W))
+  val immediateEX = Wire(UInt(16.W))
+  val opBSelectEx = Wire(Bool())
+  val aluOpEx = Wire(UInt(3.W))
+
+  // inherit the data from ID stage
+  valRsEX := idToEx.io.pipeOut.data.valRs
+  valRtEX := idToEx.io.pipeOut.data.valRt
+  immediateEX := idToEx.io.pipeOut.data.immediate
+
+  // get the control signals passed in
+  opBSelectEx := idToEx.io.pipeOut.control.opBSelect
+  aluOpEx := idToEx.io.pipeOut.control.aluOp
+
+  // get the immediate reday
+  val extendedImmediateData = Cat(Fill(16, immediateEX(15)), immediateEX)
+
+  alu.io.input.inputA := valRsEX
   // if OpBSelect is true, select rb; otherwise select sign extended immediate
-  alu.io.input.inputB := Mux(controller.io.output.OpBSelect, valRT, extendedImmediateData)
-  alu.io.input.aluOp := controller.io.output.AluOp
+  alu.io.input.inputB := Mux(opBSelectEx, valRtEX, extendedImmediateData)
+  alu.io.input.aluOp := aluOpEx
 
-  val aluOutput = Wire(UInt(32.W))
-  aluOutput := alu.io.output.aluOutput
+  val aluOutputEx = Wire(UInt(32.W))
+  aluOutputEx := alu.io.output.aluOutput
 
+
+  // pipe in to the pipeline registers
+  exToMem.io.valid := true.B
+
+  // here are the data values to pipe in
+  exToMem.io.pipeIn.data.aluOutput := aluOutputEx
+  exToMem.io.pipeIn.data.writeData := valRtEX
+  exToMem.io.pipeIn.data.rdAddr := idToEx.io.pipeOut.data.rdAddr
+  exToMem.io.pipeIn.data.rtAddr := idToEx.io.pipeOut.data.rtAddr
+
+  // pass along the control signals
+  //--------------------------memory stage--------------------------
+  exToMem.io.pipeIn.control.memMask := idToEx.io.pipeOut.control.memMask
+  exToMem.io.pipeIn.control.memSext := idToEx.io.pipeOut.control.memSext
+  exToMem.io.pipeIn.control.memWriteEnable := idToEx.io.pipeOut.control.memWriteEnable
+  exToMem.io.pipeIn.control.wBSelect := idToEx.io.pipeOut.control.wBSelect
+  //--------------------------write back stage--------------------------
+  exToMem.io.pipeIn.control.dstRegSelect := idToEx.io.pipeOut.control.dstRegSelect
+  exToMem.io.pipeIn.control.wBEnable := idToEx.io.pipeOut.control.wBEnable
+
+  //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   // -------------------------memory stage---------------------
   //---------------------------------------------------------------------------------
-  io.dmem.address := aluOutput
-  io.dmem.writedata := valRT
-  io.dmem.memread := controller.io.output.WBSelect
-  io.dmem.memwrite := controller.io.output.MemWriteEnable
-  //TODO: a design choice:
-  // if we are piping Op code through all stages, then there isn't any need for Masks
-  // However, if we are not piping op code through, then we definitely need a control signal
-  io.dmem.maskmode := controller.io.output.MemMask
-  io.dmem.sext := controller.io.output.MemSext
-  // a valid interface
-  io.dmem.valid := true.B
-  //TODO: add a big mux to avoid waiting, though we can avoid this
-  // in pipeline?
-  val readData = Wire(UInt(32.W))
-  readData := io.dmem.readdata
-  wb_data := Mux((controller.io.output.WBSelect),readData, aluOutput)
+  //---------------------------------------------------------------------------------
+
+  // initialze the wires
+  // data wire
+  val aluOutputMem = Wire(UInt(32.W))
+  val writeDataMem = Wire(UInt(32.W))
+  // control signal wires
+  val memMask = Wire(UInt(2.W))
+  val memSext = Wire(Bool())
+  val memWriteEnable = Wire(Bool())
+  val wBSelect = Wire(Bool())
+
+  // pass the signals and values
+  aluOutputMem := exToMem.io.pipeOut.data.aluOutput
+  writeDataMem := exToMem.io.pipeOut.data.writeData
+  memMask := exToMem.io.pipeOut.control.memMask
+  memSext := exToMem.io.pipeOut.control.memSext
+  memWriteEnable := exToMem.io.pipeOut.control.memWriteEnable
+  wBSelect := exToMem.io.pipeOut.control.wBSelect
+
+  io.dmem.address := aluOutputMem
+  io.dmem.writedata := writeDataMem
+  // when I am selecting the mem read value to perform
+  // a write back, I'm doing a write back
+  // when I am selecting alu output to perform a write back
+  // then I'm not writing back, as I can't do anything with
+  // it
+  io.dmem.memread := wBSelect
+  io.dmem.memwrite := memWriteEnable
+  io.dmem.maskmode := memMask
+  io.dmem.sext := memSext
+
+  // make it valid if I'm either reading or writing
+  io.dmem.valid := (memWriteEnable | wBSelect)
+
+  //TODO: make this more efficient, don't pass in values when
+  // neither reading or writing
+  val wbDataMem = Wire(UInt(32.W))
+  when(wBSelect && io.dmem.good) {
+    // If I'm doing a read, write back memory
+    wbDataMem := io.dmem.readdata
+  }.otherwise {
+    // otherwise, write back alu
+    wbDataMem := aluOutputMem
+  }
+
+  // pass the signals and data to the pipeline registers
+  memToWb.io.valid := true.B
+
+  // pipe in the data values
+  memToWb.io.pipeIn.data.wbData := wbDataMem
+  memToWb.io.pipeIn.data.rtAddr := exToMem.io.pipeOut.data.rtAddr
+  memToWb.io.pipeIn.data.rdAddr := exToMem.io.pipeOut.data.rdAddr
+
+
+  // pipe in the control signals
+  memToWb.io.pipeIn.control.dstRegSelect := exToMem.io.pipeOut.control.dstRegSelect
+  memToWb.io.pipeIn.control.wBEnable := exToMem.io.pipeOut.control.wBEnable
+
+  //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   //---------------write back stage-----------------------
   //---------------------------------------------------------------------------------
+  //---------------------------------------------------------------------------------
 
+  wbDataToReg := memToWb.io.pipeOut.data.wbData
+  rdAddrToReg := memToWb.io.pipeOut.data.rdAddr
+  rtAddrToReg := memToWb.io.pipeOut.data.rtAddr
+  wbEnableToReg := memToWb.io.pipeOut.control.wBEnable
+  dstRegSelectToReg := memToWb.io.pipeOut.control.dstRegSelect
 
 }

@@ -37,8 +37,9 @@ abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
   io.imem.response <> 0.U.asTypeOf(Valid (new Response))
   io.dmem.response <> 0.U.asTypeOf(Valid (new Response))
 
-  //TODO: change this to syncmem?
-  //NOTICE: directly changing this to syncreadmem won't work
+  // change this to syncreadmem doesn't work with single cycle
+  // because the data will always be returned on the second cycle
+  // so essentially everything you see is a cycle late
   // need some work on the interface
   val physicalMem = Mem(math.ceil(size.toDouble/4).toInt, UInt(32.W))
   // load hex mem

@@ -7,11 +7,12 @@ import cpu.components.{BaseCPU, Controller, RegisterFile, _}
 
 class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
   // initialize all the modules
+  // sequentially
   val reg_pc = RegInit(0.U(32.W))
   val controller = Module(new Controller)
   val regFile = Module(new RegisterFile)
-  val alu = Module(new ALU)
   val branchUnit = Module(new BranchUnit)
+  val alu = Module(new ALU)
 
   //-------------------------------instruction fetch---------------------------
   // a decoupled interface
