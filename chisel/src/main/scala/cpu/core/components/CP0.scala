@@ -102,7 +102,7 @@ class CP0 extends Module {
   )
 
   cause := Cat(
-    /* 31     BD  */  except && io.inDelaySlot,
+    /* 31     BD  */  Mux(except, io.inDelaySlot, cause(31)),
     /* 30     TI  */  0.U(1.W),
     /* 29:16  0   */  0.U(14.W),
     /* 15:10  IP7...IP2 */ io.intr,
