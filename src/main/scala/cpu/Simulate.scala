@@ -160,7 +160,7 @@ object simulate {
     // Simulate until the pc is the "endPC" or until max cycles has been reached
     println("Running...")
     // print the pc initial position
-//    println(s"the position of the initial PC is ${simulator.peek("cpu.reg_pc")}")
+    //    println(s"the position of the initial PC is ${simulator.peek("cpu.regPc")}")
 
 
 //  memory peek helper
@@ -179,7 +179,7 @@ object simulate {
       // this is becasue PC is updated at the end of every cycle
 
       // print pc position
-//      println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
+      //      println(s"pc position is at ${simulator.peek("cpu.regPc")}")
       // print loaded instruction
 //      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
       // print alu signals
