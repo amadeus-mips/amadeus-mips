@@ -91,6 +91,10 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   instructionID := ifToID.io.pipeOut.data.instruction
   pcPlusFourID := ifToID.io.pipeOut.data.nextPc
 
+  //hazard control unit input here
+  hazard.io.input.idRs := rsAddressID
+  hazard.io.input.idRt := rtAddressID
+  hazard.io.input.idIsJump := controller.io.output.pcIsJump
 
   // set up all the immediate
   val rsAddressID = instructionID(25, 21)
@@ -125,10 +129,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   regFile.io.writeData := wbDataToReg
   regFile.io.writeAddr := wbAddrToReg
 
-  //hazard control unit input here
-  hazard.io.input.idRs := rsAddressID
-  hazard.io.input.idRt := rtAddressID
-  hazard.io.input.idIsJump := controller.io.output.pcIsJump
+
 
   idToEX.io.valid := true.B
   idToEX.io.flush := hazard.io.output.idEXFlush
@@ -179,6 +180,10 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   regRtEX := idToEX.io.pipeOut.data.regRt
   dstRegEX := idToEX.io.pipeOut.data.regDst
 
+
+  hazard.io.input.idEXDstReg := dstRegEX
+  hazard.io.input.idEXMemread := memReadEX
+
   // bypassing unit
   bypass.io.input.idEXRs := regRsEX
   bypass.io.input.idEXRt := regRtEX
@@ -213,8 +218,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   aluOutputEx := alu.io.output.aluOutput
   isBranchEx := idToEX.io.pipeOut.control.isBranch
 
-  hazard.io.input.idEXDstReg := dstRegEX
-  hazard.io.input.idEXMemread := memReadEX
 
   // pipe in to the pipeline registers
   exToMEM.io.valid := true.B
@@ -302,6 +305,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
+  memToWB.io.flush := false.B
 
   // pipe in the data values
   memToWB.io.pipeIn.data.wbData := wbDataMem
@@ -321,8 +325,32 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   bypass.io.input.memWBRegDst := wbAddrToReg
   bypass.io.input.memWBRegWriteEnable := wbEnableToReg
 
-  wbEnableToReg := memToWB.io.pipeOut.control.wbEnable
+  // preventing writing to register zero
+  wbEnableToReg := (memToWB.io.pipeOut.control.wbEnable && (wbAddrToReg =/= 0.U))
   wbDataToReg := memToWB.io.pipeOut.data.wbData
   wbAddrToReg := memToWB.io.pipeOut.data.regDst
 
+}
+
+object PipelinedCPUInfo {
+  def getModules(): List[String] = {
+    List(
+      "imem",
+      "dmem",
+      "controller",
+      "regFile",
+      "alu",
+      "bypass",
+      "hazard",
+    )
+  }
+
+  def getPipelineRegs(): List[String] = {
+    List(
+    "ifToID",
+    "idToEX",
+    "exToMEM",
+    "memToWB",
+    )
+  }
 }
