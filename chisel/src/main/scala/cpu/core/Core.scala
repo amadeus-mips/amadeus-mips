@@ -95,8 +95,8 @@ class Core extends Module {
   cp0.io.addr := id_exe.io.out.imm26(15, 11)
   cp0.io.sel := id_exe.io.out.imm26(2,0)
   cp0.io.except <> memoryTop.io.except
-  cp0.io.inDelaySlot := memoryTop.io.inDelaySlot
-  cp0.io.pc := id_exe.io.out.pc
+  cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
+  cp0.io.pc := exe_mem.io.out.pc
   cp0.io.badAddr := memoryTop.io.badAddr
 
   hilo.io.in := mem_wb.io.out.hilo
