@@ -35,12 +35,12 @@ class StageRegister[+T <: Data](private val gen: T) extends Module {
   // initialze the register to 0
   val register = RegInit(0.U.asTypeOf(gen))
   // pipe the register to the output regardless
-  io.pipeIn := register
+  io.pipeOut := register
 
   // when the input io is valid, register becomes io.valIn
   // when not, register holds its value
   when (io.valid) {
-    register := io.pipeOut
+    register := io.pipeIn
   }
   // when flush, reset the register value back to 0
   // note: flush precedes valid signal

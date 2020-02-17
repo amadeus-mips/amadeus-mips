@@ -107,21 +107,22 @@ object simulate {
 
     // Get the name for the hex file
     // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/../testMemFile/branch/branch.txt"
+    val hexName = optionsManager.targetDirName + "/../testMemFile/arithmetic/a.txt"
 //    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
 //    println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
     val conf = new CPUConfig()
 
 //    val params = args(1).split(":")
-    // pin the cpu type to single cycle
-    val cpuType = "single-cycle"
 //    val cpuType =
 //      if (params.length == 2) {
 //        "pipelined-bp"
 //      } else {
 //        params(0)
 //      }
+
+    // pin the cpu type to single cycle
+    val cpuType = "pipelined"
 //
 //    val predictor =
 //      if (params.length == 2) {
@@ -154,12 +155,12 @@ object simulate {
     // This is the actual simulation
 
     var cycles = 0
-    val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 2000000
+    val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
 //    val maxCycles = 2000000
     // Simulate until the pc is the "endPC" or until max cycles has been reached
     println("Running...")
     // print the pc initial position
-    println(s"the position of the initial PC is ${simulator.peek("cpu.reg_pc")}")
+//    println(s"the position of the initial PC is ${simulator.peek("cpu.reg_pc")}")
 
 
 //  memory peek helper
@@ -170,7 +171,7 @@ object simulate {
 
 
     // simulate until the max cycles are reached or the pc reaches the end pc
-    while (simulator.peek("cpu.reg_pc") != endPC && cycles < maxCycles) {
+    while (simulator.peek("cpu.regPc") != endPC && cycles < maxCycles) {
 
 
       // for small simulation, print pc every cycle
@@ -178,9 +179,9 @@ object simulate {
       // this is becasue PC is updated at the end of every cycle
 
       // print pc position
-      println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
+//      println(s"pc position is at ${simulator.peek("cpu.reg_pc")}")
       // print loaded instruction
-      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
+//      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
       // print alu signals
 //      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
 //      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
@@ -216,7 +217,7 @@ object simulate {
     // reg files will not "poke" correctly on the same cycle
     //TODO: bridge an interface between simulation results and results from an actual simulator
     println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (!(simulator.peek("cpu.regFile.regs_10") == 20)) {
+    if (!(simulator.peek("cpu.regFile.regs_10") == 26)) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")

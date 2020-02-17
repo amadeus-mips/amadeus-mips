@@ -91,17 +91,17 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   instructionID := ifToID.io.pipeOut.data.instruction
   pcPlusFourID := ifToID.io.pipeOut.data.nextPc
 
-  //hazard control unit input here
-  hazard.io.input.idRs := rsAddressID
-  hazard.io.input.idRt := rtAddressID
-  hazard.io.input.idIsJump := controller.io.output.pcIsJump
-
   // set up all the immediate
   val rsAddressID = instructionID(25, 21)
   val rtAddressID = instructionID(20, 16)
   val rdAddressID = instructionID(15, 11)
   val immediateID = instructionID(15, 0)
   val addressID = instructionID(25, 0)
+
+  //hazard control unit input here
+  hazard.io.input.idRs := rsAddressID
+  hazard.io.input.idRt := rtAddressID
+  hazard.io.input.idIsJump := controller.io.output.pcIsJump
 
   //TODO: change this to opcode
   // feed the instruction into the controller

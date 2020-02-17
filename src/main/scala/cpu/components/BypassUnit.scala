@@ -54,7 +54,6 @@ class BypassUnit extends Module{
     val input = new BypassUnitIn
     val output = new BypassUnitOut
   })
-
   //----------------------------------------------------------------------------------------
   // ALU bypass and Branch Bypass
   //----------------------------------------------------------------------------------------
@@ -73,11 +72,11 @@ class BypassUnit extends Module{
   // note : search in the result directly from exe-mem first
   // you should also exclude register zero in the hazard detection unit
   when ((io.input.idEXRt === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
-    io.output.forwardALUOpA := 1.U
+    io.output.forwardALUOpB := 1.U
   }.elsewhen ((io.input.idEXRt === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable ) {
-    io.output.forwardALUOpA := 2.U
+    io.output.forwardALUOpB := 2.U
   }.otherwise {
-    io.output.forwardALUOpA := 0.U
+    io.output.forwardALUOpB := 0.U
   }
 
   //----------------------------------------------------------------------------------------

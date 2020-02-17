@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 
 object ALUTypes {
-  val nop :: add :: sub :: and :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil = Enum(11)
+  val nop :: add :: sub :: and :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil = Enum(10)
 }
 
 class ALUIn extends Bundle {
@@ -33,6 +33,9 @@ class ALU extends Module {
     val input = new ALUIn
     val output = new ALUOut
   })
+
+  io.output.aluOutput := io.input.inputA
+  io.output.branchTake := false.B
 
   // omitting nop and passthrough, as they are the default: input A
   io.output.aluOutput := MuxLookup(io.input.aluOp, io.input.inputA,Array(

@@ -52,7 +52,9 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU{
 
   branchUnit.io.input.regRs := valRS
   branchUnit.io.input.regRt := valRT
-  branchUnit.io.input.branchOp := controller.io.output.branchOp
+//  temporary comment to test pipelined processor
+//  TODO: remove this2
+//  branchUnit.io.input.branchOp := controller.io.output.branchOp
 
   val br_target = Wire(UInt(32.W))
   val j_target = Wire(UInt(32.W))

@@ -4,6 +4,7 @@ import java.io.File
 import cpu.components._
 import cpu.memory._
 import cpu.singleCycle.SingleCycleCPU
+import cpu.pipelined.PipelinedCPU
 /**
   * This class configures all of the dinocpus. It takes parameters for the type of CPU model
   * (e.g., single-cycle, five-cycle, etc.), and the memories to hook up.
@@ -11,7 +12,7 @@ import cpu.singleCycle.SingleCycleCPU
 class CPUConfig
 {
   /** The type of CPU to elaborate */
-  var cpuType = "single-cycle"
+  var cpuType = "pipelined"
 
   /** The type of branch predictor to use */
 //  var branchPredictor = "always-not-taken"
@@ -37,7 +38,7 @@ class CPUConfig
     implicit val conf = this
     cpuType match {
       case "single-cycle" => new SingleCycleCPU
-//      case "pipelined" => new PipelinedCPU
+      case "pipelined" => new PipelinedCPU
 //      case "pipelined-bp" => new PipelinedCPUBP
       case _ => throw new IllegalArgumentException("Must specify known CPU model")
     }
