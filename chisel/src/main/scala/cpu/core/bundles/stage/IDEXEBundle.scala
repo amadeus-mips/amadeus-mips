@@ -13,8 +13,8 @@ class IDEXEBundle extends Bundle {
   val op2 = UInt(dataLen.W)
   val write = new WriteControlBundle
   val cp0Control = new CPControlBundle
-  val except = Vec(exceptionTypeAmount, Bool())
+  val except = Vec(exceptAmount, Bool())
   val imm26 = UInt(26.W)
-  val pcPlus4 = UInt(addrLen.W)
+  val pc = UInt(addrLen.W)
   val inDelaySlot = Bool()
 }

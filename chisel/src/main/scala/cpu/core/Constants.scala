@@ -4,13 +4,13 @@ package cpu.core
 
 import chisel3._
 import common.Util
-import cpu.common.{DefaultConfig, DefaultWireLength, Instructions}
+import cpu.common.{CP0Constants, DefaultWireLength, Instructions}
 
 trait opConstants {
   // @formatter:off
   // 指令是否有效
   val Y       = true.B
-  val N       = true.B
+  val N       = false.B
 
   // OP1
   val OP1_RS    = 0.U(2.W)    // regfile
@@ -87,14 +87,20 @@ trait opConstants {
   val EXC_ER    = 45.U(opLen.W)   // eret 返回
   val EXC_BR    = 46.U(opLen.W)   // break 中断
 
-  /** judge if op is to load data from memory */
+  /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
     Util.listHasElement(List(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW), op)
   }
-  /** judge if op is branch. */
+  /** judge whether op is to save data to memory */
+  def opIsStore(op: UInt): Bool = {
+    Util.listHasElement(List(MEM_SB, MEM_SH, MEM_SW), op)
+  }
+  /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {
     Util.listHasElement(List(BR_EQ, BR_NE, BR_GTZ, BR_GEZ, BR_GEZAL, BR_LTZ, BR_LTZAL, BR_LEZ), op)
   }
+
+
 
   // 是否写regfile, Write Register
   val WR_Y      = true.B
@@ -117,19 +123,21 @@ trait opConstants {
 
 trait valueConstants {
   val startPC = "hbfbffffc".U(32.W)
+  val exceptPC = "hbfc00380".U(32.W)
   val zeroWord = 0.U(32.W)
   val GPR31 = "b11111".U(5.W)
 }
 
 trait exceptConstants {
-  val EXCEPT_IF = 0
+  val EXCEPT_FETCH = 0
   val EXCEPT_ERET = 1
   val EXCEPT_INST_INVALID = 2
   val EXCEPT_BREAK = 3
   val EXCEPT_SYSCALL = 4
   val EXCEPT_OVERFLOW = 5
   val EXCEPT_LOAD = 6
-  val EXCEPT_SAVE = 7
+  val EXCEPT_STORE = 7
+  val EXCEPT_INTR = 8
 }
 
 object Constants extends
@@ -137,6 +145,7 @@ object Constants extends
   exceptConstants with
   Instructions with
   DefaultWireLength with
-  valueConstants {
+  valueConstants with
+  CP0Constants {
 
 }

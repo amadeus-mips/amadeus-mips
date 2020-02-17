@@ -10,7 +10,7 @@ class Memory extends Module {
   val io = IO(new Bundle {
     val op1 = Input(UInt(dataLen.W))
     val op2 = Input(UInt(dataLen.W))
-    val imm26 = Input(UInt(26.W))
+    val imm16 = Input(UInt(16.W))
     val operation = Input(UInt(opLen.W))
 
     val memAddr = Output(UInt(addrLen.W))
@@ -18,8 +18,8 @@ class Memory extends Module {
     val exceptSave = Output(Bool())
   })
 
-  val offset = Util.signedExtend(io.imm26)  // extend to 32bits
-  val memAddr = io.op1 + io.imm26
+  val offset = Util.signedExtend(io.imm16)  // extend to 32bits
+  val memAddr = io.op1 + offset
   io.memAddr := memAddr
 
   /** Exception caused by address not alignment */

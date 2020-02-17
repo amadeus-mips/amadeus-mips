@@ -6,6 +6,7 @@ import chisel3._
 import chisel3.util.{Cat, MuxLookup, ValidIO}
 import common.Util.signedExtend
 import cpu.core.Constants._
+import cpu.core.bundles.ValidBundle
 
 class Branch extends Module {
   val io = IO(new Bundle {
@@ -14,7 +15,7 @@ class Branch extends Module {
     val operation = Input(UInt(opLen.W))
     val imm26 = Input(UInt(26.W))
     val pcPlus4 = Input(UInt(addrLen.W))
-    val branch = Output(new ValidIO(UInt(addrLen.W)))
+    val branch = Output(new ValidBundle)
   })
 
   val imm16 = io.imm26(15, 0)
@@ -45,7 +46,7 @@ class Branch extends Module {
       BR_JR -> io.op1,
       BR_JALR -> io.op1,
       BR_J -> JTarget,
-      BR_JR -> JTarget
+      BR_JAL -> JTarget
     )
   )
 

@@ -1,7 +1,6 @@
+package cpu.core.pipeline.stage
 
-package cpu.core.pipeline
-
-import chisel3._
+import chisel3.Driver
 
 object IFIDMain extends App {
   // Vivado 不认识非ASCII码，因此去掉了toString方法产生的"$@"

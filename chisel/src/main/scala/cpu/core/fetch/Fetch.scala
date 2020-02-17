@@ -5,6 +5,7 @@ package cpu.core.fetch
 import chisel3._
 import chisel3.util.ValidIO
 import cpu.core.Constants._
+import cpu.core.bundles.ValidBundle
 import cpu.core.bundles.stage.IFIDBundle
 
 class Fetch extends Module {
@@ -15,12 +16,10 @@ class Fetch extends Module {
     val flushPC = Input(UInt(addrLen.W))
 
     // from id module
-    val branchFlag = Input(Bool())
-    val branchTarget = Input(UInt(addrLen.W))
+    val branch = Input(new ValidBundle)
 
     // from ram
-    val inst = Input(UInt(dataLen.W))
-    val instValid = Input(Bool())
+    val inst = Input(new ValidBundle)
 
     // to IFID
     val out = Output(new IFIDBundle)
@@ -36,7 +35,7 @@ class Fetch extends Module {
   val instFetchExcept = RegInit(false.B)
 
   val pc = RegInit({
-    val bundle = Wire(new ValidIO(UInt(dataLen.W)))
+    val bundle = Wire(new ValidBundle)
     bundle.bits := startPC
     bundle.valid := false.B
     bundle
@@ -46,7 +45,7 @@ class Fetch extends Module {
    * 是否需要暂停流水线，
    * 若pc有效但指令无效则请求暂停流水线
    */
-  val stallReq = pc.valid && !io.instValid
+  val stallReq = pc.valid && !io.inst.valid
 
   /**
     * 流水线是否被<b>其它模块</b>暂停
@@ -65,11 +64,11 @@ class Fetch extends Module {
   val useIBuffer = RegInit(false.B)
 
   useIBuffer := stalledByOthers
-  instBuffer := Mux(stalledByOthers && !useIBuffer, io.inst, instBuffer)
+  instBuffer := Mux(stalledByOthers && !useIBuffer, io.inst.bits, instBuffer)
 
   io.out.instFetchExcept := instFetchExcept
   io.out.pc := pc.bits
-  io.out.inst := Mux(useIBuffer, instBuffer, io.inst)
+  io.out.inst := Mux(useIBuffer, instBuffer, io.inst.bits)
   io.outPCValid := pc.valid
   io.outStallReq := stallReq
 
@@ -90,9 +89,9 @@ class Fetch extends Module {
   }.elsewhen(!io.stall(0)) {
     // 流水线未暂停，pc+=4，或为跳转指令指定的pc
     // 非跳转指令默认不会产生指令地址未对齐异常
-    pc.bits := Mux(io.branchFlag, io.branchTarget, pc.bits + 4.U)
-    pc.valid := !io.branchFlag || !addressMisalignment(io.branchTarget)
-    instFetchExcept := io.branchFlag && addressMisalignment(io.branchTarget)
+    pc.bits := Mux(io.branch.valid, io.branch.bits, pc.bits + 4.U)
+    pc.valid := !io.branch.valid || !addressMisalignment(io.branch.bits)
+    instFetchExcept := io.branch.valid && addressMisalignment(io.branch.bits)
   }.otherwise {
     // 流水线被暂停
     pc.bits := pc.bits

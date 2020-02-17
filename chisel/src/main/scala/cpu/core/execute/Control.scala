@@ -12,7 +12,7 @@ class Control extends Module {
     val instType = Input(UInt(instTypeLen.W))
     val inWrite = Input(new WriteControlBundle)
     val pcPlus4 = Input(UInt(addrLen.W))
-    val inExcept = Input(Vec(exceptionTypeAmount, Bool()))
+    val inExcept = Input(Vec(exceptAmount, Bool()))
 
     val aluResult = Input(UInt(dataLen.W))
     val aluOverflow = Input(Bool())
@@ -23,13 +23,13 @@ class Control extends Module {
     val moveResult = Input(UInt(dataLen.W))
 
     val outWrite = Output(new WriteBundle())
-    val outExcept = Output(Vec(exceptionTypeAmount, Bool()))
+    val outExcept = Output(Vec(exceptAmount, Bool()))
   })
 
   io.outExcept <> io.inExcept
   io.outExcept(EXCEPT_OVERFLOW) := io.aluOverflow
   io.outExcept(EXCEPT_LOAD) := io.exceptLoad
-  io.outExcept(EXCEPT_SAVE) := io.exceptSave
+  io.outExcept(EXCEPT_STORE) := io.exceptSave
 
   io.outWrite.control <> io.inWrite
   when(io.aluOverflow || io.exceptSave || io.exceptLoad){ io.outWrite.control.enable := false.B}

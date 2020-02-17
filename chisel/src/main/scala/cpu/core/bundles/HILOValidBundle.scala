@@ -10,8 +10,8 @@ import cpu.core.Constants._
  * hi and lo are ValidIO
  */
 class HILOValidBundle extends Bundle {
-  val hi = new ValidIO(UInt(dataLen.W))
-  val lo = new ValidIO(UInt(dataLen.W))
+  val hi = new ValidBundle
+  val lo = new ValidBundle
 }
 
 /**

@@ -42,7 +42,7 @@ class Control extends Module {
       // 移位
       SLLV      -> List(Y , OP1_RS , OP2_RS , INST_ALU, ALU_SLL , WR_Y  , WRA_T1 , IMM_N  ),
       SRLV      -> List(Y , OP1_RS , OP2_RS , INST_ALU, ALU_SRL , WR_Y  , WRA_T1 , IMM_N  ),
-      SRAV      -> List(Y , OP1_RS , OP2_RS , INST_ALU, ALU_SRL , WR_Y  , WRA_T1 , IMM_N  ),
+      SRAV      -> List(Y , OP1_RS , OP2_RS , INST_ALU, ALU_SRA , WR_Y  , WRA_T1 , IMM_N  ),
       SLL       -> List(Y , OP1_IMM, OP2_RS , INST_ALU, ALU_SLL , WR_Y  , WRA_T1 , IMM_SHT),
       SRL       -> List(Y , OP1_IMM, OP2_RS , INST_ALU, ALU_SRL , WR_Y  , WRA_T1 , IMM_SHT),
       SRA       -> List(Y , OP1_IMM, OP2_RS , INST_ALU, ALU_SRA , WR_Y  , WRA_T1 , IMM_SHT),

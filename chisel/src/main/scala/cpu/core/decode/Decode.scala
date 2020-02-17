@@ -21,7 +21,7 @@ class Decode extends Module {
     val write = Output(new WriteControlBundle)
     val cp0Control = Output(new CPControlBundle)
     val nextInstInDelaySlot = Output(Bool()) // ^
-    val except = Output(Vec(exceptionTypeAmount, Bool()))
+    val except = Output(Vec(exceptAmount, Bool()))
   })
 
   val rt = io.inst(20, 16)
@@ -68,8 +68,8 @@ class Decode extends Module {
 
   io.nextInstInDelaySlot := io.signal.instType === INST_BR
 
-  io.except := 0.U(exceptionTypeAmount.W).asBools()
-  io.except(EXCEPT_IF) := io.instFetchExc
+  io.except := 0.U(exceptAmount.W).asBools()
+  io.except(EXCEPT_FETCH) := io.instFetchExc
   io.except(EXCEPT_ERET) := io.signal.operation === EXC_ER
   io.except(EXCEPT_BREAK) := io.signal.operation === EXC_BR
   io.except(EXCEPT_SYSCALL) := io.signal.operation === EXC_SC

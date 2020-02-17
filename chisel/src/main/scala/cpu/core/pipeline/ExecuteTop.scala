@@ -69,12 +69,12 @@ class ExecuteTop extends Module {
 
   memory.io.op1 := io.in.op1
   memory.io.op2 := io.in.op2
-  memory.io.imm26 := io.in.imm26
+  memory.io.imm16 := io.in.imm26(15,0)
   memory.io.operation := io.in.operation
 
   control.io.instType := io.in.instType
   control.io.inWrite <> io.in.write
-  control.io.pcPlus4 := io.in.pcPlus4
+  control.io.pcPlus4 := io.in.pc + 4.U
   control.io.inExcept := io.in.except
 
   control.io.aluResult := alu.io.result
@@ -84,11 +84,12 @@ class ExecuteTop extends Module {
   control.io.moveResult := move.io.result
 
   io.out.write <> control.io.outWrite
+  io.out.operation := io.in.operation
   io.out.cp0 <> writeOther.io.outCP0
   io.out.hilo <> writeOther.io.outHILO
   io.out.inDelaySlot := io.in.inDelaySlot
   io.out.except <> control.io.outExcept
-  io.out.pcPlus4 := io.in.pcPlus4
+  io.out.pc := io.in.pc
   io.out.memAddr := memory.io.memAddr
   io.out.memData := io.in.op2
   io.stallReq := writeOther.io.stallReq

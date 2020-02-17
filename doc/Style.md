@@ -16,6 +16,7 @@
 | exc | Exception | Such as address not alignment, signed add overflow |
 | in | Input ||
 | inst | Instruction ||
+| intr | Interrupt ||
 | len | Length ||
 | op | Operation | Used in Execute and Memory stage to determine how to execute. |
 | op1 | operator 1 ||
