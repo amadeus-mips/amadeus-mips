@@ -51,7 +51,7 @@ class IDEXDataBundle extends Bundle {
   val immediate = UInt(16.W)
 
   // register write address
-  val regWriteAddr = UInt(5.W)
+  val regDst = UInt(5.W)
 
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
@@ -63,7 +63,7 @@ class EXMEMDataBundle extends Bundle {
   val aluOutput = UInt(32.W)
   val writeData = UInt(32.W)
   // register write address
-  val regWriteAddr = UInt(5.W)
+  val regDst = UInt(5.W)
 }
 
 // io bundle for data path from memory stage to write
@@ -72,7 +72,7 @@ class MEMWBDataBundle extends Bundle {
   // actually, you can select which data to write at the memory stage
   val wbData = UInt(32.W)
   // register write address
-  val regWriteAddr = UInt(5.W)
+  val regDst = UInt(5.W)
 }
 
 // io bundle from instruction decode stage
@@ -87,6 +87,9 @@ class IDEXControlBundle extends Bundle {
 
   // what is the ALU OP
   val aluOp = Output(UInt(3.W))
+
+  // merge branch unit into ALU for managing complexity ( or bypassing wires go crazy )
+  val isBranch = Output(Bool())
 
   // -----------------------------memory stage--------------------------
 

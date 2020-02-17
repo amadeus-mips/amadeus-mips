@@ -16,7 +16,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val regPc = RegInit(0.U(32.W))
   val controller = Module(new Controller)
   val regFile = Module(new RegisterFile)
-  val branchUnit = Module(new BranchUnit)
   val alu = Module(new ALU)
 
   // initialize the pipeline stage registers
@@ -110,11 +109,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   regFile.io.writeData := wbDataToReg
   regFile.io.writeAddr := wbAddrToReg
 
-  branchUnit.io.input.regRs := regFile.io.rs1Data
-  branchUnit.io.input.regRt := regFile.io.rs2Data
-  branchUnit.io.input.branchOp := controller.io.output.branchOp
-
-  isBranchToPC :=  (controller.io.output.pcIsBranch & branchUnit.io.output.branchTake)
   isJumpToPC := controller.io.output.pcIsJump
 
   // pipe the values to the state registers
@@ -127,13 +121,14 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEX.io.pipeIn.data.valRs := regFile.io.rs1Data
   idToEX.io.pipeIn.data.valRt := regFile.io.rs2Data
   idToEX.io.pipeIn.data.immediate := immediateID
-  idToEX.io.pipeIn.data.regWriteAddr := Mux(controller.io.output.dstRegSelect, rdAddressID, rtAddressID)
+  idToEX.io.pipeIn.data.regDst := Mux(controller.io.output.dstRegSelect, rdAddressID, rtAddressID)
 
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
   idToEX.io.pipeIn.control.opBSelect := controller.io.output.opBSelect
   idToEX.io.pipeIn.control.aluOp := controller.io.output.aluOp
+  idToEX.io.pipeIn.control.isBranch := controller.io.output.pcIsBranch
   // -----------------------------memory stage--------------------------
   idToEX.io.pipeIn.control.memMask := controller.io.output.memMask
   idToEX.io.pipeIn.control.memSext := controller.io.output.memSext
@@ -173,8 +168,11 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   alu.io.input.aluOp := aluOpEx
 
   val aluOutputEx = Wire(UInt(32.W))
+  val isBranchEx = Wire(Bool())
   aluOutputEx := alu.io.output.aluOutput
+  isBranchEx := idToEX.io.pipeOut.control.isBranch
 
+  isBranchToPC :=  (isBranchEx & alu.io.output.branchTake)
 
   // pipe in to the pipeline registers
   exToMEM.io.valid := true.B
@@ -182,7 +180,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // here are the data values to pipe in
   exToMEM.io.pipeIn.data.aluOutput := aluOutputEx
   exToMEM.io.pipeIn.data.writeData := valRtEX
-  exToMEM.io.pipeIn.data.regWriteAddr := idToEX.io.pipeOut.data.regWriteAddr
+  exToMEM.io.pipeIn.data.regDst := idToEX.io.pipeOut.data.regDst
 
   // pass along the control signals
   //--------------------------memory stage--------------------------
@@ -249,7 +247,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // pipe in the data values
   memToWB.io.pipeIn.data.wbData := wbDataMem
-  memToWB.io.pipeIn.data.regWriteAddr := exToMEM.io.pipeOut.data.regWriteAddr
+  memToWB.io.pipeIn.data.regDst := exToMEM.io.pipeOut.data.regDst
 
 
   // pipe in the control signals
@@ -263,6 +261,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   wbEnableToReg := memToWB.io.pipeOut.control.wbEnable
   wbDataToReg := memToWB.io.pipeOut.data.wbData
-  wbAddrToReg := memToWB.io.pipeOut.data.regWriteAddr
+  wbAddrToReg := memToWB.io.pipeOut.data.regDst
 
 }

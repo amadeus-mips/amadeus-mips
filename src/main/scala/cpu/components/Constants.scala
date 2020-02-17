@@ -35,15 +35,12 @@ package cpu.components
     val ALU_ADD = 1.U
     val ALU_SUB = 2.U
     val ALU_AND = 3.U
-
-    // the branch ops
-    val BRANCH_CMP_X = 0.U
-    val BRANCH_CMP_EQ = 1.U
-    val BRANCH_CMP_N_EQ = 2.U
-    val BRANCH_CMP_GREATER_Z = 3.U
-    val BRANCH_CMP_GREATER_EQ_Z = 4.U
-    val BRANCH_CMP_LESS_Z = 5.U
-    val BRANCH_CMP_LESS_EQ_Z = 6.U
+    val ALU_CMP_EQ = 4.U
+    val ALU_CMP_N_EQ = 5.U
+    val ALU_CMP_GREATER_Z = 6.U
+    val ALU_CMP_GREATER_EQ_Z = 7.U
+    val ALU_CMP_LESS_Z = 8.U
+    val ALU_CMP_LESS_EQ_Z = 9.U
 
     // whether write to mem
     val MEM_WRITE_Y = true.B
