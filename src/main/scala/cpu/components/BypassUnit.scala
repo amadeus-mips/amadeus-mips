@@ -12,10 +12,9 @@ class BypassUnitIn extends Bundle {
   //----------------------------------------------------------------------------------------
   // ALU bypass
   //----------------------------------------------------------------------------------------
-  // rt and rd register from the ID output
-  // NOTE: this should connect directly rs and rs from the
+  // id to ex rs and rt
+  //TODO: pass along
   // if to id status register instruction
-  //TODO: pass this through in the pipelined implementation
   val idEXRs = Input(UInt(5.W))
   val idEXRt = Input(UInt(5.W))
 
@@ -64,7 +63,7 @@ class BypassUnit extends Module{
     val output = new BypassUnitOut
   })
   //----------------------------------------------------------------------------------------
-  // ALU bypass
+  // ALU bypass and Branch Bypass
   //----------------------------------------------------------------------------------------
   // this is the case where the register rs is the same as the register to write to in the alu output
   // the forward the alu output to substitute register rs
@@ -87,6 +86,7 @@ class BypassUnit extends Module{
   }.otherwise {
     io.output.forwardALUOpA := 0.U
   }
+
   //----------------------------------------------------------------------------------------
   // Memory bypass
   //----------------------------------------------------------------------------------------
@@ -100,28 +100,5 @@ class BypassUnit extends Module{
   }.otherwise {
     io.output.forwardMemWriteData := 0.U
   }
-
-
-
-  //----------------------------------------------------------------------------------------
-  // branching bypass
-  //----------------------------------------------------------------------------------------
-  // add $t2
-  // add $t3
-  // beq $t2, $t3
-  // need a stall on this case
-
-  // lw $t2
-  // lw $t3
-  // beq $t2, $t3
-  // need to stall 2 cycles in this case
-
-  // lw $t2
-  // add $t3
-  // beq $t2, $t3
-
-  // add $t2
-  // lw $t3
-  // beq $t2, $t3
 
 }

@@ -53,6 +53,8 @@ class IDEXDataBundle extends Bundle {
   // register write address
   val regDst = UInt(5.W)
 
+  val regRs = UInt(5.W)
+  val regRt = UInt(5.W)
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
 }
@@ -86,7 +88,7 @@ class IDEXControlBundle extends Bundle {
   val opBSelect = Output(Bool())
 
   // what is the ALU OP
-  val aluOp = Output(UInt(3.W))
+  val aluOp = Output(UInt(4.W))
 
   // merge branch unit into ALU for managing complexity ( or bypassing wires go crazy )
   val isBranch = Output(Bool())

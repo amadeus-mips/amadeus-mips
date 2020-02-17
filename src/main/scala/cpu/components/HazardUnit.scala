@@ -21,6 +21,11 @@ class HazardUnitIn extends Bundle {
   val idEXRd     = Input(UInt(5.W))
 }
 
+/**
+  * difference between a bubble and a flush:
+  * a bubble is a nop, does not destroy the data, only alter control
+  * flush flushes data and control
+  */
 class HazardUnitOut extends Bundle {
 
   /**
@@ -32,15 +37,14 @@ class HazardUnitOut extends Bundle {
   val pcWrite      = Output(UInt(3.W))
 
   // don't update ifID stage reg
-  val ifIDBubble  = Output(Bool())
+  val ifIDStall  = Output(Bool())
   // flush the ifID stage Reg
   val ifIDFlush   = Output(Bool())
   // insert a bubble to stage reg
-  val idEXBubble  = Output(Bool())
+  val idEXFlush  = Output(Bool())
 
-  /**
-    * difference between a bubble and a flush:
-    */
+  val exMemFlush = Output(Bool())
+
 }
 
 // note: detect as early as possible
@@ -52,10 +56,10 @@ class HazardUnit extends Module {
 
   // default actions, overriden by later assignments
   io.output.pcWrite      := 0.U
-  io.output.ifIDBubble  := false.B
-  io.output.idEXBubble  := false.B
+  io.output.ifIDStall  := false.B
   io.output.ifIDFlush   := false.B
-
+  io.output.idEXFlush  := false.B
+  io.output.exMemFlush := false.B
   // Load to use hazard.
 
   // " this instruction " is in decode stage
@@ -67,23 +71,25 @@ class HazardUnit extends Module {
     /**
       * |  IF  |  ID  |  EXE  |  MEM  |  WB  |
       * pc + 4 | add  |   ld  |   ->  |  ->  |
-      * F      S       G       G      G
-      * flush instruction from pc+4, redo the fetch
+      *        S      F       G       G      G
+      * flush instruction from pc+4, halt the unit, redo the fetch
+      * re-pipe the data from if to id
+      * at the end of this cycle, id-ex is flushed, if-id unchanged, pc unchanged
       * don't update instruction in stall ( don't discard, still need
       * in later stages)
       */
     io.output.pcWrite     := 2.U
-    io.output.ifIDBubble := true.B
-    io.output.idEXBubble := true.B
+    io.output.ifIDStall := true.B
+    io.output.idEXFlush := true.B
   }
 
   // branch flush
   // this is done in the instruction decoding stage
   when (io.input.idBranchTake) {
     /**
-      * |  IF  |  ID  |  EXE  |  MEM  |  WB  |
-      * pc + 4 | b Y  |   ->  |   ->  |  ->  |
-      *        F      F       G       G      G
+      * |  IF  |  ID  |  EXE  |  MEM  |  WB
+      * pc + 8 | pc+4 |branch |   ->  |  ->
+      *        F      F       F       G
       *        flush IF, ID becomes no-op
       *        because I don't do it in later stages
       */
@@ -98,13 +104,18 @@ class HazardUnit extends Module {
       */
     io.output.pcWrite := 1.U
     io.output.ifIDFlush  := true.B
-    io.output.idEXBubble  := true.B
-//    io.output.exMemBubble := true.B
+    io.output.idEXFlush  := true.B
+    io.output.exMemFlush := true.B
   }
 
   // jump flush
   // this is done in the decoding stage
   when (io.input.idIsJump) {
+    /**
+      *  IF  |  ID  |  EX  |  MEM  |  WB
+      *  npc |  J   |  -   |   -   |  -
+      *      F      F      -       -
+      */
     /**
       * similar to branch
       * change PC to target
@@ -113,6 +124,6 @@ class HazardUnit extends Module {
       */
     io.output.pcWrite := 4.U
     io.output.ifIDFlush := true.B
-    io.output.idEXBubble := true.B
+    io.output.idEXFlush := true.B
   }
 }

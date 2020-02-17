@@ -122,7 +122,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEX.io.pipeIn.data.valRt := regFile.io.rs2Data
   idToEX.io.pipeIn.data.immediate := immediateID
   idToEX.io.pipeIn.data.regDst := Mux(controller.io.output.dstRegSelect, rdAddressID, rtAddressID)
-
+  idToEX.io.pipeIn.data.regRs  := rsAddressID
+  idToEX.io.pipeIn.data.regRt  := rtAddressID
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
@@ -148,16 +149,20 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val valRtEX = Wire(UInt(32.W))
   val immediateEX = Wire(UInt(16.W))
   val opBSelectEx = Wire(Bool())
-  val aluOpEx = Wire(UInt(3.W))
+  val aluOpEX = Wire(UInt(4.W))
+  val regRsEX = Wire(UInt(5.W))
+  val regRtEX = Wire(UInt(5.W))
 
   // inherit the data from ID stage
   valRsEX := idToEX.io.pipeOut.data.valRs
   valRtEX := idToEX.io.pipeOut.data.valRt
   immediateEX := idToEX.io.pipeOut.data.immediate
+  regRsEX := idToEX.io.pipeOut.data.regRs
+  regRtEX := idToEX.io.pipeOut.data.regRt
 
   // get the control signals passed in
   opBSelectEx := idToEX.io.pipeOut.control.opBSelect
-  aluOpEx := idToEX.io.pipeOut.control.aluOp
+  aluOpEX := idToEX.io.pipeOut.control.aluOp
 
   // get the immediate reday
   val extendedImmediateData = Cat(Fill(16, immediateEX(15)), immediateEX)
@@ -165,7 +170,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   alu.io.input.inputA := valRsEX
   // if OpBSelect is true, select rb; otherwise select sign extended immediate
   alu.io.input.inputB := Mux(opBSelectEx, valRtEX, extendedImmediateData)
-  alu.io.input.aluOp := aluOpEx
+  alu.io.input.aluOp := aluOpEX
 
   val aluOutputEx = Wire(UInt(32.W))
   val isBranchEx = Wire(Bool())
