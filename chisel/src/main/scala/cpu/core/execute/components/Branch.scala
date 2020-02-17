@@ -3,7 +3,7 @@
 package cpu.core.execute.components
 
 import chisel3._
-import chisel3.util.{Cat, MuxLookup, ValidIO}
+import chisel3.util.{Cat, MuxLookup}
 import common.Util.signedExtend
 import cpu.core.Constants._
 import cpu.core.bundles.ValidBundle
@@ -14,14 +14,14 @@ class Branch extends Module {
     val op2 = Input(UInt(dataLen.W))
     val operation = Input(UInt(opLen.W))
     val imm26 = Input(UInt(26.W))
-    val pcPlus4 = Input(UInt(addrLen.W))
+    val pc = Input(UInt(addrLen.W))
     val branch = Output(new ValidBundle)
   })
-
+  val pcPlus4 = io.pc + 4.U
   val imm16 = io.imm26(15, 0)
   val BImmExt = Cat(signedExtend(imm16, to = 30), 0.U(2.W))
-  val BTarget = io.pcPlus4 + BImmExt
-  val JTarget = Cat(io.pcPlus4(31, 28), io.imm26, 0.U(2.W))
+  val BTarget = pcPlus4 + BImmExt
+  val JTarget = Cat(pcPlus4(31, 28), io.imm26, 0.U(2.W))
 
   io.branch.valid := MuxLookup(io.operation, false.B,
     Array(

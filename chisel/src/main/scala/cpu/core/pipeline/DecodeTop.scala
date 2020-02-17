@@ -66,7 +66,7 @@ class DecodeTop extends Module {
   branch.io.op2 := decode.io.op2
   branch.io.operation := control.io.out.operation
   branch.io.imm26 := imm26
-  branch.io.pcPlus4 := io.in.pc + 4.U
+  branch.io.pc := io.in.pc
 
   io.out.instType := control.io.out.instType
   io.out.operation := control.io.out.operation
