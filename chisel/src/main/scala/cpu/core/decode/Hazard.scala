@@ -43,14 +43,16 @@ class Forward extends Module {
   })
   io.outRsData := MuxCase(io.rsData,
     Array(
-      (io.exeWR.control.enable && io.exeWR.control.address === io.rs && io.rs =/= 0.U) -> io.exeWR.data,
-      (io.memWR.control.enable && io.memWR.control.address === io.rs && io.rt =/= 0.U) -> io.memWR.data
+      (io.rs === 0.U) -> 0.U,
+      (io.exeWR.control.enable && io.exeWR.control.address === io.rs) -> io.exeWR.data,
+      (io.memWR.control.enable && io.memWR.control.address === io.rs) -> io.memWR.data
     )
   )
   io.outRtData := MuxCase(io.rtData,
     Array(
-      (io.exeWR.control.enable && io.exeWR.control.address === io.rt && io.rs =/= 0.U) -> io.exeWR.data,
-      (io.memWR.control.enable && io.memWR.control.address === io.rt && io.rt =/= 0.U) -> io.memWR.data
+      (io.rt === 0.U) -> 0.U,
+      (io.exeWR.control.enable && io.exeWR.control.address === io.rt) -> io.exeWR.data,
+      (io.memWR.control.enable && io.memWR.control.address === io.rt) -> io.memWR.data
     )
   )
 
