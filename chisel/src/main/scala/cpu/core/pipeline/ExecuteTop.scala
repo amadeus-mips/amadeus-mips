@@ -74,7 +74,7 @@ class ExecuteTop extends Module {
 
   control.io.instType := io.in.instType
   control.io.inWrite <> io.in.write
-  control.io.pcPlus4 := io.in.pc + 4.U
+  control.io.pc := io.in.pc
   control.io.inExcept := io.in.except
 
   control.io.aluResult := alu.io.result
