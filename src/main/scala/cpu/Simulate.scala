@@ -107,7 +107,7 @@ object simulate {
 
     // Get the name for the hex file
     // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/../testMemFile/arithmetic/a.txt"
+    val hexName = optionsManager.targetDirName + "/../testMemFile/branch/branch.txt"
 //    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
 //    println(s"hexName is $hexName")
     // Create the CPU config. This sets the type of CPU and the binary to load
@@ -144,13 +144,13 @@ object simulate {
 
 
     // this is working as expected in hex format
-    val endPC = 0x00000020
+    val endPC = 0x00000040
     // Instantiate the simulator
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
     // Make sure the system is in the reset state (5 cycles)
     // for some reason, settings it back to 1 restores the initial PC to 0
-    simulator.reset(1)
+    simulator.reset(5)
 
     // This is the actual simulation
 
@@ -192,7 +192,7 @@ object simulate {
 //      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
 //      // warning: the register values will be updated on the next cycle
 //      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
-//      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
+      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
 //      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
 //      println(s"response from actual mem signal is ${simulator.peek("dmem.io_bus_response_bits_data")}")
 //      println(s"valid signal response from actual mem is ${simulator.peek("dmem.io_bus_response_valid")}")
@@ -217,7 +217,7 @@ object simulate {
     // reg files will not "poke" correctly on the same cycle
     //TODO: bridge an interface between simulation results and results from an actual simulator
     println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (!(simulator.peek("cpu.regFile.regs_10") == 26)) {
+    if (!(simulator.peek("cpu.regFile.regs_10") == 20)) {
       println("VERIFICATION FAILED")
     } else {
       println("VERIFICATION SUCCEEDED")
