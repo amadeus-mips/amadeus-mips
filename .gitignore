@@ -357,3 +357,4 @@ firrtl_black_box_resource_files.f
 hexcode.txt
 generated/
 simulator_run_dir/
+Top.DualPortedCombinMemory.physicalMem.v
