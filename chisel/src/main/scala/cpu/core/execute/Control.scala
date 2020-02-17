@@ -11,7 +11,7 @@ class Control extends Module {
   val io = IO(new Bundle {
     val instType = Input(UInt(instTypeLen.W))
     val inWrite = Input(new WriteControlBundle)
-    val pcPlus4 = Input(UInt(addrLen.W))
+    val pc = Input(UInt(addrLen.W))
     val inExcept = Input(Vec(exceptAmount, Bool()))
 
     val aluResult = Input(UInt(dataLen.W))
@@ -37,7 +37,7 @@ class Control extends Module {
     Array(
       INST_ALU -> io.aluResult,
       INST_MV -> io.moveResult,
-      INST_BR -> (io.pcPlus4 + 4.U),  // 链接跳转的写入地址为pc + 8
+      INST_BR -> (io.pc + 8.U),  // 链接跳转的写入地址为pc + 8
     )
   )
 
