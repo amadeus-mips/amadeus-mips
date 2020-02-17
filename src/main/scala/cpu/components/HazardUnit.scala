@@ -13,12 +13,19 @@ import chisel3.util._
   */
 
 class HazardUnitIn extends Bundle {
+  // rs and rt register in decode stage
   val idRs          = Input(UInt(5.W))
   val idRt          = Input(UInt(5.W))
-  val idEXMemread = Input(Bool())
-  val idBranchTake  = Input(Bool())
+  // is jump signal in instruction decode stage
   val idIsJump = Input(Bool())
-  val idEXRd     = Input(UInt(5.W))
+
+  // mem read signal in id-ex pass
+  val idEXMemread = Input(Bool())
+  // dst reg passed by stage reg
+  val idEXDstReg     = Input(UInt(5.W))
+
+  // branchtake signal result in execute stage
+  val exMemBranchTake  = Input(Bool())
 }
 
 /**
@@ -66,7 +73,7 @@ class HazardUnit extends Module {
   // the ld instruction is in execute stage
   // source operands matches one of its dst regs
   when (io.input.idEXMemread &&
-    (io.input.idEXRd === io.input.idRs || io.input.idEXRd === io.input.idRt)) {
+    (io.input.idEXDstReg === io.input.idRs || io.input.idEXDstReg === io.input.idRt)) {
     // make pc stay the same
     /**
       * |  IF  |  ID  |  EXE  |  MEM  |  WB  |
@@ -85,10 +92,10 @@ class HazardUnit extends Module {
 
   // branch flush
   // this is done in the instruction decoding stage
-  when (io.input.idBranchTake) {
+  when (io.input.exMemBranchTake) {
     /**
       * |  IF  |  ID  |  EXE  |  MEM  |  WB
-      * pc + 8 | pc+4 |branch |   ->  |  ->
+      * pc + 12| pc+8 |  pc+4 |  br   |  ->
       *        F      F       F       G
       *        flush IF, ID becomes no-op
       *        because I don't do it in later stages

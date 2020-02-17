@@ -57,6 +57,7 @@ class IDEXDataBundle extends Bundle {
   val regRt = UInt(5.W)
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
+  val branchTarget = UInt(32.W)
 }
 
 // io bundle for data path from execute stage to memory
@@ -66,6 +67,8 @@ class EXMEMDataBundle extends Bundle {
   val writeData = UInt(32.W)
   // register write address
   val regDst = UInt(5.W)
+
+  val branchTarget = UInt(32.W)
 }
 
 // io bundle for data path from memory stage to write
@@ -85,34 +88,34 @@ class IDEXControlBundle extends Bundle {
 
   // select the operand B
   // true is Reg(rt), false is sign extended offset(16bit)
-  val opBSelect = Output(Bool())
+  val opBSelect = Bool()
 
   // what is the ALU OP
-  val aluOp = Output(UInt(4.W))
+  val aluOp = UInt(4.W)
 
   // merge branch unit into ALU for managing complexity ( or bypassing wires go crazy )
-  val isBranch = Output(Bool())
+  val isBranch = Bool()
 
   // -----------------------------memory stage--------------------------
 
   // memory mask mode
-  val memMask = Output(UInt(2.W))
+  val memMask = UInt(2.W)
 
   // memory sign extension
-  val memSext = Output(Bool())
+  val memSext = Bool()
 
   // enable write to data memory
-  val memWriteEnable = Output(Bool())
+  val memWriteEnable = Bool()
 
-  // select write back from read mem and alu output
+  // select write back from read mem and al
   // if true, select from alu; if false, select from memory
-  val wbSelect = Output(Bool())
+  val wbSelect = Bool()
 
   //--------------------------WB stage----------------------------
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wbEnable = Output(Bool())
+  val wbEnable = Bool()
 
 }
 
@@ -121,25 +124,28 @@ class IDEXControlBundle extends Bundle {
 class EXMEMControlBundle extends Bundle {
   // -----------------------------memory stage--------------------------
 
+  // is branch taken
+  val branchTake = Bool()
+
   // memory mask mode
-  val memMask = Output(UInt(2.W))
+  val memMask = UInt(2.W)
 
   // memory sign extension
-  val memSext = Output(Bool())
+  val memSext = Bool()
 
   // enable write to data memory
-  val memWriteEnable = Output(Bool())
+  val memWriteEnable = Bool()
 
-  // select write back from read mem and alu output
+  // select write back from read mem and al
   // if true, select from alu; if false, select from memory
-  val wbSelect = Output(Bool())
+  val wbSelect = Bool()
 
   //--------------------------WB stage----------------------------
 
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wbEnable = Output(Bool())
+  val wbEnable = Bool()
 
 }
 
@@ -151,7 +157,7 @@ class MEMWBControlBundle extends Bundle {
 
   // whether write to the regfile
   // true is write back, false is don't write back
-  val wbEnable = Output(Bool())
+  val wbEnable = Bool()
 
 }
 

@@ -54,6 +54,8 @@ package cpu.components
     // memory sign extension mode
     val MEM_SEXT_Y = true.B
     val MEM_SEXT_N = false.B
+
+
     // chooose the writeback select
     val WB_MEM = true.B
     val WB_ALU = false.B

@@ -18,8 +18,6 @@ class BypassUnitIn extends Bundle {
   val idEXRs = Input(UInt(5.W))
   val idEXRt = Input(UInt(5.W))
 
-  // the target register, not rd in the sense of text
-  val idEXRegDst = Input(UInt(5.W))
   // the instruction between execute and memory stage
   // 's dst reg address and write back enable
   val exMemRegDst = Input(UInt(5.W))
@@ -31,12 +29,6 @@ class BypassUnitIn extends Bundle {
   val memWBRegWriteEnable = Input(Bool())
   //----------------------------------------------------------------------------------------
   // memory bypass
-  //----------------------------------------------------------------------------------------
-
-  // registers reused
-
-  //----------------------------------------------------------------------------------------
-  // branching bypass
   //----------------------------------------------------------------------------------------
 }
 
@@ -62,6 +54,7 @@ class BypassUnit extends Module{
     val input = new BypassUnitIn
     val output = new BypassUnitOut
   })
+
   //----------------------------------------------------------------------------------------
   // ALU bypass and Branch Bypass
   //----------------------------------------------------------------------------------------
@@ -96,9 +89,9 @@ class BypassUnit extends Module{
   // add $t1, $t2, $t3
   // sw $t1, 0($t0)
   when ((io.input.exMemRegDst === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable) {
-    io.output.forwardMemWriteData := 1.U
+    io.output.forwardMemWriteData := true.B
   }.otherwise {
-    io.output.forwardMemWriteData := 0.U
+    io.output.forwardMemWriteData := false.B
   }
 
 }
