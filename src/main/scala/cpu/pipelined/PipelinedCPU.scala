@@ -143,7 +143,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
-  idToEX.io.pipeIn.control.opASelect := controller.io.output.opASelect
   idToEX.io.pipeIn.control.opBSelect := controller.io.output.opBSelect
   idToEX.io.pipeIn.control.aluOp := controller.io.output.aluOp
   idToEX.io.pipeIn.control.isBranch := controller.io.output.pcIsBranch
