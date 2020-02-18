@@ -13,7 +13,6 @@ import scala.collection.SortedMap
   * Simple object with only a main function to run the treadle simulation.
   * When run, this will begin execution and continue until the PC reaches the
   * "_last" symbol in the elf file or the max cycle parameter is reached
-  *
   * {{{
   *  sbt> runMain dinocpu.simulate [options] <riscv binary> <CPU type>
   * }}}
@@ -29,7 +28,7 @@ object simulate {
     var info = SortedMap[Long, (Long, Long)]()
     // Search for these section names
     for (i <- 1 until elf.num_sh) {
-      val section =  elf.getSection(i)
+      val section = elf.getSection(i)
       if (sections.contains(section.getName)) {
         //println("Found "+section.address + " " + section.section_offset + " " + section.size)
         info += section.address -> (section.section_offset, section.size)
@@ -54,11 +53,11 @@ object simulate {
       f.read(data)
       var s = List[String]()
       for (byte <- data) {
-        s = s :+ ("%02X" format byte)
+        s = s :+ ("%02X".format(byte))
         location += 1
         if (location % 4 == 0) {
           // Once we've read 4 bytes, swap endianness
-          output.write(s(3)+s(2)+s(1)+s(0)+"\n")
+          output.write(s(3) + s(2) + s(1) + s(0) + "\n")
           s = List[String]()
         }
       }
@@ -142,7 +141,6 @@ object simulate {
     // (Do this after compiling the firrtl so the directory is created)
 //    val endPC = elfToHex(args(0), hexName)
 
-
     // this is working as expected in hex format
     val endPC = 0x00000040
     // Instantiate the simulator
@@ -155,13 +153,13 @@ object simulate {
     // This is the actual simulation
 
     var cycles = 0
-    val maxCycles = if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
+    val maxCycles =
+      if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
 //    val maxCycles = 2000000
     // Simulate until the pc is the "endPC" or until max cycles has been reached
     println("Running...")
     // print the pc initial position
     //    println(s"the position of the initial PC is ${simulator.peek("cpu.regPc")}")
-
 
 //  memory peek helper
 //     Note: this does work with written mem
@@ -169,10 +167,8 @@ object simulate {
 //      println(s"the instruction at position $i is ${simulator.peekMemory("mem.physicalMem", i)}")
 //    }
 
-
     // simulate until the max cycles are reached or the pc reaches the end pc
     while (simulator.peek("cpu.regPc") != endPC && cycles < maxCycles) {
-
 
       // for small simulation, print pc every cycle
       println(s"Simulation results for cycle $cycles")
@@ -208,7 +204,7 @@ object simulate {
       simulator.step(1)
       cycles += 1
 
-   }
+    }
 //    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
     println(s"TOTAL CYCLES: $cycles")
 
@@ -225,7 +221,7 @@ object simulate {
   }
 }
 
-case class SimulatorOptions(maxCycles : Int= 0) extends firrtl.ComposableOptions {}
+case class SimulatorOptions(maxCycles: Int = 0) extends firrtl.ComposableOptions {}
 
 trait HasSimulatorOptions {
   self: ExecutionOptionsManager =>
@@ -234,17 +230,19 @@ trait HasSimulatorOptions {
 
   parser.note("simulator-options")
 
-  parser.opt[Int]("max-cycles")
+  parser
+    .opt[Int]("max-cycles")
     .abbr("mx")
     .valueName("<long-value>")
-    .foreach {x =>
-      simulatorOptions.copy(maxCycles = x)
-    }
+    .foreach { x => simulatorOptions.copy(maxCycles = x) }
     .text("Max number of cycles to simulate. Default is 0, to continue simulating")
 }
 
 class SimulatorOptionsManager extends TreadleOptionsManager with HasSimulatorSuite
 
-trait HasSimulatorSuite extends TreadleOptionsManager with HasChiselExecutionOptions with HasFirrtlOptions with HasTreadleOptions with HasSimulatorOptions {
-  self : ExecutionOptionsManager =>
-}
+trait HasSimulatorSuite
+    extends TreadleOptionsManager
+    with HasChiselExecutionOptions
+    with HasFirrtlOptions
+    with HasTreadleOptions
+    with HasSimulatorOptions { self: ExecutionOptionsManager => }
