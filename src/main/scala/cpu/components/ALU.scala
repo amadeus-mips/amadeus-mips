@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 
 object ALUTypes {
-  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: sra :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil =
+  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil =
     Enum(21)
 }
 
@@ -56,10 +56,10 @@ class ALU extends Module {
       // shift instructions
       slv -> (io.input.inputB << io.input.inputA(5, 0)),
       sli -> (io.input.inputB << io.input.shamt),
-      srlv -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)),
-      srli -> (io.input.inputB.asSInt() >> io.input.shamt),
-      srav -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)),
-      srai -> (io.input.inputB.asSInt() >> io.input.shamt)
+      srlv -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)).asUInt(),
+      srli -> (io.input.inputB.asSInt() >> io.input.shamt).asUInt,
+      srav -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)).asUInt(),
+      srai -> (io.input.inputB.asSInt() >> io.input.shamt).asUInt()
     )
   )
 
