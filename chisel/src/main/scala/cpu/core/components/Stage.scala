@@ -28,7 +28,7 @@ class StageIO[+T <: Data](gen: T) extends Bundle {
  * @param gen         the instance of the bundle
  * @tparam T the input and output bundle type.
  */
-class Stage[+T <: Data](stageNumber: Int, gen: T) extends Module {
+class Stage[+T <: Data](stageNumber: Int, gen: T) extends MultiIOModule {
   val io = IO(new StageIO[T](gen))
 
   val pipeReg = RegInit(0.U.asTypeOf(gen))

@@ -12,7 +12,7 @@ import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
 import cpu.core.pipeline.stage._
 
-class Core extends Module {
+class Core extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
     val inst = Input(new ValidBundle)
@@ -21,11 +21,6 @@ class Core extends Module {
     val load = new DataReadIO
     val store = new DataWriteIO
     val addr = Output(UInt(addrLen.W))
-
-    val flush = Output(Bool())
-
-    // Debug
-    val debug = Output(new DebugBundle)
   })
 
   val fetch = Module(new Fetch)
@@ -58,7 +53,7 @@ class Core extends Module {
   decodeTop.io.memWR := memoryTop.io.out.write
   decodeTop.io.rsData := regFile.io.rsData
   decodeTop.io.rtData := regFile.io.rtData
-  decodeTop.io.inDelaySlot := id_exe.io.inDelaySlot
+  decodeTop.io.inDelaySlot := id_exe.ioExt.inDelaySlot
 
   regFile.io.write <> mem_wb.io.out.write
   regFile.io.rs := if_id.io.out.inst(25, 21)
@@ -67,7 +62,7 @@ class Core extends Module {
   id_exe.io.in <> decodeTop.io.out
   id_exe.io.stall := ctrl.io.stall
   id_exe.io.flush := ctrl.io.flush
-  id_exe.io.nextInstInDelaySlot := decodeTop.io.nextInstInDelaySlot
+  id_exe.ioExt.nextInstInDelaySlot := decodeTop.io.nextInstInDelaySlot
 
   executeTop.io.in <> id_exe.io.out
   executeTop.io.flush := ctrl.io.flush
@@ -115,9 +110,4 @@ class Core extends Module {
   io.outPC.bits := fetch.io.out.pc
   io.outPC.valid := fetch.io.outPCValid
   io.addr := memoryTop.io.addr
-  io.flush := ctrl.io.flush
-  io.debug.wbPC := mem_wb.io.out.pc
-  io.debug.wbRegFileWEn := Fill(4, mem_wb.io.out.write.control.enable)
-  io.debug.wbRegFileWNum := mem_wb.io.out.write.control.address
-  io.debug.wbRegFileWData := mem_wb.io.out.write.data
 }

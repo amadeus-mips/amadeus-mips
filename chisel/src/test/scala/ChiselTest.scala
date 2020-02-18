@@ -15,5 +15,6 @@ object ChiselTest {
 
       io.out := Util.subwordModify(io.in, (31, 1), 0.U(31.W))
     })
+    println(toString.replaceAll("\\$@.*", ""))
   }
 }

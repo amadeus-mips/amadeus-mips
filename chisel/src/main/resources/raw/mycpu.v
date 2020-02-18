@@ -44,13 +44,13 @@ module mycpu(
         .io_store_sel               (data_axi_wsel),
         .io_store_data              (data_axi_wdata),
         .io_addr                    (data_axi_addr),
-        .io_ex_addr                 (ex_data_addr),
-        .io_cached_trans            (cached_trans),
-        .io_flush                   (axi_flush),
-        .io_debug_wbPC              (debug_wb_pc),
-        .io_debug_wbRegFileWEn      (debug_wb_rf_wen),
-        .io_debug_wbRegFileWNum     (debug_wb_rf_wnum),
-        .io_debug_wbRegFileWData    (debug_wb_rf_wdata)
+        .io_ls_ex_addr              (ex_data_addr),
+        .io_ls_cached_trans         (cached_trans),
+        .io_ls_flush                (axi_flush),
+        .io_ls_debug_wbPC           (debug_wb_pc),
+        .io_ls_debug_wbRegFileWEn   (debug_wb_rf_wen),
+        .io_ls_debug_wbRegFileWNum  (debug_wb_rf_wnum),
+        .io_ls_debug_wbRegFileWData (debug_wb_rf_wdata)
     );
 
 
