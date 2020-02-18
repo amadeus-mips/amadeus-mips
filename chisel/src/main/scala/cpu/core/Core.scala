@@ -3,10 +3,9 @@
 package cpu.core
 
 import chisel3._
-import Constants._
-import chisel3.util.{Fill, ValidIO}
 import cpu.common.{DataReadIO, DataWriteIO}
-import cpu.core.bundles.{DebugBundle, ValidBundle}
+import cpu.core.Constants._
+import cpu.core.bundles.ValidBundle
 import cpu.core.components.{CP0, HILO, RegFile}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._

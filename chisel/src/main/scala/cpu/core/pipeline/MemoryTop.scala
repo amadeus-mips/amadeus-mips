@@ -3,7 +3,7 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.{Cat, DecoupledIO}
+import chisel3.util.Cat
 import cpu.common.{DataReadIO, DataWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle

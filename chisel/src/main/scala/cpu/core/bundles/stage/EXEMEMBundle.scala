@@ -3,9 +3,8 @@
 package cpu.core.bundles.stage
 
 import chisel3._
-import chisel3.util.ValidIO
 import cpu.core.Constants._
-import cpu.core.bundles.{CPBundle, CPControlBundle, HILOValidBundle, WriteBundle}
+import cpu.core.bundles.{CPBundle, HILOValidBundle, WriteBundle}
 
 class EXEMEMBundle extends Bundle {
   val write = new WriteBundle

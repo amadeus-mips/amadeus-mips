@@ -48,7 +48,7 @@ class ExecuteTop extends Module {
   /** cp0 control come from decode */
   forward.io.rawCP0.control <> io.in.cp0Control
   /** cp0 data come from CP0 regfile */
-  forward.io.rawCP0.data <> io.cp0Data
+  forward.io.rawCP0.data := io.cp0Data
   forward.io.memCP0 <> io.memCP0
   forward.io.wbCP0 <> io.wbCP0
 
