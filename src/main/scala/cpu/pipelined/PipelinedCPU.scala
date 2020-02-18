@@ -116,7 +116,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // branch target
   //TODO: move the adder into the ALU
   //ignored for now for simplicity
-  val extendedImmediateAddrID = Cat(Fill(14, immediateID(15)), Cat(immediateID, Fill(2, 0.U)))
+  val extendedImmediateAddrID = Cat(Fill(14, immediateID(15)), immediateID, Fill(2, 0.U))
 
   // initialize the wire for write back data
   // this wire should be assigned at the write back stage
@@ -143,6 +143,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
+  idToEX.io.pipeIn.control.opASelect := controller.io.output.opASelect
   idToEX.io.pipeIn.control.opBSelect := controller.io.output.opBSelect
   idToEX.io.pipeIn.control.aluOp := controller.io.output.aluOp
   idToEX.io.pipeIn.control.isBranch := controller.io.output.pcIsBranch
@@ -164,8 +165,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val valRsEX = Wire(UInt(32.W))
   val valRtEX = Wire(UInt(32.W))
   val immediateEX = Wire(UInt(16.W))
-  val opBSelectEx = Wire(Bool())
-  val aluOpEX = Wire(UInt(4.W))
   val regRsEX = Wire(UInt(5.W))
   val regRtEX = Wire(UInt(5.W))
   val dstRegEX = Wire(UInt(5.W))
@@ -180,8 +179,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   dstRegEX := idToEX.io.pipeOut.data.regDst
 
   // get the control signals passed in
-  opBSelectEx := idToEX.io.pipeOut.control.opBSelect
-  aluOpEX := idToEX.io.pipeOut.control.aluOp
   // true is mem read
   memReadEX := idToEX.io.pipeOut.control.wbSelect
 
@@ -193,10 +190,11 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   bypass.io.input.idEXRs := regRsEX
   bypass.io.input.idEXRt := regRtEX
 
-  // get the immediate reday
-  val extendedImmediateData = Cat(Fill(16, immediateEX(15)), immediateEX)
+  //ALU unit
+  alu.io.input.aluOp := idToEX.io.pipeOut.control.aluOp
 
-  // alu bypassing for input A
+  alu.io.input.shamt := immediateEX(10, 6)
+
   alu.io.input.inputA := MuxCase(
     valRsEX,
     Array(
@@ -206,39 +204,31 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   )
 
   alu.io.input.inputB := Mux(
-    opBSelectEx,
+    idToEX.io.pipeOut.control.opBSelect,
+    Cat(Fill(16, immediateEX(15)), immediateEX),
     MuxCase(
       valRtEX,
       Array(
         (bypass.io.output.forwardALUOpB === 1.U) -> exToMEM.io.pipeOut.data.aluOutput,
         (bypass.io.output.forwardALUOpB === 2.U) -> wbDataToReg
       )
-    ),
-    extendedImmediateData
+    )
   )
-  // if OpBSelect is true, select rt; otherwise select sign extended immediate
-
-  alu.io.input.aluOp := aluOpEX
-
-  val aluOutputEx = Wire(UInt(32.W))
-  val isBranchEx = Wire(Bool())
-
-  aluOutputEx := alu.io.output.aluOutput
-  isBranchEx := idToEX.io.pipeOut.control.isBranch
+  // if OpBSelect is false, select rt; otherwise select sign extended immediate
 
   // pipe in to the pipeline registers
   exToMEM.io.valid := true.B
   exToMEM.io.flush := hazard.io.output.exMemFlush
 
   // here are the data values to pipe in
-  exToMEM.io.pipeIn.data.aluOutput := aluOutputEx
+  exToMEM.io.pipeIn.data.aluOutput := alu.io.output.aluOutput
   exToMEM.io.pipeIn.data.writeData := valRtEX
   exToMEM.io.pipeIn.data.regDst := dstRegEX
   exToMEM.io.pipeIn.data.branchTarget := idToEX.io.pipeOut.data.branchTarget
 
   // pass along the control signals
   //--------------------------memory stage--------------------------
-  exToMEM.io.pipeIn.control.branchTake := (isBranchEx & alu.io.output.branchTake)
+  exToMEM.io.pipeIn.control.branchTake := (idToEX.io.pipeOut.control.isBranch & alu.io.output.branchTake)
   exToMEM.io.pipeIn.control.memMask := idToEX.io.pipeOut.control.memMask
   exToMEM.io.pipeIn.control.memSext := idToEX.io.pipeOut.control.memSext
   exToMEM.io.pipeIn.control.memWriteEnable := idToEX.io.pipeOut.control.memWriteEnable

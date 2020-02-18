@@ -31,7 +31,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val immediate = instruction(15, 0)
   val address = instruction(25, 0)
   val extendedImmediateData = Cat(Fill(16, immediate(15)), immediate)
-  val extendedImmediateAddr = Cat(Fill(14, immediate(15)), Cat(immediate, Fill(2, 0.U)))
+  val extendedImmediateAddr = Cat(Fill(14, immediate(15)), immediate, Fill(2, 0.U))
 
   // feed the instruction into the controller
   //TODO: optimized the bit pattern, reduce bandwidth

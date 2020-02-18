@@ -2,7 +2,6 @@ package cpu.pipelined
 
 import chisel3._
 
-
 //TODO: rewrite this to use a generator and enum
 
 // io bundle from instruction fetch stage
@@ -31,7 +30,6 @@ class MEMWBBundle extends Bundle {
   val data = new MEMWBDataBundle
   val control = new MEMWBControlBundle
 }
-
 
 // the data bundle for data path from instruction
 // fetch stage to instruction decode stage
@@ -86,12 +84,10 @@ class IDEXControlBundle extends Bundle {
 
   // -------------------------------execute stage----------------------
 
-  // select the operand B
-  // true is Reg(rt), false is sign extended offset(16bit)
   val opBSelect = Bool()
 
   // what is the ALU OP
-  val aluOp = UInt(4.W)
+  val aluOp = UInt(5.W)
 
   // merge branch unit into ALU for managing complexity ( or bypassing wires go crazy )
   val isBranch = Bool()
@@ -142,7 +138,6 @@ class EXMEMControlBundle extends Bundle {
 
   //--------------------------WB stage----------------------------
 
-
   // whether write to the regfile
   // true is write back, false is don't write back
   val wbEnable = Bool()
@@ -160,4 +155,3 @@ class MEMWBControlBundle extends Bundle {
   val wbEnable = Bool()
 
 }
-
