@@ -88,58 +88,25 @@ object simulate {
   }
 
   def main(args: Array[String]): Unit = {
-//    require(args.length >= 2, "Error: Expected at least two argument\n" + helptext)
+    require(args.length >= 3, "Error: Expected at least three argument\n" + helptext)
     //   don't use the binary, manually load the mem file
 //    require(args.length >= 1, "Error: Expected at least 1 argument\n" + helptext)
     val optionsManager = new SimulatorOptionsManager
+    val cpuType = args(0)
+    val directoryName = args(1)
+    val memFile = args(2)
 
-    // does the output directory exist: if not, create it
-//    if (optionsManager.parser.parse(args)) {
-//      optionsManager.setTargetDirName("simulator_run_dir")
-//    } else {
-//      None
-//    }
-
-//     see if this fix the bug saying
-//     Exactly one target directory must be specified, but found `simulator_run_dir, simulator_run_dir`
     optionsManager.setTargetDirName("./simulator_run_dir")
 
-    // Get the name for the hex file
-    // the executable.hex in the target directory
-    val hexName = optionsManager.targetDirName + "/../testMemFile/branch/branch.txt"
-//    val hexName = "/Users/cvl/ChiselProjects/Phoenix/hexcode.txt"
-//    println(s"hexName is $hexName")
+    val hexName = s"${optionsManager.targetDirName}/../testMemFile/$directoryName/$memFile"
+
     // Create the CPU config. This sets the type of CPU and the binary to load
     val conf = new CPUConfig()
-
-//    val params = args(1).split(":")
-//    val cpuType =
-//      if (params.length == 2) {
-//        "pipelined-bp"
-//      } else {
-//        params(0)
-//      }
-
-    // pin the cpu type to single cycle
-    val cpuType = "pipelined"
-//
-//    val predictor =
-//      if (params.length == 2) {
-//        params(1)
-//      } else {
-//        "always-not-taken"
-//      }
-
     conf.cpuType = cpuType
-//    conf.branchPredictor = predictor
     conf.memFile = hexName
 
     // This compiles the chisel to firrtl
     val compiledFirrtl = build(optionsManager, conf)
-
-    // Convert the binary to a hex file that can be loaded by treadle
-    // (Do this after compiling the firrtl so the directory is created)
-//    val endPC = elfToHex(args(0), hexName)
 
     // this is working as expected in hex format
     val endPC = 0x00000040

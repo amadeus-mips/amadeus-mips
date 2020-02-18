@@ -80,7 +80,7 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
 //    val inst = Disassembler.disassemble(v.longValue())
 //    val hex = v.toInt.toHexString.reverse.padTo(8, '0').reverse
 //    println(s"${pc.toString().padTo(8, ' ')}: ${inst.padTo(20, ' ')} (0x${hex})")
-    println(s"the instruction at ${pc.toString.padTo(3, ' ')} has decimal value of ${v}")
+    println(s"the instruction at ${pc.toString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
   }
 
   def dumpAllModules(): Unit = {
@@ -149,7 +149,9 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
   def printPipeReg(module: String): Unit = {
     val syms =
       simulator.engine.validNames.filter(name =>
-        (!name.startsWith(s"cpu.$module._")) && (name.startsWith(s"cpu.${module}")) && !name.endsWith("/in")
+        (!name.startsWith(s"cpu.$module.register")) && (!name.startsWith(s"cpu.$module._")) && (name.startsWith(
+          s"cpu.${module}"
+        )) && !name.endsWith("/in")
       )
     for (sym <- syms) {
       val value = simulator.peek(sym)
@@ -232,7 +234,7 @@ case class CPUTestCase(
 
 // the companion object
 object CPUTestDriver {
-  def apply(testCase: CPUTestCase, cpuType: String): Boolean = {
+  def apply(cpuType: String, testCase: CPUTestCase): Boolean = {
     val driver = new CPUTestDriver(cpuType, testCase.directoryName, testCase.memFile)
     driver.initRegs(testCase.initRegs)
     driver.initMemory(testCase.initMem)
