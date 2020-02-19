@@ -76,10 +76,6 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
     val pc = if (addr < 0) simulator.peek("cpu.regPc").toInt else addr
     // the data at the pc
     val v = simulator.peekMemory("mem.physicalMem", pc / 4)
-    // Note: the memory is a 32-bit memory
-//    val inst = Disassembler.disassemble(v.longValue())
-//    val hex = v.toInt.toHexString.reverse.padTo(8, '0').reverse
-//    println(s"${pc.toString().padTo(8, ' ')}: ${inst.padTo(20, ' ')} (0x${hex})")
     println(s"the instruction at ${pc.toString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
   }
 

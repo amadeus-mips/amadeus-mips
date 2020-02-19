@@ -1,23 +1,19 @@
-Chisel Project Template
+Documentation
 =======================
 
-You've done the Chisel [tutorials](https://github.com/ucb-bar/chisel-tutorial), and now you 
-are ready to start your own chisel project.  The following procedure should get you started
-with a clean running [Chisel3](https://github.com/freechipsproject/chisel3) project.
+now, for the testing part
 
-> More and more users are finding IntelliJ to be a powerful tool for Chisel coding. See the 
-[IntelliJ Installation Guide](https://github.com/ucb-bar/chisel-template/wiki/IntelliJ-Installation-Guide) for how to install it.
+## automated testing
+in this section, we will test the CPU design with tests automatically. The tests 
+will be run within intellij
 
-## Make your own Chisel3 project
-### How to get started
-The first thing you want to do is clone this repo into a directory of your own.  I'd recommend creating a chisel projects directory somewhere
-```sh
-mkdir ~/ChiselProjects
-cd ~/ChiselProjects
+###related files
+[CPUTestDriver](src/main/scala/cpu/testing/CPUTestDriver.scala)<br/>
+implements the functions and modules for testing<br>
+[Test Cases](src/main/scala/cpu/testing/TestCases.scala)<br>
+this is the file that contains the testcases, the format are specified 
+as in the case class **CPUTestCase**
 
-git clone https://github.com/ucb-bar/chisel-template.git MyChiselProject
-cd MyChiselProject
-```
 ### Make your project into a fresh git repo
 There may be more elegant way to do it, but the following works for me. **Note:** this project comes with a magnificent 339 line (at this writing) .gitignore file.
  You may want to edit that first in case we missed something, whack away at it, or start it from scratch.

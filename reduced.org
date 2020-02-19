@@ -1,25 +1,4 @@
-* instructions to implement
-
-** No op
-   no-op
-** R type
-| opcode | rs | rt | rd | shamt | funct
-*** add rd, rs, rt  
-*** sub rd, rs, rt
-*** and rd, rs, rt
-** I type
-| opcode | rs | rt | immediate |
-*** addi rt, rs, IMME
-*** BEQ rs, rt, Offset
-** J type
-| opcode | address |
-*** J target
-** DONE all mem instructions
-   CLOSED: [2020-02-13 Thu 21:31]
-format similar as I type
-| opcode | rs | rt | offset |
-*** lw rt, offset(base)
-*** sw rt, offset(base)
-* DONE add isZero to ALU
-  CLOSED: [2020-02-04 Tue 16:57]
-   (this is cool) 
+instruction not supported:
+all fpu
+exceptions
+jr, jalr, branch and link register
