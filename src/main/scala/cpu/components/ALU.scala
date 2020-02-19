@@ -54,12 +54,12 @@ class ALU extends Module {
       or -> (io.input.inputA | io.input.inputB),
       xor -> (io.input.inputA ^ io.input.inputB),
       // shift instructions
-      slv -> (io.input.inputB << io.input.inputA(5, 0)),
+      slv -> (io.input.inputB << io.input.inputA(4, 0)),
       sli -> (io.input.inputB << io.input.shamt),
-      srlv -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)).asUInt(),
-      srli -> (io.input.inputB.asSInt() >> io.input.shamt).asUInt,
-      srav -> (io.input.inputB.asSInt() >> io.input.inputA(5, 0)).asUInt(),
-      srai -> (io.input.inputB.asSInt() >> io.input.shamt).asUInt()
+      srlv -> (io.input.inputB >> io.input.inputA(4, 0)),
+      srli -> (io.input.inputB >> io.input.shamt),
+      srav -> (io.input.inputB.asSInt >> io.input.inputA(4, 0)).asUInt(),
+      srai -> (io.input.inputB.asSInt >> io.input.shamt).asUInt()
     )
   )
 

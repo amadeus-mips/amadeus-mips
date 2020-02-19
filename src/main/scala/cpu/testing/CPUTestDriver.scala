@@ -20,7 +20,7 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
   optionsManager.setTargetDirName(s"./simulator_run_dir")
 
   // set the memory file name
-  val hexName = s"${optionsManager.targetDirName}/../testMemFile/$directoryName/$memFile"
+  val hexName = s"${optionsManager.targetDirName}/../testMemFile/$directoryName/$memFile.txt"
 
   val conf = new CPUConfig()
   conf.cpuType = cpuType
@@ -69,14 +69,14 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
 
   def printPC(): Unit = {
     val v = simulator.peek("cpu.regPc")
-    println(s"PC: ${v}")
+    println(s"PC:    0x${v.toInt.toHexString}")
   }
 
   def printInst(addr: Int = -1): Unit = {
     val pc = if (addr < 0) simulator.peek("cpu.regPc").toInt else addr
     // the data at the pc
     val v = simulator.peekMemory("mem.physicalMem", pc / 4)
-    println(s"the instruction at ${pc.toString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
+    println(s"the instruction at 0x${pc.toHexString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
   }
 
   def dumpAllModules(): Unit = {

@@ -7,7 +7,6 @@ import chisel3.util._
 // like bypassing for the branch comparison
 // bypassing for store in data memory
 
-
 class BypassUnitIn extends Bundle {
   //----------------------------------------------------------------------------------------
   // ALU bypass
@@ -49,7 +48,7 @@ class BypassUnitOut extends Bundle {
   //----------------------------------------------------------------------------------------
 }
 
-class BypassUnit extends Module{
+class BypassUnit extends Module {
   val io = IO(new Bundle() {
     val input = new BypassUnitIn
     val output = new BypassUnitOut
@@ -61,23 +60,29 @@ class BypassUnit extends Module{
   // the forward the alu output to substitute register rs
   // the second case is where rs is the same as dst register passed from memory out
   // note: search in the result directly from exe-mem first
-  when ((io.input.idEXRs === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
+  when((io.input.idEXRs === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
     io.output.forwardALUOpA := 1.U
-  }.elsewhen ((io.input.idEXRs === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable ) {
-    io.output.forwardALUOpA := 2.U
-  }.otherwise {
-    io.output.forwardALUOpA := 0.U
-  }
+  }.elsewhen(
+      (io.input.idEXRs === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+    ) {
+      io.output.forwardALUOpA := 2.U
+    }
+    .otherwise {
+      io.output.forwardALUOpA := 0.U
+    }
 
   // note : search in the result directly from exe-mem first
   // you should also exclude register zero in the hazard detection unit
-  when ((io.input.idEXRt === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
+  when((io.input.idEXRt === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
     io.output.forwardALUOpB := 1.U
-  }.elsewhen ((io.input.idEXRt === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable ) {
-    io.output.forwardALUOpB := 2.U
-  }.otherwise {
-    io.output.forwardALUOpB := 0.U
-  }
+  }.elsewhen(
+      (io.input.idEXRt === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+    ) {
+      io.output.forwardALUOpB := 2.U
+    }
+    .otherwise {
+      io.output.forwardALUOpB := 0.U
+    }
 
   //----------------------------------------------------------------------------------------
   // Memory bypass
@@ -87,7 +92,9 @@ class BypassUnit extends Module{
   // or
   // add $t1, $t2, $t3
   // sw $t1, 0($t0)
-  when ((io.input.exMemRegDst === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable) {
+  when(
+    (io.input.exMemRegDst === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+  ) {
     io.output.forwardMemWriteData := true.B
   }.otherwise {
     io.output.forwardMemWriteData := false.B

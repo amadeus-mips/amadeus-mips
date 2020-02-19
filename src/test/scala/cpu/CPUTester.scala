@@ -10,3 +10,15 @@ class PipeLinedCPUBEQTester extends CPUFlatSpec {
     }
   }
 }
+
+class PipeLinedCPUALLTester extends CPUFlatSpec {
+  behavior.of("pipelined CPU")
+  for ((group, tests) <- InstructionTests.tests) {
+    for (test <- tests) {
+      it should s"run group:$group test ${test.directoryName}/${test.memFile}" in {
+        //TODO: make pipelined an argument
+        CPUTestDriver("pipelined", test) should be(true)
+      }
+    }
+  }
+}
