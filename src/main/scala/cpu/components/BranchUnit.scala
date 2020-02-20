@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.util._
 
 object branchOpEnum {
-  val comp_dontcare :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil =
-    Enum(7)
+  val comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil =
+    Enum(6)
 }
 
 class BranchUnitIn extends Bundle {
