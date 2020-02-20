@@ -368,14 +368,14 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
 
-  // setup the bypass signal
-  bypass.io.input.memWBRegDst := wbAddrToReg
-  bypass.io.input.memWBRegWriteEnable := wbEnableToReg
-
   // preventing writing to register zero
   wbEnableToReg := (memToWB.io.pipeOut.control.wbEnable && (wbAddrToReg =/= 0.U))
   wbDataToReg := memToWB.io.pipeOut.data.wbData
   wbAddrToReg := memToWB.io.pipeOut.data.regDst
+
+  // setup the bypass signal
+  bypass.io.input.memWBRegDst := wbAddrToReg
+  bypass.io.input.memWBRegWriteEnable := wbEnableToReg
 
 }
 

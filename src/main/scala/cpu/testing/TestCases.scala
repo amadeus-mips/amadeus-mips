@@ -80,6 +80,19 @@ object InstructionTests {
       Map()
     )
   )
+
+  val randTest = List[CPUTestCase](
+    CPUTestCase(
+      "testBench",
+      "t1",
+      Map("pipelined" -> 50),
+      Map(),
+      Map(0 -> 0, 2 -> 7, 7 -> 7),
+      Map(),
+      Map()
+    )
+  )
+
   val itype = List[CPUTestCase](
     CPUTestCase(
       "arith",
@@ -91,8 +104,8 @@ object InstructionTests {
       Map()
     )
   )
-  val tests = Map("rtype" -> rtype, "itype" -> itype, "branchType" -> branchType)
-  val allTests = rtype ++ itype ++ branchType
+  val tests = Map("rtype" -> rtype, "itype" -> itype, "branchType" -> branchType, "randTest" -> randTest)
+  val allTests = rtype ++ itype ++ branchType ++ randTest
 
   // 2's complement value
   def twoscomp(v: BigInt): BigInt = {

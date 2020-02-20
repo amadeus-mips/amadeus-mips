@@ -98,13 +98,14 @@ import cpu.components.Instructions._
           JR      ->  List(BRANCH_N,    JUMP_Y,       DST_RD,   WB_N,    OPB_RT,          ALU_NOP,        BRANCH_CMP_EQ,               JUMP_REG,       MEM_MASK_X,     MEM_SEXT_X,     MEM_WRITE_N,   WB_ALU),
           JALR    ->  List(BRANCH_N,    JUMP_Y,       DST_RD,   WB_Y,    OPB_PCPLUSFOUR,  ALU_PLUS_FOUR,  BRANCH_CMP_EQ,               JUMP_REG,       MEM_MASK_X,     MEM_SEXT_X,     MEM_WRITE_N,   WB_ALU),
           LW      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_Y,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_WORD,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
-          SW      ->  List(BRANCH_N,    JUMP_N,       DST_RD,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_WORD,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU),
+          // notice: select rt as write back for bypassing
+          SW      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_WORD,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU),
           LH      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_Y,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_HALF,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
           LHU     ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_Y,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_HALF,  MEM_SEXT_N,     MEM_WRITE_N,   WB_MEM),
-          SH      ->  List(BRANCH_N,    JUMP_N,       DST_RD,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_HALF,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU),
+          SH      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_HALF,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU),
           LB      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_Y,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_BYTE,  MEM_SEXT_Y,     MEM_WRITE_N,   WB_MEM),
           LBU     ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_Y,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_BYTE,  MEM_SEXT_N,     MEM_WRITE_N,   WB_MEM),
-          SB      ->  List(BRANCH_N,    JUMP_N,       DST_RD,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_BYTE,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU)
+          SB      ->  List(BRANCH_N,    JUMP_N,       DST_RT,   WB_N,    OPB_OFFSET,      ALU_ADD,        BRANCH_CMP_EQ,               JUMP_X,         MEM_MASK_BYTE,  MEM_SEXT_N,     MEM_WRITE_Y,   WB_ALU)
         ))
 
     val (csPcIsBranch: Bool) :: (csPcIsJump: Bool) :: (csDstRegSelect: UInt):: (csWBEnable:Bool) :: (csOpBSelect : UInt) :: (csAluOp : UInt) :: (csBranchOp: UInt) :: (csPcJumpTarget: Bool)  :: (csMemMask : UInt)::(csMemSext:Bool)::(csMemWriteEnable:Bool):: (csWBSelect: Bool) :: Nil = controlSignals
