@@ -45,8 +45,8 @@ object InstructionTests {
       "arith",
       "sra",
       Map("pipelined" -> 5),
-      Map(1 -> -2, 2 -> 1),
-      Map(0 -> 0, 3 -> (twoscomp(-2) >> 1)),
+      Map(2 -> -2),
+      Map(0 -> 0, 3 -> twoscomp(-1)),
       Map(),
       Map()
     )

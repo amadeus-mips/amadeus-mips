@@ -1,13 +1,11 @@
 package cpu.components
 
 import chisel3._
-import chisel3.experimental.ChiselEnum
 import chisel3.util._
 
-// TODO: change this to ChiselEnum someday
-// too bad it doesn't work now
 object branchOpEnum {
-  val comp_dontcare :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil = Enum(7)
+  val comp_dontcare :: comp_is_equal :: comp_not_equal :: comp_greater_than_z :: comp_greater_than_or_e_z :: comp_less_than_z :: comp_less_than_or_e_z :: Nil =
+    Enum(7)
 }
 
 class BranchUnitIn extends Bundle {
@@ -33,14 +31,21 @@ class BranchUnit extends Module {
     val output = new BranchUnitOut
   })
 
-  //TODO: seems that a lot of stuff are available here for optimization
-  io.output.branchTake := MuxLookup(io.input.branchOp, false.B, Array(
-    comp_is_equal -> (io.input.regRs === io.input.regRt),
-    comp_not_equal -> !(io.input.regRs === io.input.regRt),
-    comp_greater_than_z -> (io.input.regRs > 0.U) ,
-    comp_greater_than_or_e_z -> (io.input.regRs >= 0.U),
-    comp_less_than_z -> !(io.input.regRs >= 0.U),
-    comp_less_than_or_e_z -> !(io.input.regRs > 0.U)
-  ))
+  val notEqual = (io.input.regRs - io.input.regRt).orR
+  val equalToZero = io.input.regRs.orR
+  // if the MSB is 0, then it's greater than zero
+  val greaterThanZero = !io.input.regRs(31)
+  io.output.branchTake := MuxLookup(
+    io.input.branchOp,
+    false.B,
+    Array(
+      comp_is_equal -> !notEqual,
+      comp_not_equal -> notEqual,
+      comp_greater_than_z -> greaterThanZero,
+      comp_greater_than_or_e_z -> (greaterThanZero | equalToZero),
+      comp_less_than_z -> !(greaterThanZero | equalToZero),
+      comp_less_than_or_e_z -> !greaterThanZero
+    )
+  )
 
 }

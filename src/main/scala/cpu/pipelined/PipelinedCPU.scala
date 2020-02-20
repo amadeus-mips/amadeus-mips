@@ -3,7 +3,17 @@ package cpu.pipelined
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.components._
+import cpu.components.{
+  ALU,
+  AddressUnit,
+  BaseCPU,
+  BranchUnit,
+  BypassUnit,
+  Controller,
+  HazardUnit,
+  RegisterFile,
+  StageRegister
+}
 
 class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
@@ -24,10 +34,12 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
 
   // initialize the data path modules
-  val regPc = RegInit(0.U(32.W))
+  val regPC = RegInit(0.U(32.W))
   val controller = Module(new Controller)
   val regFile = Module(new RegisterFile)
   val alu = Module(new ALU)
+  val branch = Module(new BranchUnit)
+  val brAddress = Module(new AddressUnit)
   val bypass = Module(new BypassUnit)
   val hazard = Module(new HazardUnit)
 
@@ -47,25 +59,25 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
 
-  io.imem.address := regPc
+  io.imem.address := regPC
   io.imem.valid := (!hazard.io.output.ifIDStall)
 
   // make it a wire
   val pcPlusFourIF = Wire(UInt(32.W))
-  pcPlusFourIF := (regPc + 4.U)
+  pcPlusFourIF := (regPC + 4.U)
 
   // the branch target and jump target wires are connected from ID
   // target for branching and jump
   val brTarget = Wire(UInt(32.W))
   val jTarget = Wire(UInt(32.W))
 
-  regPc := MuxLookup(
+  regPC := MuxLookup(
     hazard.io.output.pcWrite,
     pcPlusFourIF,
     Array(
       1.U -> brTarget,
-      2.U -> regPc,
-      4.U -> jTarget
+      2.U -> regPC,
+      3.U -> jTarget
     )
   )
 
@@ -76,7 +88,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //TODO: as we'are using combinational memory, every cycle is valid
   // change this to sync mem in the future
   ifToID.io.pipeIn.data.instruction := io.imem.instruction
-  ifToID.io.pipeIn.data.nextPc := pcPlusFourIF
+  ifToID.io.pipeIn.data.pcPlusFour := pcPlusFourIF
 
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
@@ -86,12 +98,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // wire for the instruction
   val instructionID = Wire(UInt(32.W))
-  // wire for the next PC
-  val pcPlusFourID = Wire(UInt(32.W))
 
   // assign the wires from the state registers
   instructionID := ifToID.io.pipeOut.data.instruction
-  pcPlusFourID := ifToID.io.pipeOut.data.nextPc
 
   // set up all the immediate
   val rsAddressID = instructionID(25, 21)
@@ -103,20 +112,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //hazard control unit input here
   hazard.io.input.idRs := rsAddressID
   hazard.io.input.idRt := rtAddressID
-  hazard.io.input.idIsJump := controller.io.output.pcIsJump
 
   //TODO: change this to opcode
-  // feed the instruction into the controller
   controller.io.input.instr := instructionID
-
-  // decide the next PC
-  // the jump address has 4 upper bits taken from old PC, and the address shift 2 digits
-  jTarget := Cat(pcPlusFourID(31, 28), addressID, Fill(2, 0.U))
-
-  // branch target
-  //TODO: move the adder into the ALU
-  //ignored for now for simplicity
-  val extendedImmediateAddrID = Cat(Fill(14, immediateID(15)), immediateID, Fill(2, 0.U))
 
   // initialize the wire for write back data
   // this wire should be assigned at the write back stage
@@ -124,28 +122,40 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val wbDataToReg = Wire(UInt(32.W))
   val wbAddrToReg = Wire(UInt(5.W))
 
+  // register file
   regFile.io.input.rs1Addr := rsAddressID
   regFile.io.input.rs2Addr := rtAddressID
   regFile.io.input.writeEnable := wbEnableToReg
   regFile.io.input.writeData := wbDataToReg
   regFile.io.input.writeAddr := wbAddrToReg
 
+  // pass along to pipeline registers
   idToEX.io.valid := true.B
   idToEX.io.flush := hazard.io.output.idEXFlush
   // here are the data values
   idToEX.io.pipeIn.data.valRs := regFile.io.output.rs1Data
   idToEX.io.pipeIn.data.valRt := regFile.io.output.rs2Data
   idToEX.io.pipeIn.data.immediate := immediateID
-  idToEX.io.pipeIn.data.regDst := Mux(controller.io.output.dstRegSelect, rdAddressID, rtAddressID)
+  idToEX.io.pipeIn.data.regDst := MuxLookup(
+    controller.io.output.dstRegSelect,
+    rtAddressID,
+    Array(
+      1.U -> rdAddressID,
+      2.U -> 31.U(5.W)
+    )
+  )
   idToEX.io.pipeIn.data.regRs := rsAddressID
   idToEX.io.pipeIn.data.regRt := rtAddressID
-  idToEX.io.pipeIn.data.branchTarget := pcPlusFourID + extendedImmediateAddrID
+  idToEX.io.pipeIn.data.pcPlusFour := ifToID.io.pipeOut.data.pcPlusFour
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
   idToEX.io.pipeIn.control.opBSelect := controller.io.output.opBSelect
   idToEX.io.pipeIn.control.aluOp := controller.io.output.aluOp
-  idToEX.io.pipeIn.control.isBranch := controller.io.output.pcIsBranch
+  idToEX.io.pipeIn.control.isBranch := controller.io.output.isBranch
+  idToEX.io.pipeIn.control.branchOp := controller.io.output.branchOp
+  idToEX.io.pipeIn.control.isJump := controller.io.output.isJump
+  idToEX.io.pipeIn.control.jumpOp := controller.io.output.jumpOp
   // -----------------------------memory stage--------------------------
   idToEX.io.pipeIn.control.memMask := controller.io.output.memMask
   idToEX.io.pipeIn.control.memSext := controller.io.output.memSext
@@ -168,6 +178,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val regRtEX = Wire(UInt(5.W))
   val dstRegEX = Wire(UInt(5.W))
   val memReadEX = Wire(Bool())
+  val aluOutputEX = Wire(UInt(32.W))
+  val pcPlusFourEX = Wire(UInt(32.W))
 
   // inherit the data from ID stage
   valRsEX := idToEX.io.pipeOut.data.valRs
@@ -176,6 +188,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   regRsEX := idToEX.io.pipeOut.data.regRs
   regRtEX := idToEX.io.pipeOut.data.regRt
   dstRegEX := idToEX.io.pipeOut.data.regDst
+  pcPlusFourEX := idToEX.io.pipeOut.data.pcPlusFour
 
   // get the control signals passed in
   // true is mem read
@@ -184,50 +197,104 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // hazard unit
   hazard.io.input.idEXDstReg := dstRegEX
   hazard.io.input.idEXMemread := memReadEX
+  hazard.io.input.exBranchTake := (idToEX.io.pipeOut.control.isBranch & branch.io.output.branchTake)
+  hazard.io.input.exIsJump := idToEX.io.pipeOut.control.isJump
 
   // bypassing unit
   bypass.io.input.idEXRs := regRsEX
   bypass.io.input.idEXRt := regRtEX
+  bypass.io.input.idEXRegWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
+  bypass.io.input.idEXRegDst := dstRegEX
 
+  // stage at memory stage, put here to omit warnings
+  val wbDataMem = Wire(UInt(32.W))
   //ALU unit
   alu.io.input.aluOp := idToEX.io.pipeOut.control.aluOp
 
   alu.io.input.shamt := immediateEX(10, 6)
 
-  alu.io.input.inputA := MuxCase(
+  // input A is always rs ( forwarded or not )
+  alu.io.input.inputA := MuxLookup(
+    bypass.io.output.forwardRs,
     valRsEX,
     Array(
-      (bypass.io.output.forwardALUOpA === 1.U) -> exToMEM.io.pipeOut.data.aluOutput,
-      (bypass.io.output.forwardALUOpA === 2.U) -> wbDataToReg
+      1.U -> wbDataMem,
+      2.U -> wbDataToReg
     )
   )
 
-  alu.io.input.inputB := Mux(
+  alu.io.input.inputB := MuxLookup(
     idToEX.io.pipeOut.control.opBSelect,
     Cat(Fill(16, immediateEX(15)), immediateEX),
-    MuxCase(
-      valRtEX,
+    Array(
+      1.U -> MuxLookup(
+        bypass.io.output.forwardRt,
+        valRtEX,
+        Array(
+          1.U -> wbDataMem,
+          2.U -> wbDataToReg
+        )
+      ),
+      2.U -> pcPlusFourEX
+    )
+  )
+
+  aluOutputEX := alu.io.output.aluOutput
+
+  // the branch unit
+  // branch rs bypassing
+  branch.io.input.regRs := MuxLookup(
+    bypass.io.output.forwardRs,
+    valRsEX,
+    Array(
+      1.U -> wbDataMem,
+      2.U -> wbDataToReg
+    )
+  )
+
+  // branch rt bypassing
+  branch.io.input.regRt := MuxLookup(
+    bypass.io.output.forwardRt,
+    valRtEX,
+    Array(
+      1.U -> wbDataMem,
+      2.U -> wbDataToReg
+    )
+  )
+
+  // branch op
+  branch.io.input.branchOp := idToEX.io.pipeOut.control.branchOp
+
+  // jump target calculation
+  jTarget := Mux(
+    idToEX.io.pipeOut.control.jumpOp,
+    Cat(pcPlusFourEX(31, 28), addressID, Fill(2, 0.U)),
+    MuxLookup(
+      bypass.io.output.forwardRs,
+      valRsEX,
       Array(
-        (bypass.io.output.forwardALUOpB === 1.U) -> exToMEM.io.pipeOut.data.aluOutput,
-        (bypass.io.output.forwardALUOpB === 2.U) -> wbDataToReg
+        1.U -> wbDataMem,
+        2.U -> wbDataToReg
       )
     )
   )
-  // if OpBSelect is false, select rt; otherwise select sign extended immediate
+
+  // branch address calculator
+  brAddress.io.input.branchOffSet := immediateEX
+  brAddress.io.input.pcPlusFour := pcPlusFourEX
+  brTarget := brAddress.io.output.branchTarget
 
   // pipe in to the pipeline registers
   exToMEM.io.valid := true.B
   exToMEM.io.flush := hazard.io.output.exMemFlush
 
   // here are the data values to pipe in
-  exToMEM.io.pipeIn.data.aluOutput := alu.io.output.aluOutput
+  exToMEM.io.pipeIn.data.aluOutput := aluOutputEX
   exToMEM.io.pipeIn.data.writeData := valRtEX
   exToMEM.io.pipeIn.data.regDst := dstRegEX
-  exToMEM.io.pipeIn.data.branchTarget := idToEX.io.pipeOut.data.branchTarget
 
   // pass along the control signals
   //--------------------------memory stage--------------------------
-  exToMEM.io.pipeIn.control.branchTake := (idToEX.io.pipeOut.control.isBranch & alu.io.output.branchTake)
   exToMEM.io.pipeIn.control.memMask := idToEX.io.pipeOut.control.memMask
   exToMEM.io.pipeIn.control.memSext := idToEX.io.pipeOut.control.memSext
   exToMEM.io.pipeIn.control.memWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
@@ -266,10 +333,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   bypass.io.input.exMemRegDst := regDstMem
   bypass.io.input.exMemRegWriteEnable := regWriteEnableMem
 
-  hazard.io.input.exMemBranchTake := exToMEM.io.pipeOut.control.branchTake
-
-  brTarget := exToMEM.io.pipeOut.data.branchTarget
-
   io.dmem.address := aluOutputMem
   // if data memory has a forward
   io.dmem.writedata := Mux(bypass.io.output.forwardMemWriteData, wbDataToReg, writeDataMem)
@@ -286,17 +349,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // make it valid if I'm either reading or writing
   io.dmem.valid := (memWriteEnable | wbSelect)
 
-  //TODO:
-  // this is not working correctly
-  // Only supports combinational memory for now
-  val wbDataMem = Wire(UInt(32.W))
-  when(wbSelect && io.dmem.good) {
-    // If I'm doing a read, write back memory
-    wbDataMem := io.dmem.readdata
-  }.otherwise {
-    // otherwise, write back alu
-    wbDataMem := aluOutputMem
-  }
+  wbDataMem := Mux(wbSelect, io.dmem.readdata, aluOutputMem)
 
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
@@ -335,7 +388,9 @@ object PipelinedCPUInfo {
       "regFile",
       "alu",
       "bypass",
-      "hazard"
+      "hazard",
+      "branch",
+      "brAddress"
     )
   }
 

@@ -41,7 +41,14 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val wb_data = Wire(UInt(32.W))
   regFile.io.input.rs1Addr := rs_address
   regFile.io.input.rs2Addr := rt_address
-  regFile.io.input.writeAddr := Mux(controller.io.output.dstRegSelect, rd_address, rt_address)
+  regFile.io.input.writeAddr := MuxLookup(
+    controller.io.output.dstRegSelect,
+    rt_address,
+    Array(
+      1.U -> rd_address,
+      2.U -> 31.U(5.W)
+    )
+  )
   regFile.io.input.writeData := wb_data
   regFile.io.input.writeEnable := controller.io.output.wbEnable
 
@@ -61,7 +68,7 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val is_Branch = Wire(Bool())
   val pc_plus_four = Wire(UInt(32.W))
   val pc_next = Wire(UInt(32.W))
-  is_Branch := (controller.io.output.pcIsBranch & branchUnit.io.output.branchTake)
+  is_Branch := (controller.io.output.isBranch & branchUnit.io.output.branchTake)
 
   pc_plus_four := reg_pc + 4.U
   // decide the next PC
@@ -72,14 +79,22 @@ class SingleCycleCPU(implicit val conf: CPUConfig) extends BaseCPU {
     pc_plus_four,
     Array(
       (is_Branch) -> br_target,
-      (controller.io.output.pcIsJump) -> j_target
+      (controller.io.output.isJump) -> j_target
     )
   )
   reg_pc := pc_next
   // -----------------execute stage----------------------
   alu.io.input.inputA := valRS
   // if OpBSelect is true, select rb; otherwise select sign extended immediate
-  alu.io.input.inputB := Mux(controller.io.output.opBSelect, valRT, extendedImmediateData)
+  alu.io.input.inputB := MuxLookup(
+    controller.io.output.opBSelect,
+    extendedImmediateData,
+    Array(
+      1.U -> valRT,
+      // this is wrong
+      2.U -> pc_plus_four
+    )
+  )
   alu.io.input.aluOp := controller.io.output.aluOp
 
   val aluOutput = Wire(UInt(32.W))

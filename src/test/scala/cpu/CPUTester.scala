@@ -22,3 +22,12 @@ class PipeLinedCPUALLTester extends CPUFlatSpec {
     }
   }
 }
+
+class PipelinedCPURTypeTester extends CPUFlatSpec {
+  behavior.of("pipelined CPU")
+  for (test <- InstructionTests.rtype) {
+    it should s"run ${test.directoryName}/${test.memFile}" in {
+      CPUTestDriver("pipelined", test) should be(true)
+    }
+  }
+}

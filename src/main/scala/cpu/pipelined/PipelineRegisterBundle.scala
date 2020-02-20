@@ -35,7 +35,7 @@ class MEMWBBundle extends Bundle {
 // fetch stage to instruction decode stage
 class IFIDDataBundle extends Bundle {
   val instruction = UInt(32.W)
-  val nextPc = UInt(32.W)
+  val pcPlusFour = UInt(32.W)
 }
 
 // io bundle for data path from instruction decode stage
@@ -55,7 +55,7 @@ class IDEXDataBundle extends Bundle {
   val regRt = UInt(5.W)
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
-  val branchTarget = UInt(32.W)
+  val pcPlusFour = UInt(32.W)
 }
 
 // io bundle for data path from execute stage to memory
@@ -65,8 +65,6 @@ class EXMEMDataBundle extends Bundle {
   val writeData = UInt(32.W)
   // register write address
   val regDst = UInt(5.W)
-
-  val branchTarget = UInt(32.W)
 }
 
 // io bundle for data path from memory stage to write
@@ -84,13 +82,15 @@ class IDEXControlBundle extends Bundle {
 
   // -------------------------------execute stage----------------------
 
-  val opBSelect = Bool()
-
+  val opBSelect = UInt(2.W)
   // what is the ALU OP
-  val aluOp = UInt(5.W)
+  val aluOp = UInt(4.W)
 
-  // merge branch unit into ALU for managing complexity ( or bypassing wires go crazy )
   val isBranch = Bool()
+  val branchOp = UInt(3.W)
+
+  val isJump = Bool()
+  val jumpOp = Bool()
 
   // -----------------------------memory stage--------------------------
 
@@ -119,9 +119,6 @@ class IDEXControlBundle extends Bundle {
 // stage
 class EXMEMControlBundle extends Bundle {
   // -----------------------------memory stage--------------------------
-
-  // is branch taken
-  val branchTake = Bool()
 
   // memory mask mode
   val memMask = UInt(2.W)

@@ -68,12 +68,12 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
   }
 
   def printPC(): Unit = {
-    val v = simulator.peek("cpu.regPc")
+    val v = simulator.peek("cpu.regPC")
     println(s"PC:    0x${v.toInt.toHexString}")
   }
 
   def printInst(addr: Int = -1): Unit = {
-    val pc = if (addr < 0) simulator.peek("cpu.regPc").toInt else addr
+    val pc = if (addr < 0) simulator.peek("cpu.regPC").toInt else addr
     // the data at the pc
     val v = simulator.peekMemory("mem.physicalMem", pc / 4)
     println(s"the instruction at 0x${pc.toHexString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
@@ -199,7 +199,7 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
 
   def step(cycles: Int = 0): Unit = {
     val start = cycle
-    while (simulator.peek("cpu.regPc") != endPC && cycle < start + cycles) {
+    while (simulator.peek("cpu.regPC") != endPC && cycle < start + cycles) {
       simulator.step(1)
       cycle += 1
     }

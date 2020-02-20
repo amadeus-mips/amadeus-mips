@@ -2,7 +2,6 @@ package cpu.components {
 
   import chisel3._
 
-  // TODO: this is originally a trait. Don't know why it doesn't work
   object ControlSignalConstants {
 
     // general yes and no
@@ -17,17 +16,26 @@ package cpu.components {
     val JUMP_Y = true.B
     val JUMP_N = false.B
 
+    val JUMP_ADDR = true.B
+    val JUMP_REG = false.B
+    val JUMP_X = false.B
+
     // choose destination register
-    val DSTRD = true.B
-    val DSTRT = false.B
+    val DST_X = 0.U
+    val DST_RT = 0.U
+    val DST_RD = 1.U
+    // for reg 31
+    val DST_L = 2.U
 
     //whether write back or not
     val WB_Y = true.B
     val WB_N = false.B
 
     // choose the operand B for ALU
-    val OPBRT = false.B
-    val OPBOFFSET = true.B
+    val OPB_OFFSET = 0.U
+    val OPB_RT = 1.U
+    val OPB_PCPLUSFOUR = 2.U
+    val OPB_X = 0.U
 
     // choose the ALU Op
     val ALU_NOP = 0.U
@@ -45,29 +53,34 @@ package cpu.components {
     val ALU_SRLI = 12.U
     val ALU_SRAV = 13.U
     val ALU_SRAI = 14.U
-    //TODO: put branching comparison to ID, and
-    // compare with 2's complement
-    val ALU_CMP_EQ = 15.U
-    val ALU_CMP_N_EQ = 16.U
-    val ALU_CMP_GREATER_Z = 17.U
-    val ALU_CMP_GREATER_EQ_Z = 18.U
-    val ALU_CMP_LESS_Z = 19.U
-    val ALU_CMP_LESS_EQ_Z = 20.U
+    val ALU_PLUS_FOUR = 15.U
+
+    // branch ops
+    val BRANCH_X = 0.U
+    val BRANCH_CMP_EQ = 0.U
+    val BRANCH_CMP_N_EQ = 1.U
+    val BRANCH_CMP_GREATER_Z = 2.U
+    val BRANCH_CMP_GREATER_EQ_Z = 3.U
+    val BRANCH_CMP_LESS_Z = 4.U
+    val BRANCH_CMP_LESS_EQ_Z = 5.U
 
     // whether write to mem
     val MEM_WRITE_Y = true.B
     val MEM_WRITE_N = false.B
 
     // memory mask mode
+    val MEM_MASK_X = 0.U
     val MEM_MASK_WORD = 2.U
     val MEM_MASK_HALF = 1.U
     val MEM_MASK_BYTE = 0.U
 
     // memory sign extension mode
+    val MEM_SEXT_X = false.B
     val MEM_SEXT_Y = true.B
     val MEM_SEXT_N = false.B
 
     // chooose the writeback select
+    val WB_X = false.B
     val WB_MEM = true.B
     val WB_ALU = false.B
   }
