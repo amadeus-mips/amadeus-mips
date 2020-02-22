@@ -49,6 +49,7 @@ class HazardUnitOut extends Bundle {
   // insert a bubble to stage reg
   val idEXFlush = Output(Bool())
 
+  //TODO: remove this, seems never flushed
   val exMemFlush = Output(Bool())
 
 }
@@ -98,8 +99,8 @@ class HazardUnit extends Module {
 
     /**
       * |  IF  |  ID  |  EXE  |  MEM  |  WB
-      * pc + 8 | pc+4 |  br   |   g   |  ->
-      *        F      F       F       G
+      * pc + 8 | delay|  br   |   g   |  ->
+      *        F      G       G       G
       *        flush IF, ID becomes no-op
       *        because I don't do it in later stages
       */
@@ -113,7 +114,6 @@ class HazardUnit extends Module {
       */
     io.output.pcWrite := 1.U
     io.output.ifIDFlush := true.B
-    io.output.idEXFlush := true.B
   }
 
   // jump flush
@@ -122,8 +122,8 @@ class HazardUnit extends Module {
 
     /**
       *  IF  |  ID  |  EX  |  MEM  |  WB
-      *  pc+8| pc+4 |  j   |   -   |  -
-      *      F      F      -       -
+      *  pc+8| delay|  j   |   -   |  -
+      *      F            -       -
       */
     /**
       * similar to branch
@@ -134,6 +134,5 @@ class HazardUnit extends Module {
     io.output.pcWrite := 3.U
     io.output.ifIDFlush := true.B
     // pc+4 gets flushed and never enters ex, j proceeds
-    io.output.idEXFlush := true.B
   }
 }

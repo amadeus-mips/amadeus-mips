@@ -147,6 +147,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEX.io.pipeIn.data.regRs := rsAddressID
   idToEX.io.pipeIn.data.regRt := rtAddressID
   idToEX.io.pipeIn.data.pcPlusFour := ifToID.io.pipeOut.data.pcPlusFour
+  idToEX.io.pipeIn.data.jAddress := addressID
 
   // here are the control signals
   // -----------------------------execute stage--------------------------
@@ -268,7 +269,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // jump target calculation
   jTarget := Mux(
     idToEX.io.pipeOut.control.jumpOp,
-    Cat(pcPlusFourEX(31, 28), addressID, Fill(2, 0.U)),
+    Cat(pcPlusFourEX(31, 28), idToEX.io.pipeOut.data.jAddress, Fill(2, 0.U)),
     MuxLookup(
       bypass.io.output.forwardRs,
       valRsEX,

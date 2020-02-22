@@ -57,7 +57,7 @@ object InstructionTests {
       "branchTrue",
       Map("single-cycle" -> 10, "pipelined" -> 20),
       Map(8 -> 2, 9 -> 2, 10 -> 10),
-      Map(0 -> 0, 10 -> 20),
+      Map(0 -> 0, 2 -> 11, 3 -> 12),
       Map(),
       Map()
     ),
@@ -65,17 +65,8 @@ object InstructionTests {
       "branch",
       "branchFalse",
       Map("single-cycle" -> 10, "pipelined" -> 20),
-      Map(8 -> 2, 9 -> 3, 10 -> 10),
-      Map(0 -> 0, 10 -> 30),
       Map(),
-      Map()
-    ),
-    CPUTestCase(
-      "branch",
-      "branchBoth",
-      Map("pipelined" -> 40),
-      Map(12 -> 20, 8 -> 1, 9 -> 1, 10 -> 15),
-      Map(0 -> 0, 12 -> 28),
+      Map(0 -> 0, 2 -> 12, 3 -> 11),
       Map(),
       Map()
     )
@@ -87,7 +78,7 @@ object InstructionTests {
       "t1",
       Map("pipelined" -> 50),
       Map(),
-      Map(0 -> 0, 2 -> 7, 7 -> 7),
+      Map(0 -> 0, 2 -> 1, 3 -> 12, 4 -> 1, 7 -> twoscomp(-4)),
       Map(),
       Map()
     )
@@ -104,8 +95,21 @@ object InstructionTests {
       Map()
     )
   )
-  val tests = Map("rtype" -> rtype, "itype" -> itype, "branchType" -> branchType, "randTest" -> randTest)
-  val allTests = rtype ++ itype ++ branchType ++ randTest
+
+  val jtype = List[CPUTestCase](
+    CPUTestCase(
+      "jump",
+      "jal",
+      Map("pipelined" -> 15),
+      Map(),
+      Map(0 -> 0, 2 -> 5, 31 -> 12),
+      Map(),
+      Map()
+    )
+  )
+  val tests =
+    Map("rtype" -> rtype, "itype" -> itype, "branchType" -> branchType, "randTest" -> randTest, "jtype" -> jtype)
+  val allTests = rtype ++ itype ++ branchType ++ randTest ++ jtype
 
   // 2's complement value
   def twoscomp(v: BigInt): BigInt = {

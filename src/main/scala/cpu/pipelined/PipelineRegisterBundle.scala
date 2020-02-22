@@ -56,6 +56,7 @@ class IDEXDataBundle extends Bundle {
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
   val pcPlusFour = UInt(32.W)
+  val jAddress = UInt(25.W)
 }
 
 // io bundle for data path from execute stage to memory
