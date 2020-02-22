@@ -358,3 +358,4 @@ hexcode.txt
 generated/
 simulator_run_dir/
 Top.DualPortedCombinMemory.physicalMem.v
+venv/lib/
