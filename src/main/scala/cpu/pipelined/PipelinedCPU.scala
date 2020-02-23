@@ -370,7 +370,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   //---------------------------------------------------------------------------------
 
   // preventing writing to register zero
-  wbEnableToReg := (memToWB.io.pipeOut.control.wbEnable && (wbAddrToReg =/= 0.U))
+  wbEnableToReg := (memToWB.io.pipeOut.control.wbEnable && wbAddrToReg.orR)
   wbDataToReg := memToWB.io.pipeOut.data.wbData
   wbAddrToReg := memToWB.io.pipeOut.data.regDst
 

@@ -64,10 +64,10 @@ class BypassUnit extends Module {
   // the forward the alu output to substitute register rs
   // the second case is where rs is the same as dst register passed from memory out
   // note: search in the result directly from exe-mem first
-  when((io.input.idEXRs === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
+  when((io.input.idEXRs === io.input.exMemRegDst) && io.input.exMemRegDst.orR && io.input.exMemRegWriteEnable) {
     io.output.forwardRs := 1.U
   }.elsewhen(
-      (io.input.idEXRs === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+      (io.input.idEXRs === io.input.memWBRegDst) && io.input.memWBRegDst.orR && io.input.memWBRegWriteEnable
     ) {
       io.output.forwardRs := 2.U
     }
@@ -77,10 +77,10 @@ class BypassUnit extends Module {
 
   // note : search in the result directly from exe-mem first
   // you should also exclude register zero in the hazard detection unit
-  when((io.input.idEXRt === io.input.exMemRegDst) && (io.input.exMemRegDst =/= 0.U) && io.input.exMemRegWriteEnable) {
+  when((io.input.idEXRt === io.input.exMemRegDst) && io.input.exMemRegDst.orR && io.input.exMemRegWriteEnable) {
     io.output.forwardRt := 1.U
   }.elsewhen(
-      (io.input.idEXRt === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+      (io.input.idEXRt === io.input.memWBRegDst) && io.input.memWBRegDst.orR && io.input.memWBRegWriteEnable
     ) {
       io.output.forwardRt := 2.U
     }
@@ -97,7 +97,7 @@ class BypassUnit extends Module {
   // add $t1, $t2, $t3
   // sw $t1, 0($t0)
   when(
-    (io.input.exMemRegDst === io.input.memWBRegDst) && (io.input.memWBRegDst =/= 0.U) && io.input.memWBRegWriteEnable
+    (io.input.exMemRegDst === io.input.memWBRegDst) && io.input.memWBRegDst.orR && io.input.memWBRegWriteEnable
   ) {
     io.output.forwardMemWriteData := true.B
   }.otherwise {
