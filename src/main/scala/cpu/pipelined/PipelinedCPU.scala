@@ -181,10 +181,27 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val memReadEX = Wire(Bool())
   val aluOutputEX = Wire(UInt(32.W))
   val pcPlusFourEX = Wire(UInt(32.W))
+  // stage at memory stage, put here to omit warnings
+  val wbDataMem = Wire(UInt(32.W))
 
   // inherit the data from ID stage
-  valRsEX := idToEX.io.pipeOut.data.valRs
-  valRtEX := idToEX.io.pipeOut.data.valRt
+  valRsEX := MuxLookup(
+    bypass.io.output.forwardRs,
+    idToEX.io.pipeOut.data.valRs,
+    Array(
+      1.U -> wbDataMem,
+      2.U -> wbDataToReg
+    )
+  )
+
+  valRtEX := MuxLookup(
+    bypass.io.output.forwardRt,
+    idToEX.io.pipeOut.data.valRt,
+    Array(
+      1.U -> wbDataMem,
+      2.U -> wbDataToReg
+    )
+  )
   immediateEX := idToEX.io.pipeOut.data.immediate
   regRsEX := idToEX.io.pipeOut.data.regRs
   regRtEX := idToEX.io.pipeOut.data.regRt
@@ -207,35 +224,19 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   bypass.io.input.idEXRegWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
   bypass.io.input.idEXRegDst := dstRegEX
 
-  // stage at memory stage, put here to omit warnings
-  val wbDataMem = Wire(UInt(32.W))
   //ALU unit
   alu.io.input.aluOp := idToEX.io.pipeOut.control.aluOp
 
   alu.io.input.shamt := immediateEX(10, 6)
 
   // input A is always rs ( forwarded or not )
-  alu.io.input.inputA := MuxLookup(
-    bypass.io.output.forwardRs,
-    valRsEX,
-    Array(
-      1.U -> wbDataMem,
-      2.U -> wbDataToReg
-    )
-  )
+  alu.io.input.inputA := valRsEX
 
   alu.io.input.inputB := MuxLookup(
     idToEX.io.pipeOut.control.opBSelect,
     Cat(Fill(16, immediateEX(15)), immediateEX),
     Array(
-      1.U -> MuxLookup(
-        bypass.io.output.forwardRt,
-        valRtEX,
-        Array(
-          1.U -> wbDataMem,
-          2.U -> wbDataToReg
-        )
-      ),
+      1.U -> valRtEX,
       2.U -> pcPlusFourEX
     )
   )
@@ -244,24 +245,10 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // the branch unit
   // branch rs bypassing
-  branch.io.input.regRs := MuxLookup(
-    bypass.io.output.forwardRs,
-    valRsEX,
-    Array(
-      1.U -> wbDataMem,
-      2.U -> wbDataToReg
-    )
-  )
+  branch.io.input.regRs := valRsEX
 
   // branch rt bypassing
-  branch.io.input.regRt := MuxLookup(
-    bypass.io.output.forwardRt,
-    valRtEX,
-    Array(
-      1.U -> wbDataMem,
-      2.U -> wbDataToReg
-    )
-  )
+  branch.io.input.regRt := valRtEX
 
   // branch op
   branch.io.input.branchOp := idToEX.io.pipeOut.control.branchOp
@@ -270,14 +257,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   jTarget := Mux(
     idToEX.io.pipeOut.control.jumpOp,
     Cat(pcPlusFourEX(31, 28), idToEX.io.pipeOut.data.jAddress, Fill(2, 0.U)),
-    MuxLookup(
-      bypass.io.output.forwardRs,
-      valRsEX,
-      Array(
-        1.U -> wbDataMem,
-        2.U -> wbDataToReg
-      )
-    )
+    valRsEX
   )
 
   // branch address calculator

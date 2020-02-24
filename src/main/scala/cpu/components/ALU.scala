@@ -18,6 +18,7 @@ class ALUIn extends Bundle {
 
 class ALUOut extends Bundle {
   val aluOutput = Output(UInt(32.W))
+//  val overflow = Output(UInt(32.W))
 }
 
 import cpu.components.ALUTypes._
@@ -60,4 +61,11 @@ class ALU extends Module {
     )
   )
 
+//  io.output.overflow := MuxLookup(
+//    io.input.aluOp,
+//    false.B,
+//    Array(
+//      add -> (Cat(io.input.inputA(31), io.input.inputA),)
+//    )
+//  )
 }
