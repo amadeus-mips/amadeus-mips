@@ -27,6 +27,8 @@ class CP0 extends Module {
     val input = new CP0In
     val output = new CP0Out
   })
+  //TODO: add reginit value ( determine intial values
+
   // register 9
   // count register, work with compare ( 11 )
   val regCount = Reg(UInt(32.W))
@@ -43,4 +45,8 @@ class CP0 extends Module {
   // register 14
   // initialize the epc register
   val regEPC = Reg(UInt(32.W))
+
+  when(io.input.writeEnable) {
+    when(io.input.regSelect === 9.U)
+  }
 }

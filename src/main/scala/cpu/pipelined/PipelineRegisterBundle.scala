@@ -1,6 +1,7 @@
 package cpu.pipelined
 
 import chisel3._
+import cpu.components.exceptionVector
 
 //TODO: rewrite this to use a generator and enum
 
@@ -8,6 +9,7 @@ import chisel3._
 // to instruction decode stage
 class IFIDBundle extends Bundle {
   val data = new IFIDDataBundle
+  val exception = new exceptionVector
 }
 
 // io bundle from instruction decode stage
@@ -15,6 +17,7 @@ class IFIDBundle extends Bundle {
 class IDEXBundle extends Bundle {
   val data = new IDEXDataBundle
   val control = new IDEXControlBundle
+  val exception = new exceptionVector
 }
 
 // io bundle from execute stage to memory
@@ -22,6 +25,7 @@ class IDEXBundle extends Bundle {
 class EXMEMBundle extends Bundle {
   val data = new EXMEMDataBundle
   val control = new EXMEMControlBundle
+  val exception = new exceptionVector
 }
 
 // io bundle from memory stage to write
@@ -85,7 +89,7 @@ class IDEXControlBundle extends Bundle {
 
   val opBSelect = UInt(2.W)
   // what is the ALU OP
-  val aluOp = UInt(4.W)
+  val aluOp = UInt(5.W)
 
   val isBranch = Bool()
   val branchOp = UInt(3.W)

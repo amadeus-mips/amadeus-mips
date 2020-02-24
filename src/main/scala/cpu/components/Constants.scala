@@ -54,6 +54,8 @@ package cpu.components {
     val ALU_SRAV = 13.U
     val ALU_SRAI = 14.U
     val ALU_PLUS_FOUR = 15.U
+    val ALU_ADDU = 16.U
+    val ALU_SUBU = 17.U
 
     // branch ops
     val BRANCH_X = 0.U

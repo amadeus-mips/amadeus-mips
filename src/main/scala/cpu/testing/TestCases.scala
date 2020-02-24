@@ -72,6 +72,17 @@ object InstructionTests {
     )
   )
 
+  val bypassTest = List[CPUTestCase](
+    CPUTestCase(
+      "bypass",
+      "memToALU",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 2 -> 3),
+      Map(),
+      Map()
+    )
+  )
   val randTest = List[CPUTestCase](
     CPUTestCase(
       "testBench",

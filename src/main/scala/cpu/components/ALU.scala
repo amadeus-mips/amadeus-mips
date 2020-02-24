@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.util._
 
 object ALUTypes {
-  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: plusFour :: Nil =
-    Enum(16)
+  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: plusFour :: addu :: subu :: Nil =
+    Enum(18)
 }
 
 class ALUIn extends Bundle {
@@ -13,12 +13,12 @@ class ALUIn extends Bundle {
   val inputB = Input(UInt(32.W))
   val shamt = Input(UInt(5.W))
   // the width of control signal should be equal to the log2 ceil number of instructions
-  val aluOp = Input(UInt(4.W))
+  val aluOp = Input(UInt(5.W))
 }
 
 class ALUOut extends Bundle {
   val aluOutput = Output(UInt(32.W))
-//  val overflow = Output(UInt(32.W))
+  val overflow = Output(Bool())
 }
 
 import cpu.components.ALUTypes._
@@ -37,13 +37,18 @@ class ALU extends Module {
     val output = new ALUOut
   })
 
+  val addResult = (io.input.inputA + io.input.inputB)
+  val subResult = (io.input.inputA - io.input.inputB)
+
   // omitting nop and passthrough, as they are the default: input A
   io.output.aluOutput := MuxLookup(
     io.input.aluOp,
     io.input.inputA,
     Array(
-      add -> (io.input.inputA + io.input.inputB),
-      sub -> (io.input.inputA - io.input.inputB),
+      add -> addResult,
+      addu -> addResult,
+      sub -> subResult,
+      subu -> subResult,
       and -> (io.input.inputA & io.input.inputB),
       slt -> (io.input.inputA < io.input.inputB),
       lui -> (io.input.inputB << 16),
@@ -61,11 +66,17 @@ class ALU extends Module {
     )
   )
 
-//  io.output.overflow := MuxLookup(
-//    io.input.aluOp,
-//    false.B,
-//    Array(
-//      add -> (Cat(io.input.inputA(31), io.input.inputA),)
-//    )
-//  )
+  //logic behind this:
+  //overflow: can't represent with the current hardware
+  //if add A and B are different signs, overflow cannot occur
+  //if add A and B have different signs, overflow can occur: when the result sign is not the A sign
+  // sub is similar
+  io.output.overflow := MuxLookup(
+    io.input.aluOp,
+    false.B,
+    Array(
+      add -> ((~(io.input.inputA(31) ^ io.input.inputB(31))) & (io.input.inputA(31) ^ addResult)),
+      sub -> ((io.input.inputA(31) ^ io.input.inputB(31)) & (io.input.inputA(31) ^ subResult))
+    )
+  )
 }
