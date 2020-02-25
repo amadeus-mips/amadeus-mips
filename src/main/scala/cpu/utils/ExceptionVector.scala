@@ -1,7 +1,6 @@
-package cpu.components
+package cpu.utils
 
 import chisel3._
-import chisel3.util._
 
 class exceptionVector extends Bundle {
   val isBranchDelaySlot = Bool()
@@ -12,7 +11,7 @@ class exceptionVector extends Bundle {
 
 class exceptionOrR extends Module {
   val io = IO(new Bundle() {
-    val input = new exceptionVector
+    val input = Input(new exceptionVector)
     val output = Output(Bool())
   })
   // note: Don't take is branch delay slot

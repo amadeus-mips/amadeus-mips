@@ -4,8 +4,6 @@ import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.components.{
-  exceptionOrR,
-  isException,
   ALU,
   AddressUnit,
   BaseCPU,
@@ -17,6 +15,7 @@ import cpu.components.{
   RegisterFile,
   StageRegister
 }
+import cpu.utils.isException
 
 class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 

@@ -1,8 +1,7 @@
 package cpu.pipelined
 
 import chisel3._
-import cpu.components.exceptionVector
-
+import cpu.utils.exceptionVector
 //TODO: rewrite this to use a generator and enum
 
 // io bundle from instruction fetch stage

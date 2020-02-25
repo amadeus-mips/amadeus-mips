@@ -2,10 +2,16 @@ package cpu.components
 
 import chisel3._
 import chisel3.util._
+import cpu.utils.{exceptionVector, TimerHelper}
 
-object exceptionCodes {
-  val int :: mod :: tlbl :: tlbs :: adel :: ades :: ibe :: dbe :: syscall :: bp :: ri :: cpu :: ov :: trap :: unused0 :: fpe :: cus0 :: cus1 :: c2e :: expand0 :: expand1 :: expand2 :: mdmx :: watch :: mcheck :: thread :: dsp :: expand3 :: expand4 :: expand5 :: cacherr :: unused1 :: Nil =
-    Enum(32)
+//object exceptionCodes {
+//  val interrupt :: mod :: tlbl :: tlbs :: adel :: ades :: ibe :: dbe :: syscall :: bp :: ri :: cpu :: ov :: trap :: unused0 :: fpe :: cus0 :: cus1 :: c2e :: expand0 :: expand1 :: expand2 :: mdmx :: watch :: mcheck :: thread :: dsp :: expand3 :: expand4 :: expand5 :: cacherr :: unused1 :: Nil =
+//    Enum(32)
+//}
+
+// this passed the compilation test instead of the one above, one would infer that you'd have to use them
+object excCodes {
+  val ibe :: ri :: ov :: dbe :: Nil = Enum(4)
 }
 
 class CPZeroIn extends Bundle {
@@ -31,8 +37,10 @@ class CPZeroOut extends Bundle {
 
 //TODO: initialization values
 
+import cpu.components.excCodes._
+
 //TODO: this is assuming no multiple exceptions
-import cpu.components.exceptionCodes._
+
 class CPZero extends Module {
   val io = IO(new Bundle() {
     val input = new CPZeroIn
@@ -47,11 +55,11 @@ class CPZero extends Module {
 
   // register 9
   // count register, work with compare ( 11 )
-  val regCountHelper = RegInit(false.B(Bool()))
+  val regCountHelper = RegInit(false.B)
   regCountHelper := !regCountHelper
   // notice, the latter number indicates how many counts there are, so it's not off by one
   //TODO: what to do when wrap around
-  val regCount = Counter(regCountHelper, 4294967296)
+  val regCount = TimerHelper(regCountHelper, 4294967296L)
 
   // register 11
   // compare register, work with count ( 9 )
@@ -76,12 +84,12 @@ class CPZero extends Module {
   //TODO: for the compliance of the competition, ebase is ignored ( fixed to a pre-defined value ) because bev is always 1
   // exception handler is always at 0xBFC00380, which is 0xBFC0.0200 + 0x180
   //TODO: will long literal compile?
-  val regEBase = RegInit(3217032064.U(32.W))
+  val regEBase = RegInit(3217032064L.U(32.W))
 
   // when there is an exception and exception level is 0
   when(io.input.isException && (regSR(1) === 0.U)) {
     //1. changing exception level to one means automatically it's kernel mode, see mips32 privileged page 22
-    regSR := Cat(regSR(31,2), 3.U(2.W))
+    regSR := Cat(regSR(31, 2), 3.U(2.W))
 
     //2. setup the actual cause for the exception
     when(io.input.cause.fetchException) {
