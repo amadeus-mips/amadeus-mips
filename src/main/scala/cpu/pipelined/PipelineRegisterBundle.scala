@@ -70,6 +70,7 @@ class EXMEMDataBundle extends Bundle {
   val writeData = UInt(32.W)
   // register write address
   val regDst = UInt(5.W)
+  val pcPlusFour = UInt(32.W)
 }
 
 // io bundle for data path from memory stage to write

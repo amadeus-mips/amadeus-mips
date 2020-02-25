@@ -11,6 +11,7 @@ import cpu.components.{
   BaseCPU,
   BranchUnit,
   BypassUnit,
+  CPZero,
   Controller,
   HazardUnit,
   RegisterFile,
@@ -44,6 +45,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val brAddress = Module(new AddressUnit)
   val bypass = Module(new BypassUnit)
   val hazard = Module(new HazardUnit)
+  val cpZero = Module(new CPZero)
 
   // initialize the pipeline stage registers
   // instruction fetch to instruction decode
@@ -73,13 +75,17 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val brTarget = Wire(UInt(32.W))
   val jTarget = Wire(UInt(32.W))
 
-  regPC := MuxLookup(
-    hazard.io.output.pcWrite,
-    pcPlusFourIF,
-    Array(
-      1.U -> brTarget,
-      2.U -> regPC,
-      3.U -> jTarget
+  regPC := Mux(
+    cpZero.io.output.jToNextPC,
+    cpZero.io.output.nextPC,
+    MuxLookup(
+      hazard.io.output.pcWrite,
+      pcPlusFourIF,
+      Array(
+        1.U -> brTarget,
+        2.U -> regPC,
+        3.U -> jTarget
+      )
     )
   )
 
@@ -175,6 +181,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // here are the exceptions
   idToEX.io.pipeIn.exception <> ifToID.io.pipeOut.exception
+  //TODO: this does not comply with bc ( branch unconditional )
   idToEX.io.pipeIn.exception.isBranchDelaySlot := idToEX.io.pipeOut.control.isBranch
 
   //---------------------------------------------------------------------------------
@@ -290,7 +297,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // does this increase cycle time?
   exToMEM.io.pipeIn.data.writeData := valRtEX
   exToMEM.io.pipeIn.data.regDst := dstRegEX
-
+  exToMEM.io.pipeIn.data.pcPlusFour := pcPlusFourEX
   // pass along the control signals
   //--------------------------memory stage--------------------------
   exToMEM.io.pipeIn.control.memMask := idToEX.io.pipeOut.control.memMask
@@ -351,7 +358,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // then I'm not writing back, as I can't do anything with
   // it
   io.dmem.memread := wbSelect
-  io.dmem.memwrite := (memWriteEnable &)
+  io.dmem.memwrite := memWriteEnable
   io.dmem.maskmode := memMask
   io.dmem.sext := memSext
 
@@ -360,9 +367,17 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   wbDataMem := Mux(wbSelect, io.dmem.readdata, aluOutputMem)
 
+  // TODO: catch exceptions from the memory stage
+  val memException = false.B
   // detect early ( prevent writes ), handle late
   // handle the exceptions here
   //TODO: I don't know if this works
+
+  cpZero.io.input.readEnable := false.B
+  cpZero.io.input.cause := exToMEM.io.pipeOut.exception
+  cpZero.io.input.isException := (isExceptionPrevious || memException)
+  cpZero.io.input.pcPlusFour := exToMEM.io.pipeOut.data.pcPlusFour
+  cpZero.io.input.memException := memException
 
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
