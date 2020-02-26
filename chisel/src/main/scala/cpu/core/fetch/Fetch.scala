@@ -35,7 +35,8 @@ class Fetch extends Module {
   io.out.instFetchExcept := instFetchExcept
   io.out.pc := pc
   io.out.instValid := io.instValid
-  io.outPCValid := !instFetchExcept && (!(io.instValid && io.stall(0)))
+  io.outPCValid := !instFetchExcept
+//  io.outPCValid := !instFetchExcept && (!(io.instValid && io.stall(0)))
   io.outStallReq := !io.instValid
 
   when(io.flush) {

@@ -49,6 +49,8 @@ module inst_axi(
     assign i_arprot     = 3'b000;       // 与awprot有关，目前暂定3'b000
     assign i_arvalid    = flush ? 1'b0 : cached_trans ? miss : pc_en;
 
+    assign inst_valid = cached_trans ? hit : 1'b0;
+
     wire cache_write_valid = (i_rid == `AXI_INST_Id) & (i_rvalid == 1'b1);
     inst_cache u_inst_cache (
         .clk        (clk),
