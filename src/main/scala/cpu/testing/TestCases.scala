@@ -72,13 +72,68 @@ object InstructionTests {
     )
   )
 
-  val bypassTest = List[CPUTestCase](
+  val hazardTest = List[CPUTestCase](
+    // 2 R type bypassing
     CPUTestCase(
       "bypass",
-      "memToALU",
+      "memToEXRR",
       Map("pipelined" -> 20),
       Map(),
-      Map(0 -> 0, 2 -> 3),
+      Map(0 -> 0, 4 -> 7),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "wbToEXRR",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 4 -> 7),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "memToEXRM",
+      Map("pipelined" -> 25),
+      Map(),
+      Map(0 -> 0, 3 -> 5, 5 -> 5),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "wbToEXRM",
+      Map("pipelined" -> 25),
+      Map(),
+      Map(0 -> 0, 3 -> 5, 5 -> 5),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "memToEXMM",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 6 -> 5),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "wbToEXMM",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 6 -> 5),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "stall",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 6 -> 5),
       Map(),
       Map()
     )
@@ -119,8 +174,15 @@ object InstructionTests {
     )
   )
   val tests =
-    Map("rtype" -> rtype, "itype" -> itype, "branchType" -> branchType, "randTest" -> randTest, "jtype" -> jtype)
-  val allTests = rtype ++ itype ++ branchType ++ randTest ++ jtype
+    Map(
+      "rtype" -> rtype,
+      "itype" -> itype,
+      "branchType" -> branchType,
+      "randTest" -> randTest,
+      "jtype" -> jtype,
+      "hazardTest" -> hazardTest
+    )
+  val allTests = rtype ++ itype ++ branchType ++ randTest ++ jtype ++ hazardTest
 
   // 2's complement value
   def twoscomp(v: BigInt): BigInt = {
