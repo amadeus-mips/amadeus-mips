@@ -55,11 +55,9 @@ class CPZero extends Module {
 
   // register 9
   // count register, work with compare ( 11 )
-  val regCountHelper = RegInit(false.B)
-  regCountHelper := !regCountHelper
-  // notice, the latter number indicates how many counts there are, so it's not off by one
-  //TODO: what to do when wrap around
-  val regCount = TimerHelper(regCountHelper, 4294967296L)
+  val regCount = RegInit(0.U(33.W))
+  regCount := regCount + 1.U
+  // when using, shift right 1 bit
 
   // register 11
   // compare register, work with count ( 9 )
