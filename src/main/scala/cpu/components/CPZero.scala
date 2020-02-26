@@ -2,7 +2,7 @@ package cpu.components
 
 import chisel3._
 import chisel3.util._
-import cpu.utils.{exceptionVector, TimerHelper}
+import cpu.utils.exceptionVector
 
 //object exceptionCodes {
 //  val interrupt :: mod :: tlbl :: tlbs :: adel :: ades :: ibe :: dbe :: syscall :: bp :: ri :: cpu :: ov :: trap :: unused0 :: fpe :: cus0 :: cus1 :: c2e :: expand0 :: expand1 :: expand2 :: mdmx :: watch :: mcheck :: thread :: dsp :: expand3 :: expand4 :: expand5 :: cacherr :: unused1 :: Nil =
@@ -57,7 +57,7 @@ class CPZero extends Module {
   // count register, work with compare ( 11 )
   val regCount = RegInit(0.U(33.W))
   regCount := regCount + 1.U
-  // when using, shift right 1 bit
+  // when using, use regCount(32,1)
 
   // register 11
   // compare register, work with count ( 9 )

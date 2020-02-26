@@ -3,18 +3,7 @@ package cpu.pipelined
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.components.{
-  ALU,
-  AddressUnit,
-  BaseCPU,
-  BranchUnit,
-  BypassUnit,
-  CPZero,
-  Controller,
-  HazardUnit,
-  RegisterFile,
-  StageRegister
-}
+import cpu.components._
 import cpu.utils.isException
 
 class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
@@ -42,7 +31,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val alu = Module(new ALU)
   val branch = Module(new BranchUnit)
   val brAddress = Module(new AddressUnit)
-  val bypass = Module(new BypassUnit)
   val hazard = Module(new HazardUnit)
   val cpZero = Module(new CPZero)
 
@@ -204,7 +192,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // inherit the data from ID stage
   valRsEX := MuxLookup(
-    bypass.io.output.forwardRs,
+    hazard.io.output.forwardRs,
     idToEX.io.pipeOut.data.valRs,
     Array(
       1.U -> wbDataMem,
@@ -213,7 +201,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   )
 
   valRtEX := MuxLookup(
-    bypass.io.output.forwardRt,
+    hazard.io.output.forwardRt,
     idToEX.io.pipeOut.data.valRt,
     Array(
       1.U -> wbDataMem,
@@ -236,11 +224,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   hazard.io.input.exBranchTake := (idToEX.io.pipeOut.control.isBranch & branch.io.output.branchTake)
   hazard.io.input.exIsJump := idToEX.io.pipeOut.control.isJump
 
-  // bypassing unit
-  bypass.io.input.idEXRs := regRsEX
-  bypass.io.input.idEXRt := regRtEX
-  bypass.io.input.idEXRegWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
-  bypass.io.input.idEXRegDst := dstRegEX
+  // hazarding unit
+  hazard.io.input.idEXRs := regRsEX
+  hazard.io.input.idEXRt := regRtEX
 
   //ALU unit
   alu.io.input.aluOp := idToEX.io.pipeOut.control.aluOp
@@ -262,10 +248,10 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   aluOutputEX := alu.io.output.aluOutput
 
   // the branch unit
-  // branch rs bypassing
+  // branch rs hazarding
   branch.io.input.regRs := valRsEX
 
-  // branch rt bypassing
+  // branch rt hazarding
   branch.io.input.regRt := valRtEX
 
   // branch op
@@ -289,7 +275,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   // here are the data values to pipe in
   exToMEM.io.pipeIn.data.aluOutput := aluOutputEX
-  // bypassing of value rt does not happen until the memory stage
+  // hazarding of value rt does not happen until the memory stage
   //TODO: note this with care!!!
   // this is to forward reg in the write back stage, which can't be forwarded
   // when this instruction enters the mem stage
@@ -339,18 +325,18 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   wbSelect := exToMEM.io.pipeOut.control.wbSelect
   regDstMem := exToMEM.io.pipeOut.data.regDst
   // Don't care about register write signal in case of an exception
-  // if there is an exception, wb enable will be flushed and become zero, and the bypassing paths
+  // if there is an exception, wb enable will be flushed and become zero, and the hazarding paths
   // will become invalid
   regWriteEnableMem := exToMEM.io.pipeOut.control.wbEnable
 
-  bypass.io.input.exMemRegDst := regDstMem
-  bypass.io.input.exMemRegWriteEnable := regWriteEnableMem
+  hazard.io.input.exMemRegDst := regDstMem
+  hazard.io.input.exMemRegWriteEnable := regWriteEnableMem
 
   //TODO: for now, pretend there is no exception during the memory stage
 
   io.dmem.address := aluOutputMem
   // if data memory has a forward
-  io.dmem.writedata := Mux(bypass.io.output.forwardMemWriteData, wbDataToReg, writeDataMem)
+  io.dmem.writedata := Mux(hazard.io.output.forwardMemWriteData, wbDataToReg, writeDataMem)
   // when I am selecting the mem read value to perform
   // a write back, I'm doing a write back
   // when I am selecting alu output to perform a write back
@@ -400,9 +386,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   wbDataToReg := memToWB.io.pipeOut.data.wbData
   wbAddrToReg := memToWB.io.pipeOut.data.regDst
 
-  // setup the bypass signal
-  bypass.io.input.memWBRegDst := wbAddrToReg
-  bypass.io.input.memWBRegWriteEnable := wbEnableToReg
+  // setup the hazard signal
+  hazard.io.input.memWBRegDst := wbAddrToReg
+  hazard.io.input.memWBRegWriteEnable := wbEnableToReg
 
 }
 
@@ -414,7 +400,6 @@ object PipelinedCPUInfo {
       "controller",
       "regFile",
       "alu",
-      "bypass",
       "hazard",
       "branch",
       "brAddress"
