@@ -114,12 +114,12 @@ class ICache extends Module {
     }
   }
   val instBanks = for(i <- 0 until wayAmount; j <- 0 until bankAmount) yield {
-    val bank = Module(new ICacheBram)
-    bank.io.clka := clock
-    bank.io.wea := we(i)(j)
-    bank.io.addra := index
-    bank.io.dina := io.busData.bits
-    bankData(i)(j) := bank.io.douta
+    val bank = Module(new SinglePortBank(depth, dataLen, syncRead = true))
+    bank.io.we := we(i)(j)
+    bank.io.en.get := true.B
+    bank.io.addr := index
+    bank.io.inData := io.busData.bits
+    bankData(i)(j) := bank.io.outData
   }
   val tagBanks = for(i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(depth, tagLen, syncRead = false))
