@@ -27,6 +27,8 @@ module mycpu(
     output wire [4 :0] debug_wb_rf_wnum,
     output wire [31:0] debug_wb_rf_wdata
 );
+    wire [31:0] pc;
+    assign pc_o = {3'b0, pc[28:0]};
 
     Core_ls core_ls (
         .clock                      (clk),
@@ -34,8 +36,8 @@ module mycpu(
         .io_intr                    (int),
         .io_inst_valid              (inst_valid),
         .io_inst_bits               (inst),
-        .io_outPC_valid             (pc_en),
-        .io_outPC_bits              (pc_o),
+        .io_pc_valid                (pc_en),
+        .io_pc_bits                 (pc),
         .io_load_rValid             (data_axi_rvalid),
         .io_load_data               (data_axi_rdata),
         .io_load_enable             (data_axi_ren),

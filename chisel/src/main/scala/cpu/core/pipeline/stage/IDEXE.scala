@@ -8,7 +8,7 @@ import cpu.core.Constants.cpuStallLen
 import cpu.core.bundles.stage.IDEXEBundle
 import cpu.core.components.{Stage, StageIO}
 
-class IDEXE extends Stage(2, new IDEXEBundle) {
+class IDEXE(stageId: Int = 2) extends Stage(stageId, new IDEXEBundle) {
   val ioExt = IO(new Bundle {
     val nextInstInDelaySlot = Input(Bool())
     val inDelaySlot = Output(Bool()) // back to Decode

@@ -13,6 +13,7 @@ import cpu.core.execute.components.Branch
 class DecodeTop extends Module {
   val io = IO(new Bundle {
     val in = Input(new IFIDBundle)
+    val inst = Input(UInt(dataLen.W))
     val exeOp = Input(UInt(opLen.W))
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
@@ -26,18 +27,20 @@ class DecodeTop extends Module {
     val stallReq = Output(Bool())       // to pipeLine control
   })
 
+  val inst = Mux(io.in.instFetchExcept || io.in.pc === 0.U, 0.U, io.inst)
+
   val forward = Module(new Forward)
   val loadUse = Module(new LoadUse)
   val control = Module(new Control)
   val decode = Module(new Decode)
   val branch = Module(new Branch)
 
-  val rs = io.in.inst(25, 21)
-  val rt = io.in.inst(20, 16)
-  val rd = io.in.inst(15, 11)
-  val sa = io.in.inst(10, 6)
-  val imm16 = io.in.inst(15, 0)
-  val imm26 = io.in.inst(25, 0)
+  val rs = inst(25, 21)
+  val rt = inst(20, 16)
+  val rd = inst(15, 11)
+  val sa = inst(10, 6)
+  val imm16 = inst(15, 0)
+  val imm26 = inst(25, 0)
 
   forward.io.exeWR <> io.exeWR
   forward.io.memWR <> io.memWR
@@ -54,10 +57,10 @@ class DecodeTop extends Module {
   loadUse.io.rt := rt
 
   /** 根据指令解码获取控制信号 */
-  control.io.inst := io.in.inst
+  control.io.inst := inst
 
   decode.io.signal <> control.io.out
-  decode.io.inst := io.in.inst
+  decode.io.inst := inst
   decode.io.instFetchExc := io.in.instFetchExcept
   decode.io.rsData := forward.io.outRsData
   decode.io.rtData := forward.io.outRtData

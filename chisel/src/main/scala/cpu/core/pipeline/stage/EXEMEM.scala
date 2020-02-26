@@ -8,6 +8,6 @@ import cpu.core.components.Stage
 /**
  * Nothing need to modify.
  */
-class EXEMEM extends Stage(3, new EXEMEMBundle) {
+class EXEMEM(stageId: Int = 3) extends Stage(stageId, new EXEMEMBundle) {
 
 }

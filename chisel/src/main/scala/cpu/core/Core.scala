@@ -3,6 +3,7 @@
 package cpu.core
 
 import chisel3._
+import chisel3.util.MuxLookup
 import cpu.common.{DataReadIO, DataWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.ValidBundle
@@ -16,23 +17,28 @@ class Core extends MultiIOModule {
     val intr = Input(UInt(intrLen.W))
     val inst = Input(new ValidBundle)
 
-    val outPC = Output(new ValidBundle)
+    val pc = Output(new ValidBundle)
     val load = new DataReadIO
     val store = new DataWriteIO
     val addr = Output(UInt(addrLen.W))
   })
 
+  /**
+   * fetch | decodeTop | executeTop | memoryTop | wb
+   */
   val fetch = Module(new Fetch)
-  val if_id = Module(new IFID)
   val decodeTop = Module(new DecodeTop)
-  val regFile = Module(new RegFile)
-  val id_exe = Module(new IDEXE)
   val executeTop = Module(new ExecuteTop)
-  val exe_mem = Module(new EXEMEM)
   val memoryTop = Module(new MemoryTop)
+  val regFile = Module(new RegFile)
   val cp0 = Module(new CP0)
   val hilo = Module(new HILO)
   val ctrl = Module(new CTRL)
+
+  // stages
+  val if_id = Module(new IFID)
+  val id_exe = Module(new IDEXE)
+  val exe_mem = Module(new EXEMEM)
   val mem_wb = Module(new MEMWB)
 
   fetch.io.stall := ctrl.io.stall
@@ -40,13 +46,20 @@ class Core extends MultiIOModule {
   fetch.io.flushPC := ctrl.io.flushPC
 
   fetch.io.branch <> decodeTop.io.branch
-  fetch.io.inst <> io.inst
+  fetch.io.instValid := io.inst.valid
 
   if_id.io.in <> fetch.io.out
   if_id.io.stall := ctrl.io.stall
   if_id.io.flush := ctrl.io.flush
 
+  val stallByOther = !ctrl.io.flush && ctrl.io.stall(0)
+  val instBuffer = RegInit(0.U.asTypeOf(new ValidBundle))
+  instBuffer.valid := stallByOther
+  instBuffer.bits := Mux(instBuffer.valid, instBuffer.bits, io.inst.bits)
+  val inst = Mux(instBuffer.valid, instBuffer.bits, io.inst.bits)
+
   decodeTop.io.in <> if_id.io.out
+  decodeTop.io.inst := inst
   decodeTop.io.exeOp := id_exe.io.out.operation
   decodeTop.io.exeWR := executeTop.io.out.write
   decodeTop.io.memWR := memoryTop.io.out.write
@@ -55,8 +68,8 @@ class Core extends MultiIOModule {
   decodeTop.io.inDelaySlot := id_exe.ioExt.inDelaySlot
 
   regFile.io.write <> mem_wb.io.out.write
-  regFile.io.rs := if_id.io.out.inst(25, 21)
-  regFile.io.rt := if_id.io.out.inst(20, 16)
+  regFile.io.rs := inst(25, 21)
+  regFile.io.rt := inst(20, 16)
 
   id_exe.io.in <> decodeTop.io.out
   id_exe.io.stall := ctrl.io.stall
@@ -106,7 +119,7 @@ class Core extends MultiIOModule {
   mem_wb.io.stall := ctrl.io.stall
   mem_wb.io.flush := ctrl.io.flush
 
-  io.outPC.bits := fetch.io.out.pc
-  io.outPC.valid := fetch.io.outPCValid
+  io.pc.bits := fetch.io.out.pc
+  io.pc.valid := fetch.io.outPCValid
   io.addr := memoryTop.io.addr
 }

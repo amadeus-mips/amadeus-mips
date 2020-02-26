@@ -8,6 +8,6 @@ import cpu.core.components.{Stage, StageIO}
 /**
  * Nothing need to modify.
  */
-class MEMWB extends Stage(4, new MEMWBBundle) {
+class MEMWB(stageId: Int = 4) extends Stage(stageId, new MEMWBBundle) {
 
 }
