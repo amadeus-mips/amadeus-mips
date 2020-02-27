@@ -1,14 +1,13 @@
 package cpu.pipelined
 
 import chisel3._
-import cpu.utils.exceptionVector
 //TODO: rewrite this to use a generator and enum
 
 // io bundle from instruction fetch stage
 // to instruction decode stage
 class IFIDBundle extends Bundle {
   val data = new IFIDDataBundle
-  val exception = new exceptionVector
+  val exception = UInt(5.W)
 }
 
 // io bundle from instruction decode stage
@@ -16,7 +15,7 @@ class IFIDBundle extends Bundle {
 class IDEXBundle extends Bundle {
   val data = new IDEXDataBundle
   val control = new IDEXControlBundle
-  val exception = new exceptionVector
+  val exception = UInt(5.W)
 }
 
 // io bundle from execute stage to memory
@@ -24,7 +23,7 @@ class IDEXBundle extends Bundle {
 class EXMEMBundle extends Bundle {
   val data = new EXMEMDataBundle
   val control = new EXMEMControlBundle
-  val exception = new exceptionVector
+  val exception = UInt(5.W)
 }
 
 // io bundle from memory stage to write
@@ -112,6 +111,8 @@ class IDEXControlBundle extends Bundle {
   // if true, select from alu; if false, select from memory
   val wbSelect = Bool()
 
+  val isBranchDelaySlot = Bool()
+
   //--------------------------WB stage----------------------------
 
   // whether write to the regfile
@@ -137,6 +138,8 @@ class EXMEMControlBundle extends Bundle {
   // select write back from read mem and al
   // if true, select from alu; if false, select from memory
   val wbSelect = Bool()
+
+  val isBranchDelaySlot = Bool()
 
   //--------------------------WB stage----------------------------
 

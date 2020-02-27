@@ -4,8 +4,7 @@ import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.components._
-import cpu.utils.isException
-
+import cpu.components.exceptions._
 class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   /**
@@ -54,6 +53,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   io.imem.valid := (!hazard.io.output.ifIDStall)
 
   // make it a wire
+  //TODO: can I remove this adder?
   val pcPlusFourIF = Wire(UInt(32.W))
   pcPlusFourIF := (regPC + 4.U)
 
@@ -84,13 +84,13 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // change this to sync mem in the future
   ifToID.io.pipeIn.data.instruction := io.imem.instruction
   ifToID.io.pipeIn.data.pcPlusFour := pcPlusFourIF
-  // the exception vector
-  // TODO: exception here
-  ifToID.io.pipeIn.exception.isBranchDelaySlot := false.B
-  ifToID.io.pipeIn.exception.fetchException := false.B
-  ifToID.io.pipeIn.exception.decodeException := false.B
-  ifToID.io.pipeIn.exception.overflowException := false.B
 
+  val ifException = Wire(Bool())
+  ifException := false.B
+
+  // TODO: exception here
+  // the exception vector
+  ifToID.io.pipeIn.exception := Mux(ifException, fetch, 0.U)
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   // -----------------------------instruction decode--------------------
@@ -163,13 +163,17 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEX.io.pipeIn.control.memSext := controller.io.output.memSext
   idToEX.io.pipeIn.control.memWriteEnable := controller.io.output.memWriteEnable
   idToEX.io.pipeIn.control.wbSelect := controller.io.output.wbSelect
+  idToEX.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeOut.control.isBranch
   // -----------------------------write back stage--------------------------
   idToEX.io.pipeIn.control.wbEnable := controller.io.output.wbEnable
 
   // here are the exceptions
-  idToEX.io.pipeIn.exception <> ifToID.io.pipeOut.exception
-  //TODO: this does not comply with bc ( branch unconditional )
-  idToEX.io.pipeIn.exception.isBranchDelaySlot := idToEX.io.pipeOut.control.isBranch
+  //TODO: implement decode error
+  idToEX.io.pipeIn.exception := Mux(
+    ifToID.io.pipeOut.exception.orR.toBool,
+    controller.io.output.trapCommand,
+    ifToID.io.pipeOut.exception
+  )
 
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
@@ -289,12 +293,17 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   exToMEM.io.pipeIn.control.memSext := idToEX.io.pipeOut.control.memSext
   exToMEM.io.pipeIn.control.memWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
   exToMEM.io.pipeIn.control.wbSelect := memReadEX
+  exToMEM.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeIn.control.isBranchDelaySlot
   //--------------------------write back stage--------------------------
   exToMEM.io.pipeIn.control.wbEnable := idToEX.io.pipeOut.control.wbEnable
 
   // exceptions piping
-  exToMEM.io.pipeIn.exception <> idToEX.io.pipeOut.exception
-  exToMEM.io.pipeIn.exception.overflowException := alu.io.output.overflow
+  // is overflow when (is 0 and alu overflow)
+  exToMEM.io.pipeIn.exception := Mux(
+    (!idToEX.io.pipeOut.exception.orR.asBool && alu.io.output.overflow),
+    7.U,
+    idToEX.io.pipeOut.exception
+  )
   //---------------------------------------------------------------------------------
   //---------------------------------------------------------------------------------
   // -------------------------memory stage---------------------
@@ -314,7 +323,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val regWriteEnableMem = Wire(Bool())
   val isExceptionPrevious = Wire(Bool())
 
-  isExceptionPrevious := isException(exToMEM.io.pipeOut.exception)
+  isExceptionPrevious := exToMEM.io.pipeOut.exception.orR.asBool
 
   // pass the signals and values
   aluOutputMem := exToMEM.io.pipeOut.data.aluOutput
@@ -352,21 +361,23 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   wbDataMem := Mux(wbSelect, io.dmem.readdata, aluOutputMem)
 
-  // TODO: catch exceptions from the memory stage
   val memException = false.B
+
+  // TODO: catch exceptions from the memory stage
   // detect early ( prevent writes ), handle late
   // handle the exceptions here
-  //TODO: I don't know if this works
-
+  cpZero.io.input.isBD := exToMEM.io.pipeOut.control.isBranchDelaySlot
   cpZero.io.input.readEnable := false.B
-  cpZero.io.input.cause := exToMEM.io.pipeOut.exception
-  cpZero.io.input.isException := (isExceptionPrevious || memException)
+  cpZero.io.input.cause := Mux(
+    !exToMEM.io.pipeOut.exception.orR.asBool && memException,
+    8.U,
+    exToMEM.io.pipeOut.exception
+  )
   cpZero.io.input.pcPlusFour := exToMEM.io.pipeOut.data.pcPlusFour
-  cpZero.io.input.memException := memException
 
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
-  memToWB.io.flush := false.B
+  memToWB.io.flush := hazard.io.output.memWBFlush
 
   // pipe in the data values
   memToWB.io.pipeIn.data.wbData := wbDataMem

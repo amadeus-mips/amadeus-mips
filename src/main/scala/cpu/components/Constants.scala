@@ -81,6 +81,11 @@ package cpu.components {
     val MEM_SEXT_Y = true.B
     val MEM_SEXT_N = false.B
 
+    val TRAP_NO = 0.U
+    val TRAP_BREAK = 1.U
+    val TRAP_SYSCALL = 2.U
+    val TRAP_ERET = 3.U
+
     // chooose the writeback select
     val WB_X = false.B
     val WB_MEM = true.B

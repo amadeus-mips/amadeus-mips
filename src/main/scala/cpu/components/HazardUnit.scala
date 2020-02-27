@@ -44,6 +44,7 @@ class HazardUnitIn extends Bundle {
   val memWBRegDst = Input(UInt(5.W))
   val memWBRegWriteEnable = Input(Bool())
 
+  val isException = Input(Bool())
 }
 
 /**
@@ -84,9 +85,11 @@ class HazardUnitOut extends Bundle {
   //----------------------------------------------------------------------------------------
   val forwardMemWriteData = Output(Bool())
 
+  val memWBFlush = Output(Bool())
 }
 
 // note: detect as early as possible
+// only way to do stalling: flush. Cannot enter next stage ( exceptions )
 class HazardUnit extends Module {
   val io = IO(new Bundle {
     val input = new HazardUnitIn
@@ -99,6 +102,12 @@ class HazardUnit extends Module {
   io.output.ifIDFlush := false.B
   io.output.idEXFlush := false.B
   io.output.exMemFlush := false.B
+
+  //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
+  // stalling
+  //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
 
   // Load to use hazard.
   // this resolves alu, branching and jump
@@ -169,6 +178,12 @@ class HazardUnit extends Module {
   }
 
   //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
+  //bypassing
+  //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
+
+  //----------------------------------------------------------------------------------------
   // ALU bypass and Branch Bypass
   //----------------------------------------------------------------------------------------
   //TODO: how bypass play along with hazard detection:
@@ -216,6 +231,18 @@ class HazardUnit extends Module {
     io.output.forwardMemWriteData := true.B
   }.otherwise {
     io.output.forwardMemWriteData := false.B
+  }
 
+  //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
+  // exceptions
+  //----------------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------------------
+  // exception has the highest priority over them.
+  when(io.input.isException) {
+    io.output.ifIDFlush := true.B
+    io.output.idEXFlush := true.B
+    io.output.exMemFlush := true.B
+    io.output.memWBFlush := true.B
   }
 }
