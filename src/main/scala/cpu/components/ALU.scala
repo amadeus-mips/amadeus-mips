@@ -75,8 +75,8 @@ class ALU extends Module {
     io.input.aluOp,
     false.B,
     Array(
-      add -> ((~(io.input.inputA(31) ^ io.input.inputB(31))) & (io.input.inputA(31) ^ addResult)),
-      sub -> ((io.input.inputA(31) ^ io.input.inputB(31)) & (io.input.inputA(31) ^ subResult))
+      add -> (!((io.input.inputA(31) ^ io.input.inputB(31)).asBool) && (io.input.inputA(31) ^ addResult(31)).asBool),
+      sub -> ((io.input.inputA(31) ^ io.input.inputB(31)) & (io.input.inputA(31) ^ subResult(31)))
     )
   )
 }
