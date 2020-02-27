@@ -4,6 +4,7 @@ package cpu.cache
 
 import chisel3._
 
+@deprecated
 class ICacheBram extends BlackBox {
   val io = IO(new Bundle {
     val addra = Input(UInt(7.W))
