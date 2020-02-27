@@ -136,6 +136,24 @@ object InstructionTests {
       Map(0 -> 0, 6 -> 5),
       Map(),
       Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "memToEXAddr",
+      Map("pipelined" -> 25),
+      Map(),
+      Map(0 -> 0, 5 -> 300, 6 -> 300),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "bypass",
+      "wbToEXAddr",
+      Map("pipelined" -> 25),
+      Map(),
+      Map(0 -> 0, 5 -> 300, 6 -> 300),
+      Map(),
+      Map()
     )
   )
   val randTest = List[CPUTestCase](
