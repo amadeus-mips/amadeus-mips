@@ -55,6 +55,10 @@ class IDEXDataBundle extends Bundle {
 
   val regRs = UInt(5.W)
   val regRt = UInt(5.W)
+
+  //this is for mtc0 and mfc0
+  val regRd = UInt(5.W)
+  val cp0Select = UInt(3.W)
   // jumping and branching should finish at this stage
   // so the address and comparison doesn't pass on
   val pcPlusFour = UInt(32.W)
@@ -67,6 +71,8 @@ class EXMEMDataBundle extends Bundle {
   val aluOutput = UInt(32.W)
   val writeData = UInt(32.W)
   // register write address
+  val regRd = UInt(5.W)
+  val cp0Select = UInt(3.W)
   val regDst = UInt(5.W)
   val pcPlusFour = UInt(32.W)
 }
@@ -113,6 +119,8 @@ class IDEXControlBundle extends Bundle {
 
   val isBranchDelaySlot = Bool()
 
+  val cp0Op = UInt(2.W)
+
   //--------------------------WB stage----------------------------
 
   // whether write to the regfile
@@ -141,6 +149,7 @@ class EXMEMControlBundle extends Bundle {
 
   val isBranchDelaySlot = Bool()
 
+  val cp0Op = UInt(2.W)
   //--------------------------WB stage----------------------------
 
   // whether write to the regfile

@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.util._
 
 object ALUTypes {
-  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: plusFour :: addu :: subu :: Nil =
-    Enum(18)
+  val nop :: add :: sub :: and :: slt :: lui :: nor :: or :: xor :: slv :: sli :: srlv :: srli :: srav :: srai :: plusFour :: addu :: subu :: opB :: Nil =
+    Enum(19)
 }
 
 class ALUIn extends Bundle {
@@ -62,7 +62,8 @@ class ALU extends Module {
       srli -> (io.input.inputB >> io.input.shamt),
       srav -> (io.input.inputB.asSInt >> io.input.inputA(4, 0)).asUInt(),
       srai -> (io.input.inputB.asSInt >> io.input.shamt).asUInt(),
-      plusFour -> (io.input.inputB + 4.U)
+      plusFour -> (io.input.inputB + 4.U),
+      opB -> io.input.inputB
     )
   )
 

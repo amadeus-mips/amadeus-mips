@@ -147,6 +147,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   )
   idToEX.io.pipeIn.data.regRs := rsAddressID
   idToEX.io.pipeIn.data.regRt := rtAddressID
+  idToEX.io.pipeIn.data.regRd := rdAddressID
+  idToEX.io.pipeIn.data.cp0Select := instructionID(2, 0)
   idToEX.io.pipeIn.data.pcPlusFour := ifToID.io.pipeOut.data.pcPlusFour
   idToEX.io.pipeIn.data.jAddress := addressID
 
@@ -164,6 +166,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   idToEX.io.pipeIn.control.memWriteEnable := controller.io.output.memWriteEnable
   idToEX.io.pipeIn.control.wbSelect := controller.io.output.wbSelect
   idToEX.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeOut.control.isBranch
+  idToEX.io.pipeIn.control.cp0Op := controller.io.output.cp0Op
   // -----------------------------write back stage--------------------------
   idToEX.io.pipeIn.control.wbEnable := controller.io.output.wbEnable
 
@@ -227,7 +230,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   hazard.io.input.idEXMemread := memReadEX
   hazard.io.input.exBranchTake := (idToEX.io.pipeOut.control.isBranch & branch.io.output.branchTake)
   hazard.io.input.exIsJump := idToEX.io.pipeOut.control.isJump
-
+  hazard.io.input.idEXMFC0 := idToEX.io.pipeOut.control.cp0Op(0).asBool
   // hazarding unit
   hazard.io.input.idEXRs := regRsEX
   hazard.io.input.idEXRt := regRtEX
@@ -286,6 +289,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // does this increase cycle time?
   exToMEM.io.pipeIn.data.writeData := valRtEX
   exToMEM.io.pipeIn.data.regDst := dstRegEX
+  exToMEM.io.pipeIn.data.regRd := idToEX.io.pipeOut.data.regRd
+  exToMEM.io.pipeIn.data.cp0Select := idToEX.io.pipeOut.data.cp0Select
   exToMEM.io.pipeIn.data.pcPlusFour := pcPlusFourEX
   // pass along the control signals
   //--------------------------memory stage--------------------------
@@ -294,6 +299,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   exToMEM.io.pipeIn.control.memWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
   exToMEM.io.pipeIn.control.wbSelect := memReadEX
   exToMEM.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeIn.control.isBranchDelaySlot
+  exToMEM.io.pipeIn.control.cp0Op := idToEX.io.pipeIn.control.cp0Op
   //--------------------------write back stage--------------------------
   exToMEM.io.pipeIn.control.wbEnable := idToEX.io.pipeOut.control.wbEnable
 
@@ -366,6 +372,11 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // TODO: catch exceptions from the memory stage
   // detect early ( prevent writes ), handle late
   // handle the exceptions here
+  cpZero.io.input.readEnable := exToMEM.io.pipeOut.control.cp0Op(0).asBool
+  cpZero.io.input.writeEnable := exToMEM.io.pipeOut.control.cp0Op(1).asBool
+  cpZero.io.input.dst := exToMEM.io.pipeOut.data.regRd
+  cpZero.io.input.select := exToMEM.io.pipeOut.data.cp0Select
+  cpZero.io.input.writeData := exToMEM.io.pipeOut.data.aluOutput
   cpZero.io.input.isBD := exToMEM.io.pipeOut.control.isBranchDelaySlot
   cpZero.io.input.readEnable := false.B
   cpZero.io.input.cause := Mux(
@@ -381,7 +392,9 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   memToWB.io.flush := hazard.io.output.memWBFlush
 
   // pipe in the data values
-  memToWB.io.pipeIn.data.wbData := wbDataMem
+  // warning: assuming that there is no exception
+  //TODO: what if there is an exception going on
+  memToWB.io.pipeIn.data.wbData := Mux(exToMEM.io.pipeOut.control.cp0Op(0).asBool, cpZero.io.output.regVal, wbDataMem)
   memToWB.io.pipeIn.data.regDst := regDstMem
 
   // pipe in the control signals

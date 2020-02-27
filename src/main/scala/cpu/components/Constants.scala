@@ -56,6 +56,7 @@ package cpu.components {
     val ALU_PLUS_FOUR = 15.U
     val ALU_ADDU = 16.U
     val ALU_SUBU = 17.U
+    val ALU_OPB = 18.U
 
     // branch ops
     val BRANCH_X = 0.U
@@ -85,6 +86,10 @@ package cpu.components {
     val TRAP_BREAK = 1.U
     val TRAP_SYSCALL = 2.U
     val TRAP_ERET = 3.U
+
+    val CP0_NOP = 0.U
+    val CP0_READ = 1.U
+    val CP0_WRITE = 2.U
 
     // chooose the writeback select
     val WB_X = false.B

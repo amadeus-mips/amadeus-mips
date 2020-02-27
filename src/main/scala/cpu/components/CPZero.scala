@@ -17,6 +17,10 @@ object excCodes {
 class CPZeroIn extends Bundle {
 
   val readEnable = Input(Bool())
+  val writeEnable = Input(Bool())
+  val dst = Input(UInt(5.W))
+  val select = Input(UInt(3.W))
+  val writeData = Input(UInt(32.W))
 
   val cause = Input(UInt(5.W))
   // is branch delay slot
@@ -27,6 +31,7 @@ class CPZeroIn extends Bundle {
 class CPZeroOut extends Bundle {
   val jToNextPC = Output(Bool())
   val nextPC = Output(UInt(32.W))
+  val regVal = Output(UInt(32.W))
 }
 
 //TODO: initialization values
@@ -77,9 +82,36 @@ class CPZero extends Module {
   val isException = Wire(Bool())
   isException := io.input.cause.orR.asBool
 
+  //TODO: previledge checking for mtc0 and mfc0
+
+  io.output.regVal := DontCare
+  when(!isException && io.input.readEnable) {
+    io.output.regVal := MuxLookup(
+      io.input.dst,
+      0.U,
+      Array(
+        9.U -> regCount(32, 1),
+        12.U -> regSR,
+        13.U -> regCause,
+        14.U -> regEPC,
+        // this is not correct
+        15.U -> regEBase
+      )
+    )
+  }
+
+  when(!isException && io.input.writeEnable) {
+    switch(io.input.dst) {
+      is(9.U) { regCount := Cat(io.input.writeData, 0.U(1.W)) }
+      is(12.U) { regSR := io.input.writeData }
+      is(13.U) { regCause := io.input.writeData }
+      is(14.U) { regEPC := io.input.writeData }
+      is(15.U) { regEBase := io.input.writeData }
+    }
+  }
+
   // when there is an exception
   when(isException && regSR(1).asBool()) {
-
     // assuming the instruction eret cannot cause other exceptions
     regSR := Mux(
       isEret,

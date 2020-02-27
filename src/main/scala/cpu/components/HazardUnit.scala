@@ -24,6 +24,8 @@ class HazardUnitIn extends Bundle {
   val idEXMemread = Input(Bool())
   // dst reg passed by stage reg
   val idEXDstReg = Input(UInt(5.W))
+  // for mfc0
+  val idEXMFC0 = Input(Bool())
 
   // whether take branch in execute stage, for flushing
   val exBranchTake = Input(Bool())
@@ -33,7 +35,6 @@ class HazardUnitIn extends Bundle {
   // WB data in memory stage
   // the instruction between execute and memory stage
   // 's dst reg address and write back enable
-  // for bypassing
   val exMemRegDst = Input(UInt(5.W))
   val exMemRegWriteEnable = Input(Bool())
 
@@ -106,7 +107,7 @@ class HazardUnit extends Module {
 
   //----------------------------------------------------------------------------------------
   //----------------------------------------------------------------------------------------
-  // stalling
+  // stalling ( precedes forwarding )
   //----------------------------------------------------------------------------------------
   //----------------------------------------------------------------------------------------
 
@@ -116,7 +117,7 @@ class HazardUnit extends Module {
   // the ld instruction is in execute stage
   // source operands matches one of its dst regs
   when(
-    io.input.idEXMemread &&
+    (io.input.idEXMemread || io.input.idEXMFC0) &&
       (io.input.idEXDstReg === io.input.idRs || io.input.idEXDstReg === io.input.idRt)
   ) {
     // make pc stay the same
