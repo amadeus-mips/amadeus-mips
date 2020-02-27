@@ -170,7 +170,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // here are the exceptions
   //TODO: implement decode error
   idToEX.io.pipeIn.exception := Mux(
-    ifToID.io.pipeOut.exception.orR.toBool,
+    ifToID.io.pipeOut.exception.orR.asBool,
     controller.io.output.trapCommand,
     ifToID.io.pipeOut.exception
   )
@@ -375,6 +375,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   )
   cpZero.io.input.pcPlusFour := exToMEM.io.pipeOut.data.pcPlusFour
 
+  hazard.io.input.isException := exToMEM.io.pipeOut.exception.orR.asBool || memException
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
   memToWB.io.flush := hazard.io.output.memWBFlush

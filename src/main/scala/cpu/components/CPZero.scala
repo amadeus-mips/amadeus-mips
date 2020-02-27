@@ -69,6 +69,9 @@ class CPZero extends Module {
   // exception handler is always at 0xBFC00380, which is 0xBFC0.0200 + 0x180
   val regEBase = RegInit(3217032064L.U(32.W))
 
+  io.output.jToNextPC := false.B
+  io.output.nextPC := regEPC
+
   val isEret = Wire(Bool())
   isEret := io.input.cause === 3.U
   val isException = Wire(Bool())

@@ -102,6 +102,7 @@ class HazardUnit extends Module {
   io.output.ifIDFlush := false.B
   io.output.idEXFlush := false.B
   io.output.exMemFlush := false.B
+  io.output.memWBFlush := false.B
 
   //----------------------------------------------------------------------------------------
   //----------------------------------------------------------------------------------------
