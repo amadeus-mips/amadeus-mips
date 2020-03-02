@@ -7,6 +7,7 @@ import chisel3.util._
 import common.ValidBundle
 import cpu.common.DefaultConfig._
 
+// TODO move `write back` to the axiWrap
 class DCache extends Module {
   val wayAmount = 2   // 每组路数
   val depth = 128     // 组数
@@ -18,11 +19,13 @@ class DCache extends Module {
   val maskW = 8             // 最小写入单元的宽度
 
   val io = IO(new Bundle {
-    val bus_rData = Input(new ValidBundle)   // data read from axi bus
+    val bus_rData = Input(UInt(dataLen.W))   // data read from axi bus
+    val bus_rValid = Input(Bool())
     val bus_wReady = Input(Bool())           // write to axi bus ready
     val bus_bValid = Input(Bool())           // write to axi bus response valid
 
     val flush = Input(Bool())
+    // TODO convert to `NiseSramIO`
     val cpu_addr = Input(UInt(addrLen.W))   // address from cpu
     val cpu_ren = Input(Bool())             // read enable from cpu
     val cpu_wen = Input(Bool())             // write enable from cpu
@@ -74,7 +77,7 @@ class DCache extends Module {
   val exeWResp = RegInit(false.B)
   val exeData = RegInit(0.U(dataLen.W))
 
-  val bankWData = Mux(state === sIdle, io.cpu_wData, io.bus_rData.bits)
+  val bankWData = Mux(state === sIdle, io.cpu_wData, io.bus_rData)
   val exeTag = Mux(state === sIdle, io.cpu_exeAddr(dataLen-1, dataLen-tagLen), tag)
   val exeIndex = Mux(state === sIdle, io.cpu_exeAddr(dataLen-tagLen-1, dataLen-tagLen-indexLen), index)
   val exeBankOffSet = Mux(state === sIdle, io.cpu_exeAddr(log2Ceil(blockSize)-1, log2Ceil(bankSize)), bankOffset)
@@ -86,14 +89,14 @@ class DCache extends Module {
     for(j <- 0 until bankAmount) {
       wMask(i)(j) := MuxCase(0.U,
         Array(
-          (state === sMiss && cnt(j) && io.bus_rData.valid && LRU(index) === i.U) ->
+          (state === sMiss && cnt(j) && io.bus_rValid && LRU(index) === i.U) ->
             Fill(bankSize, true.B),
           (state === sIdle && exeChangeLRU === (1-i).U && io.cpu_wen && exeWResp && bankOffset === j.U) ->
             io.cpu_wSel
         )
       )
     }
-    tagWe(i) := state === sMiss && cnt(0) && io.bus_rData.valid && LRU(index) === i.U
+    tagWe(i) := state === sMiss && cnt(0) && io.bus_rValid && LRU(index) === i.U
   }
 
   io.hit := (state === sIdle && io.cpu_ren && exeHit)
@@ -199,7 +202,7 @@ class DCache extends Module {
       }
     }
     is(sMiss){
-      when(!cnt(bankAmount) && io.bus_rData.valid){
+      when(!cnt(bankAmount) && io.bus_rValid){
         cnt := cnt << 1
         when(cnt(6)){
           dirty(LRU(index))(index) := false.B

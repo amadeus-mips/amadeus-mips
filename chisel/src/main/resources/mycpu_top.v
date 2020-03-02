@@ -57,118 +57,51 @@ module mycpu_top(
     output wire[31:0]   debug_wb_rf_wdata
 );
 
-wire        flush;
-//inst
-wire[31:0]      pc_from_cpu;
-wire            pc_en_from_cpu;
-wire[31:0]     inst_from_axi_interface;
-wire            inst_valid_from_axi_interface;
-
-//data
-wire        data_ren;
-wire        data_wen;
-wire[3:0]   data_wsel;
-wire[31:0]  data_addr;
-wire[31:0]  data_wdata;
-
-wire[31:0]  data_rdata;
-wire        data_rvalid;
-wire        data_bvalid;
-wire[31:0]  ex_data_addr;
-
-axi_master_interface u_axi_master_interface(
-	.aclk             (aclk             ),
-    .aresetn          (aresetn          ),
-
-    .arid             (arid             ),
-    .araddr           (araddr           ),
-    .arlen            (arlen            ),
-    .arsize           (arsize           ),
-    .arburst          (arburst          ),
-    .arlock           (arlock           ),
-    .arcache          (arcache          ),
-    .arprot           (arprot           ),
-    .arvalid          (arvalid          ),
-    .arready          (arready          ),
-
-    .rid              (rid              ),
-    .rdata            (rdata            ),
-    .rresp            (rresp            ),
-    .rlast            (rlast            ),
-    .rvalid           (rvalid           ),
-    .rready           (rready           ),
-
-    .awid             (awid             ),
-    .awaddr           (awaddr           ),
-    .awlen            (awlen            ),
-    .awsize           (awsize           ),
-    .awburst          (awburst          ),
-    .awlock           (awlock           ),
-    .awcache          (awcache          ),
-    .awprot           (awprot           ),
-    .awvalid          (awvalid          ),
-    .awready          (awready          ),
-
-    .wid              (wid              ),
-    .wdata            (wdata            ),
-    .wstrb            (wstrb            ),
-    .wlast            (wlast            ),
-    .wvalid           (wvalid           ),
-    .wready           (wready           ),
-
-    .bid              (bid              ),
-    .bresp            (bresp            ),
-    .bvalid           (bvalid           ),
-    .bready           (bready           ),
-
-    .flush            (flush),
-    .pc_i             (pc_from_cpu             ),
-    .pc_en_i          (pc_en_from_cpu            ),
-    .inst_o           (inst_from_axi_interface             ),
-    .inst_valid_o     (inst_valid_from_axi_interface       ),
-
-    .data_ren         (data_ren         ),
-    .data_wen         (data_wen         ),
-    .data_wsel        (data_wsel        ),
-    .data_addr        (data_addr        ),
-    .data_wdata       (data_wdata       ),
-    .ex_data_addr     (ex_data_addr),
-    .data_rdata       (data_rdata       ),
-    .data_rvalid      (data_rvalid      ),
-    .data_bvalid      (data_bvalid      )
-);
-
-
-
-mycpu u_mycpu(
-	.clk               (aclk               ),
-    .resetn            (aresetn            ),
-    .int               (int               ),
-    
-    .pc_o              (pc_from_cpu              ),
-    .pc_en             (pc_en_from_cpu             ),
-    .inst              (inst_from_axi_interface              ),
-    .inst_valid        (inst_valid_from_axi_interface        ),
-
-    .data_axi_ren      (data_ren      ),
-    .data_axi_wen      (data_wen     ),
-    .data_axi_wsel     (data_wsel),
-    .data_axi_addr     (data_addr    ),
-    .data_axi_wdata    (data_wdata   ),
-    .ex_data_addr      (ex_data_addr),
-
-    .data_axi_rdata    (data_rdata   ),
-    .data_axi_rvalid   (data_rvalid),
-    .data_axi_bvalid   (data_bvalid),
-    
-    .axi_flush         (flush),
-
-    .debug_wb_pc       (debug_wb_pc       ),
-    .debug_wb_rf_wen   (debug_wb_rf_wen   ),
-    .debug_wb_rf_wnum  (debug_wb_rf_wnum  ),
-    .debug_wb_rf_wdata (debug_wb_rf_wdata )
-);
-
+    CPUTop cpuTop(
+        .clock    (aclk),
+        .reset    (~aresetn),
+        .io_intr  (int),
+        .io_bus_axi_ar_id         (arid),
+        .io_bus_axi_ar_addr       (araddr),
+        .io_bus_axi_ar_len        (arlen),
+        .io_bus_axi_ar_size       (arsize),
+        .io_bus_axi_ar_burst      (arburst),
+        .io_bus_axi_ar_lock       (arlock),
+        .io_bus_axi_ar_cache      (arcache),
+        .io_bus_axi_ar_prot       (arprot),
+        .io_bus_axi_ar_valid      (arvalid),
+        .io_bus_axi_ar_ready      (arready),
+        .io_bus_axi_r_id          (rid),
+        .io_bus_axi_r_data        (rdata),
+        .io_bus_axi_r_resp        (rresp),
+        .io_bus_axi_r_last        (rlast),
+        .io_bus_axi_r_valid       (rvalid),
+        .io_bus_axi_r_ready       (rready),
+        .io_bus_axi_aw_id         (awid),
+        .io_bus_axi_aw_addr       (awaddr),
+        .io_bus_axi_aw_len        (awlen),
+        .io_bus_axi_aw_size       (awsize),
+        .io_bus_axi_aw_burst      (awburst),
+        .io_bus_axi_aw_lock       (awlock),
+        .io_bus_axi_aw_cache      (awcache),
+        .io_bus_axi_aw_prot       (awprot),
+        .io_bus_axi_aw_valid      (awvalid),
+        .io_bus_axi_aw_ready      (awready),
+        .io_bus_axi_w_id          (wid),
+        .io_bus_axi_w_data        (wdata),
+        .io_bus_axi_w_strb        (wstrb),
+        .io_bus_axi_w_last        (wlast),
+        .io_bus_axi_w_valid       (wvalid),
+        .io_bus_axi_w_ready       (wready),
+        .io_bus_axi_b_id          (bid),
+        .io_bus_axi_b_resp        (bresp),
+        .io_bus_axi_b_valid       (bvalid),
+        .io_bus_axi_b_ready       (bready),
+        .io_debug_wbPC            (debug_wb_pc),
+        .io_debug_wbRegFileWEn    (debug_wb_rf_wen),
+        .io_debug_wbRegFileWNum   (debug_wb_rf_wnum),
+        .io_debug_wbRegFileWData  (debug_wb_rf_wdata)
+    );
 
 
 endmodule
