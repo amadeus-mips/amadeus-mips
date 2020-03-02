@@ -1,17 +1,12 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.iotesters._
+import chisel3.iotesters
+import chisel3.iotesters.{ChiselFlatSpec, PeekPokeTester}
 
 import scala.util.Random
 
-object SimpleDualPortMaskBankMain extends App {
-  // Vivado 不认识非ASCII码，因此去掉了toString方法产生的"$@"
-  val outDir: String = "./out/" + toString.replaceAll("\\$@", "")
-  chisel3.Driver.execute(Array("-td", outDir),  () => new SimpleDualPortMaskBank(depth = 128, maskN = 4, maskW = 8))
-}
-
-class SimpleDualPortMaskBankUnitTest extends ChiselFlatSpec {
+class SDPMBankUnitTest extends ChiselFlatSpec {
   behavior of "SimpleDualPortMaskBank"
 
   "test SimpleDualPortMaskBank" should "success" in {
@@ -29,14 +24,26 @@ class SimpleDualPortMaskBankUnitTest extends ChiselFlatSpec {
     println(s"seed: $seed")
     val r = new Random(seed)
     val data = BigInt(maskW * maskN, r)
-    poke(c.io.we, true)
-    poke(c.io.mask, BigInt(1) << maskN - 1)
-    poke(c.io.wAddr, 0.U)
-    poke(c.io.inData, data)
-    step(1)
+    val data2 = BigInt(maskW * maskN, r)
+    write(0, (BigInt(1) << maskN) - 1, data)
     poke(c.io.rAddr, 0.U)
-    expect(c.io.outData, data, s"expect $data, get ${peek(c.io.outData)}")
+    expect(c.io.outData, data)
+
     step(1)
+    write(1, (BigInt(1) << maskN) - 1, data2)
+    poke(c.io.rAddr, 0.U)
+    expect(c.io.outData, data)
+    step(1)
+    poke(c.io.mask, 0.U)
+    poke(c.io.rAddr, 1.U)
+    expect(c.io.outData, data2)
+
+    def write(addr: BigInt, mask: BigInt, data: BigInt): Unit = {
+      poke(c.io.we, true)
+      poke(c.io.mask, mask)
+      poke(c.io.wAddr, addr)
+      poke(c.io.inData, data)
+    }
   }
 
 }

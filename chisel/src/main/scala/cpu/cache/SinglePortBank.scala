@@ -5,7 +5,7 @@ package cpu.cache
 import chisel3._
 import chisel3.util._
 
-class SinglePortBank(depth: Int, width: Int, syncRead: Boolean = true) extends Module {
+class SinglePortBank(depth: Int, width: Int, syncRead: Boolean = true, dataC: Boolean = false) extends Module {
   require(isPow2(depth))
   val addrLen = log2Ceil(depth)
   val io = IO(new Bundle {
@@ -33,4 +33,6 @@ class SinglePortBank(depth: Int, width: Int, syncRead: Boolean = true) extends M
     }
     io.outData := bank.read(io.addr)
   }
+
+  override def desiredName: String = if(dataC) "SinglePortBank_d" else super.desiredName
 }

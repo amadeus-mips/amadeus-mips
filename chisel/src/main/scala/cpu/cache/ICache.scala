@@ -49,7 +49,6 @@ class ICache extends Module {
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
   /** Tag write enable, tagWe(way) */
   val tagWe = Wire(Vec(wayAmount, Bool()))
-  tagWe.suggestName("tagWe")
   /** Data from every way, bankData(way)(bank) */
   val bankData = Wire(Vec(wayAmount, Vec(bankAmount, UInt(dataLen.W))))
   /** Data from every way tag, tagData(way) */
