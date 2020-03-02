@@ -2,7 +2,6 @@
 
 package cpu.common
 
-import chisel3._
 import scala.math.log
 
 trait DefaultWireLength {

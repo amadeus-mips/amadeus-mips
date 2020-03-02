@@ -3,7 +3,6 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.ValidIO
 import common.ValidBundle
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle

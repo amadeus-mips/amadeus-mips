@@ -3,7 +3,7 @@
 package cpu.core.pipeline.stage
 
 import cpu.core.bundles.stage.MEMWBBundle
-import cpu.core.components.{Stage, StageIO}
+import cpu.core.components.Stage
 
 /**
  * Nothing need to modify.

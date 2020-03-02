@@ -3,7 +3,7 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.util.{Cat, MuxCase}
+import chisel3.util.Cat
 import common.AXIMasterIO
 import common.Constants._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}

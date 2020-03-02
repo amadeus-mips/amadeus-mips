@@ -3,7 +3,6 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.Cat
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle

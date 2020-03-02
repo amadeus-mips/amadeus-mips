@@ -2,7 +2,6 @@
 
 package cpu.core.pipeline.stage
 
-import chisel3._
 import cpu.core.bundles.stage.IFIDBundle
 import cpu.core.components.Stage
 

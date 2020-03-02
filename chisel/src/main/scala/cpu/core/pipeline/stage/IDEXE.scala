@@ -4,9 +4,8 @@ package cpu.core.pipeline.stage
 
 import chisel3._
 import chisel3.util.MuxCase
-import cpu.core.Constants.cpuStallLen
 import cpu.core.bundles.stage.IDEXEBundle
-import cpu.core.components.{Stage, StageIO}
+import cpu.core.components.Stage
 
 class IDEXE(stageId: Int = 2) extends Stage(stageId, new IDEXEBundle) {
   val ioExt = IO(new Bundle {

@@ -8,7 +8,7 @@ import chisel3.util._
 import common.Util
 import cpu.common.CP0Struct
 import cpu.core.Constants._
-import cpu.core.bundles.{CPBundle, CPControlBundle}
+import cpu.core.bundles.CPControlBundle
 import cpu.core.components.CP0IO
 
 class CP0 extends Module {

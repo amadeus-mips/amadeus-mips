@@ -4,7 +4,6 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util._
-import common.ValidBundle
 import cpu.common.DefaultConfig._
 
 // TODO move `write back` to the axiWrap
