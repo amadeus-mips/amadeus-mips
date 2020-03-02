@@ -5,8 +5,8 @@ package cpu.core.execute.components
 import chisel3._
 import chisel3.util.{Cat, MuxLookup}
 import common.Util.signedExtend
+import common.ValidBundle
 import cpu.core.Constants._
-import cpu.core.bundles.ValidBundle
 
 class Branch extends Module {
   val io = IO(new Bundle {

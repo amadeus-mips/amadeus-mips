@@ -4,8 +4,8 @@ package cpu.core.fetch
 
 import chisel3._
 import chisel3.util.{MuxCase, ValidIO}
+import common.ValidBundle
 import cpu.core.Constants._
-import cpu.core.bundles.ValidBundle
 import cpu.core.bundles.stage.IFIDBundle
 
 class Fetch extends Module {

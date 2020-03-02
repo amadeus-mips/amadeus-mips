@@ -11,7 +11,6 @@ module data_axi(
     input  wire[3:0]    mem_wsel,
     input  wire[31:0]   mem_addr,
     input  wire[31:0]   mem_wdata,
-    input  wire         cached_trans,
     input  wire[31:0]   ex_addr,
     //to mem
     output wire[31:0]   mem_rdata,
@@ -67,7 +66,7 @@ module data_axi(
     //output wire         d_bready,   // 写数据发送的master端准备号接收写响应的信号
 );
 
-    //wire    cached_trans = (mem_addr[31:29] == 3'b101) ?  1'b0 : 1'b1;   // 0xA0000000~0xBFFFFFFF 不可cache
+    wire    cached_trans = (mem_addr[31:29] == 3'b101) ?  1'b0 : 1'b1;   // 0xA0000000~0xBFFFFFFF 不可cache
     //wire    cached_trans = 1'b;
     wire[31:0]    cache_data_to_cpu;
     wire    hit;

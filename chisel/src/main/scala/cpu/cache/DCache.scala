@@ -4,7 +4,7 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util._
-import cpu.core.bundles.ValidBundle
+import common.ValidBundle
 import cpu.common.DefaultConfig._
 
 class DCache extends Module {

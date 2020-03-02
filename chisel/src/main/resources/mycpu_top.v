@@ -74,7 +74,6 @@ wire[31:0]  data_wdata;
 wire[31:0]  data_rdata;
 wire        data_rvalid;
 wire        data_bvalid;
-wire        cached_trans;
 wire[31:0]  ex_data_addr;
 
 axi_master_interface u_axi_master_interface(
@@ -133,7 +132,6 @@ axi_master_interface u_axi_master_interface(
     .data_wsel        (data_wsel        ),
     .data_addr        (data_addr        ),
     .data_wdata       (data_wdata       ),
-    .cached_trans     (cached_trans),
     .ex_data_addr     (ex_data_addr),
     .data_rdata       (data_rdata       ),
     .data_rvalid      (data_rvalid      ),
@@ -157,7 +155,6 @@ mycpu u_mycpu(
     .data_axi_wsel     (data_wsel),
     .data_axi_addr     (data_addr    ),
     .data_axi_wdata    (data_wdata   ),
-    .cached_trans      (cached_trans),
     .ex_data_addr      (ex_data_addr),
 
     .data_axi_rdata    (data_rdata   ),

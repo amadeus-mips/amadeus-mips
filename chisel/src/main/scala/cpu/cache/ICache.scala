@@ -4,8 +4,8 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util._
+import common.ValidBundle
 import cpu.common.DefaultConfig._
-import cpu.core.bundles.ValidBundle
 
 /**
  *  only for 2 way

@@ -4,8 +4,9 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.ValidIO
+import common.ValidBundle
 import cpu.core.Constants._
-import cpu.core.bundles.{ValidBundle, WriteBundle}
+import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stage.{IDEXEBundle, IFIDBundle}
 import cpu.core.decode._
 import cpu.core.execute.components.Branch

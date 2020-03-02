@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package cpu.core.bundles
+package common
 
 import chisel3._
 import cpu.core.Constants._

@@ -3,10 +3,9 @@
 package cpu.core
 
 import chisel3._
-import chisel3.util.MuxLookup
-import cpu.common.{DataReadIO, DataWriteIO}
+import common.ValidBundle
+import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.ValidBundle
 import cpu.core.components.{CP0, HILO, RegFile}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
@@ -15,12 +14,10 @@ import cpu.core.pipeline.stage._
 class Core extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
-    val inst = Input(new ValidBundle)
 
-    val pc = Output(new ValidBundle)
-    val load = new DataReadIO
-    val store = new DataWriteIO
-    val addr = Output(UInt(addrLen.W))
+    val rInst = new NiseSramReadIO()
+    val rData = new NiseSramReadIO()
+    val wData = new NiseSramWriteIO()
   })
 
   /**
@@ -46,7 +43,7 @@ class Core extends MultiIOModule {
   fetch.io.flushPC := ctrl.io.flushPC
 
   fetch.io.branch <> decodeTop.io.branch
-  fetch.io.instValid := io.inst.valid
+  fetch.io.instValid := io.rInst.valid
 
   if_id.io.in <> fetch.io.out
   if_id.io.stall := ctrl.io.stall
@@ -55,8 +52,8 @@ class Core extends MultiIOModule {
   val stallByOther = !ctrl.io.flush && ctrl.io.stall(0)
   val instBuffer = RegInit(0.U.asTypeOf(new ValidBundle))
   instBuffer.valid := stallByOther
-  instBuffer.bits := Mux(instBuffer.valid, instBuffer.bits, io.inst.bits)
-  val inst = Mux(instBuffer.valid, instBuffer.bits, io.inst.bits)
+  instBuffer.bits := Mux(instBuffer.valid, instBuffer.bits, io.rInst.data)
+  val inst = Mux(instBuffer.valid, instBuffer.bits, io.rInst.data)
 
   decodeTop.io.in <> if_id.io.out
   decodeTop.io.inst := inst
@@ -94,8 +91,8 @@ class Core extends MultiIOModule {
   memoryTop.io.inCP0Handle.cause := cp0.io.cause_o
   memoryTop.io.inCP0Handle.EPC := cp0.io.EPC_o
   memoryTop.io.wbCP0 <> mem_wb.io.out.cp0
-  memoryTop.io.load <> io.load
-  memoryTop.io.store <> io.store
+  memoryTop.io.rData <> io.rData
+  memoryTop.io.wData <> io.wData
 
   cp0.io.intr := io.intr
   cp0.io.cp0Write <> mem_wb.io.out.cp0
@@ -119,7 +116,6 @@ class Core extends MultiIOModule {
   mem_wb.io.stall := ctrl.io.stall
   mem_wb.io.flush := ctrl.io.flush
 
-  io.pc.bits := fetch.io.out.pc
-  io.pc.valid := fetch.io.outPCValid
-  io.addr := memoryTop.io.addr
+  io.rInst.addr := fetch.io.out.pc
+  io.rInst.enable := fetch.io.outPCValid
 }

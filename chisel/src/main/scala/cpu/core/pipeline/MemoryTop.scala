@@ -4,7 +4,7 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.Cat
-import cpu.common.{DataReadIO, DataWriteIO}
+import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
 import cpu.core.bundles.stage.{EXEMEMBundle, MEMWBBundle}
@@ -18,11 +18,9 @@ class MemoryTop extends Module {
     val wbCP0 = Input(new CPBundle)
 
     /** load data from memory */
-    val load = new DataReadIO
+    val rData = new NiseSramReadIO
     /** save data to memory */
-    val store = new DataWriteIO
-    /** address to memory */
-    val addr = Output(UInt(dataLen.W))
+    val wData = new NiseSramWriteIO
 
     val out = Output(new MEMWBBundle)
     val badAddr = Output(UInt(addrLen.W))
@@ -40,10 +38,10 @@ class MemoryTop extends Module {
   control.io.inWriteData := io.in.write.data
   control.io.inMemData := io.in.memData
   control.io.operation := io.in.operation
-  control.io.addrL2 := io.in.memAddr(1, 0)
+  control.io.addr := io.in.memAddr
   control.io.except := except.io.outExcept.asUInt() =/= 0.U
-  control.io.load <> io.load
-  control.io.store <> io.store
+  control.io.rData <> io.rData
+  control.io.wData <> io.wData
 
   except.io.pc := io.in.pc
   except.io.addr := io.in.memAddr
@@ -53,8 +51,6 @@ class MemoryTop extends Module {
 
   forward.io.inCP0 <> io.inCP0Handle
   forward.io.wbCP0 <> io.wbCP0
-
-  io.addr := Cat(io.in.memAddr(dataLen-1, 2), 0.U(2.W))
 
   io.out.write.control <> io.in.write.control
   io.out.write.data := control.io.outWriteData
