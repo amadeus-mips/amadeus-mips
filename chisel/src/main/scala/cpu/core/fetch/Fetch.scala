@@ -5,7 +5,7 @@ package cpu.core.fetch
 import chisel3._
 import common.ValidBundle
 import cpu.core.Constants._
-import cpu.core.bundles.stage5.IFIDBundle
+import cpu.core.bundles.stage5.IfIdBundle
 
 class Fetch extends Module {
   val io = IO(new Bundle {
@@ -21,7 +21,7 @@ class Fetch extends Module {
     val instValid = Input(Bool())
 
     // to IFID
-    val out = Output(new IFIDBundle)
+    val out = Output(new IfIdBundle)
     // to ram
     val outPCValid = Output(Bool())
     // to ctrl

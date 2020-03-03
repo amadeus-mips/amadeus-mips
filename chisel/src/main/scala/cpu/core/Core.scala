@@ -6,7 +6,7 @@ import chisel3._
 import common.Buffer
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.stage5.{EXEMEMBundle, IFIDBundle, MEMWBBundle}
+import cpu.core.bundles.stage5.{ExeMemBundle, IfIdBundle, MemWbBundle}
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
@@ -34,10 +34,10 @@ class Core extends MultiIOModule {
   val ctrl = Module(new CTRL)
 
   // stages
-  val if_id = Module(new Stage(1, new IFIDBundle))
+  val if_id = Module(new Stage(1, new IfIdBundle))
   val id_exe = Module(new IDEXE)
-  val exe_mem = Module(new Stage(3, new EXEMEMBundle))
-  val mem_wb = Module(new Stage(4, new MEMWBBundle))
+  val exe_mem = Module(new Stage(3, new ExeMemBundle))
+  val mem_wb = Module(new Stage(4, new MemWbBundle))
 
   fetch.io.stall := ctrl.io.stall
   fetch.io.flush := ctrl.io.flush

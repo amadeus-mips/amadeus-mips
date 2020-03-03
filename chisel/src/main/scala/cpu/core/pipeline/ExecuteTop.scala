@@ -5,14 +5,14 @@ package cpu.core.pipeline
 import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles._
-import cpu.core.bundles.stage5.{EXEMEMBundle, IDEXEBundle}
+import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle}
 import cpu.core.components.{Div, Mult}
 import cpu.core.execute._
 import cpu.core.execute.components._
 
 class ExecuteTop extends Module {
   val io = IO(new Bundle {
-    val in = Input(new IDEXEBundle)
+    val in = Input(new IdExeBundle)
 
     /** For multi-cycle multiplication and division. */
     val flush = Input(Bool())
@@ -25,7 +25,7 @@ class ExecuteTop extends Module {
     val memCP0 = Input(new CPBundle)
     val wbCP0 = Input(new CPBundle)
 
-    val out = Output(new EXEMEMBundle)
+    val out = Output(new ExeMemBundle)
     val stallReq = Output(Bool())
   })
 

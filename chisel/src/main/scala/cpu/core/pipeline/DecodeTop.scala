@@ -6,13 +6,13 @@ import chisel3._
 import common.ValidBundle
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
-import cpu.core.bundles.stage5.{IDEXEBundle, IFIDBundle}
+import cpu.core.bundles.stage5.{IdExeBundle, IfIdBundle}
 import cpu.core.decode._
 import cpu.core.execute.components.Branch
 
 class DecodeTop extends Module {
   val io = IO(new Bundle {
-    val in = Input(new IFIDBundle)
+    val in = Input(new IfIdBundle)
     val inst = Input(UInt(dataLen.W))
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
@@ -20,7 +20,7 @@ class DecodeTop extends Module {
     val rtData = Input(UInt(dataLen.W)) // ^
     val inDelaySlot = Input(Bool())     // get from `IDEX`
 
-    val out = Output(new IDEXEBundle)
+    val out = Output(new IdExeBundle)
     val nextInstInDelaySlot = Output(Bool())
     val branch = Output(new ValidBundle) // back to `Fetch`
     val stallReq = Output(Bool())       // to pipeLine control

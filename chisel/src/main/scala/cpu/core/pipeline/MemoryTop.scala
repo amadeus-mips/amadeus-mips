@@ -6,12 +6,12 @@ import chisel3._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
-import cpu.core.bundles.stage5.{EXEMEMBundle, MEMWBBundle}
+import cpu.core.bundles.stage5.{ExeMemBundle, MemWbBundle}
 import cpu.core.memory.{CP0HandleBundle, Control, Except, Forward}
 
 class MemoryTop extends Module {
   val io = IO(new Bundle {
-    val in = Input(new EXEMEMBundle)
+    val in = Input(new ExeMemBundle)
 
     val inCP0Handle = Input(new CP0HandleBundle)
     val wbCP0 = Input(new CPBundle)
@@ -21,7 +21,7 @@ class MemoryTop extends Module {
     /** save data to memory */
     val wData = new NiseSramWriteIO
 
-    val out = Output(new MEMWBBundle)
+    val out = Output(new MemWbBundle)
     val badAddr = Output(UInt(addrLen.W))
     val EPC = Output(UInt(dataLen.W))
     val inDelaySlot = Output(Bool())
