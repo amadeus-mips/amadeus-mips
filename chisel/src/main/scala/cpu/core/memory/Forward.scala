@@ -21,8 +21,8 @@ class Forward extends Module {
   })
 
   io.outCP0 <> io.inCP0
-  when(io.wbCP0.control.enable){
-    switch(io.wbCP0.control.address){
+  when(io.wbCP0.enable){
+    switch(io.wbCP0.address){
       is(con_Status.addr.U){
         io.outCP0.status := io.wbCP0.data
       }

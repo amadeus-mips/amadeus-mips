@@ -37,14 +37,14 @@ class Forward extends Module {
     )
   )
 
-  def cp0Forward(cp0: CPControlBundle): Bool = {
-    val raw = io.rawCP0.control
+  def cp0Forward(cp0: CPBundle): Bool = {
+    val raw = io.rawCP0
     cp0.enable && cp0.address === raw.address && cp0.sel === raw.sel
   }
   io.outCP0 := MuxCase(io.rawCP0.data,
     Array(
-      cp0Forward(io.memCP0.control) -> io.memCP0.data,
-      cp0Forward(io.wbCP0.control) -> io.wbCP0.data
+      cp0Forward(io.memCP0) -> io.memCP0.data,
+      cp0Forward(io.wbCP0) -> io.wbCP0.data
     )
   )
 

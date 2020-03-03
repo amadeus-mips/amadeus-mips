@@ -51,8 +51,9 @@ class MemoryTop extends Module {
   forward.io.inCP0 <> io.inCP0Handle
   forward.io.wbCP0 <> io.wbCP0
 
-  io.out.write.control <> io.in.write.control
+  io.out.write <> io.in.write
   io.out.write.data := control.io.outWriteData
+  io.out.write.valid := true.B
   io.out.cp0 <> io.in.cp0
   io.out.hilo <> io.in.hilo
   io.out.pc := io.in.pc

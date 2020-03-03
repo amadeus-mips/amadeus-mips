@@ -45,8 +45,8 @@ class ExecuteTop extends Module {
   forward.io.memHILO <> io.memHILO
   forward.io.wbHILO <> io.wbHILO
 
-  /** cp0 control come from decode */
-  forward.io.rawCP0.control <> io.in.cp0Control
+  /** cp0 come from decode */
+  forward.io.rawCP0 <> io.in.cp0
   /** cp0 data come from CP0 regfile */
   forward.io.rawCP0.data := io.cp0Data
   forward.io.memCP0 <> io.memCP0
@@ -63,7 +63,7 @@ class ExecuteTop extends Module {
   writeOther.io.op1 := io.in.op1
   writeOther.io.op2 := io.in.op2
   writeOther.io.operation := io.in.operation
-  writeOther.io.inCP0Control <> io.in.cp0Control
+  writeOther.io.inCP0 <> io.in.cp0
   writeOther.io.mult <> mult.io
   writeOther.io.div <> div.io
 

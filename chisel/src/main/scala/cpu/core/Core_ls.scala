@@ -19,7 +19,7 @@ class Core_ls extends Core {
   io_ls.flush := ctrl.io.flush
 
   io_ls.debug.wbPC := mem_wb.io.out.pc
-  io_ls.debug.wbRegFileWEn := Fill(4, mem_wb.io.out.write.control.enable)
-  io_ls.debug.wbRegFileWNum := mem_wb.io.out.write.control.address
+  io_ls.debug.wbRegFileWEn := Fill(4, mem_wb.io.out.write.enable)
+  io_ls.debug.wbRegFileWNum := mem_wb.io.out.write.address
   io_ls.debug.wbRegFileWData := mem_wb.io.out.write.data
 }

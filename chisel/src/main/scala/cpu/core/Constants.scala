@@ -12,15 +12,10 @@ trait opConstants {
   val Y       = true.B
   val N       = false.B
 
-  // OP1
-  val OP1_RS    = 0.U(2.W)    // regfile
-  val OP1_IMM   = 1.U(2.W)    // 立即数
-  val OP1_N     = 2.U(2.W)    // 不需要
-
-  // OP2
-  val OP2_RS    = 0.U(2.W)    // regfile
-  val OP2_IMM   = 1.U(2.W)    // 立即数
-  val OP2_N     = 2.U(2.W)    // 不需要
+  // Operand
+  val OPn_RF    = 0.U(1.W)    // regfile
+  val OPn_IMM   = 1.U(1.W)    // 立即数
+  val OPn_X     = 0.U(1.W)    // Dont care
 
   // 指令类型（判断执行阶段写入寄存器结果的来源 ALU, CP0...）
   val instTypeLen = 3

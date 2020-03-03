@@ -14,7 +14,6 @@ class DecodeTop extends Module {
   val io = IO(new Bundle {
     val in = Input(new IFIDBundle)
     val inst = Input(UInt(dataLen.W))
-    val exeOp = Input(UInt(opLen.W))
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
     val rsData = Input(UInt(dataLen.W)) // from register-file
@@ -29,8 +28,7 @@ class DecodeTop extends Module {
 
   val inst = Mux(io.in.instFetchExcept || io.in.pc === 0.U, 0.U, io.inst)
 
-  val forward = Module(new Forward)
-  val loadUse = Module(new LoadUse)
+  val hazard = Module(new Hazard)
   val control = Module(new Control)
   val decode = Module(new Decode)
   val branch = Module(new Branch)
@@ -42,19 +40,14 @@ class DecodeTop extends Module {
   val imm16 = inst(15, 0)
   val imm26 = inst(25, 0)
 
-  forward.io.exeWR <> io.exeWR
-  forward.io.memWR <> io.memWR
-  forward.io.rs := rs
-  forward.io.rt := rt
-  forward.io.rsData := io.rsData
-  forward.io.rtData := io.rtData
-
-  loadUse.io.exeOp := io.exeOp
-  loadUse.io.exeWR <> io.exeWR
-  loadUse.io.op1Type := control.io.out.op1Type
-  loadUse.io.op2Type := control.io.out.op2Type
-  loadUse.io.rs := rs
-  loadUse.io.rt := rt
+  hazard.io.exeWR <> io.exeWR
+  hazard.io.memWR <> io.memWR
+  hazard.io.rs := rs
+  hazard.io.rt := rt
+  hazard.io.rsData := io.rsData
+  hazard.io.rtData := io.rtData
+  hazard.io.op1Type := control.io.out.op1Type
+  hazard.io.op2Type := control.io.out.op2Type
 
   /** 根据指令解码获取控制信号 */
   control.io.inst := inst
@@ -62,8 +55,8 @@ class DecodeTop extends Module {
   decode.io.signal <> control.io.out
   decode.io.inst := inst
   decode.io.instFetchExc := io.in.instFetchExcept
-  decode.io.rsData := forward.io.outRsData
-  decode.io.rtData := forward.io.outRtData
+  decode.io.rsData := hazard.io.outRsData
+  decode.io.rtData := hazard.io.outRtData
 
   branch.io.op1 := decode.io.op1
   branch.io.op2 := decode.io.op2
@@ -77,7 +70,7 @@ class DecodeTop extends Module {
   io.out.op1 := decode.io.op1
   io.out.op2 := decode.io.op2
   io.out.write <> decode.io.write
-  io.out.cp0Control <> decode.io.cp0Control
+  io.out.cp0 <> decode.io.cp0
   io.out.except := decode.io.except
 
   io.out.pc := io.in.pc
@@ -86,6 +79,6 @@ class DecodeTop extends Module {
   io.nextInstInDelaySlot := decode.io.nextInstInDelaySlot
 
   io.branch <> branch.io.branch
-  io.stallReq := loadUse.io.stallReq
+  io.stallReq := hazard.io.stallReq
 
 }

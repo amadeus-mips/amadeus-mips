@@ -3,7 +3,7 @@
 package cpu.core
 
 import chisel3._
-import common.ValidBundle
+import common.Buffer
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.components.{CP0, HILO, RegFile}
@@ -49,15 +49,14 @@ class Core extends MultiIOModule {
   if_id.io.stall := ctrl.io.stall
   if_id.io.flush := ctrl.io.flush
 
-  val stallByOther = !ctrl.io.flush && ctrl.io.stall(0)
-  val instBuffer = RegInit(0.U.asTypeOf(new ValidBundle))
-  instBuffer.valid := stallByOther
-  instBuffer.bits := Mux(instBuffer.valid, instBuffer.bits, io.rInst.data)
-  val inst = Mux(instBuffer.valid, instBuffer.bits, io.rInst.data)
+  val stalled = !ctrl.io.flush && ctrl.io.stall(0)
+  val instBuffer = Module(new Buffer(dataLen))
+  instBuffer.io.in := io.rInst.data
+  instBuffer.io.en := stalled
+  val inst = instBuffer.io.out
 
   decodeTop.io.in <> if_id.io.out
   decodeTop.io.inst := inst
-  decodeTop.io.exeOp := id_exe.io.out.operation
   decodeTop.io.exeWR := executeTop.io.out.write
   decodeTop.io.memWR := memoryTop.io.out.write
   decodeTop.io.rsData := regFile.io.rsData

@@ -20,21 +20,21 @@ class RegFile extends Module {
   /** construct 32 32-bit reg */
   val regs = RegInit(VecInit(Seq.fill(regAmount)(0.U(dataLen.W))))
 
-  when(io.write.control.enable && io.write.control.address =/= 0.U) {
-    regs(io.write.control.address) := io.write.data
+  when(io.write.enable && io.write.address =/= 0.U) {
+    regs(io.write.address) := io.write.data
   }
 
   io.rsData := MuxCase(regs(io.rs),
     Array(
       (io.rs === 0.U) -> 0.U,
-      (io.write.control.enable && io.write.control.address === io.rs) ->
+      (io.write.enable && io.write.address === io.rs) ->
         io.write.data,
     )
   )
   io.rtData := MuxCase(regs(io.rt),
     Array(
       (io.rt === 0.U) -> 0.U,
-      (io.write.control.enable && io.write.control.address === io.rt) ->
+      (io.write.enable && io.write.address === io.rt) ->
         io.write.data,
     )
   )

@@ -4,7 +4,7 @@ package cpu.core.execute.components
 
 import chisel3._
 import cpu.core.Constants._
-import cpu.core.bundles.{CPBundle, CPControlBundle, HILOValidBundle}
+import cpu.core.bundles.{CPBundle, HILOValidBundle}
 import cpu.core.components.MultDivIO
 
 /**
@@ -19,7 +19,7 @@ class WriteOther extends Module {
     val op2 = Input(UInt(dataLen.W))
     val operation = Input(UInt(opLen.W))
 
-    val inCP0Control = Input(new CPControlBundle)
+    val inCP0 = Input(new CPBundle)
 
     val outCP0 = Output(new CPBundle)
     val outHILO = Output(new HILOValidBundle)
@@ -29,8 +29,9 @@ class WriteOther extends Module {
     val div = Flipped(new MultDivIO)
   })
 
-  io.outCP0.control <> io.inCP0Control
+  io.outCP0 <> io.inCP0
   io.outCP0.data := io.op2
+  io.outCP0.valid := true.B
 
   io.outHILO.hi.valid := io.operation === WO_MTHI
   io.outHILO.hi.bits := io.op1

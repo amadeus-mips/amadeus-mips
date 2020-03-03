@@ -51,7 +51,7 @@ class CP0 extends Module {
   val except = io.except.asUInt() =/= 0.U
 
   def compareWriteCP0(p:CP0Struct): Bool = {
-    val c = io.cp0Write.control
+    val c = io.cp0Write
     c.enable && c.address === p.addr.U && c.sel === p.sel.U
   }
   /** It is recommended to rename this function use `shift+F6` if you use intellij idea. :) */

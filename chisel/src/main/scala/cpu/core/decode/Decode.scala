@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.util._
 import common.Util._
 import cpu.core.Constants._
-import cpu.core.bundles.{CPControlBundle, WriteControlBundle}
+import cpu.core.bundles.{CPBundle, WriteBundle}
 
 class Decode extends Module {
   val io = IO(new Bundle {
@@ -18,8 +18,8 @@ class Decode extends Module {
 
     val op1 = Output(UInt(dataLen.W))
     val op2 = Output(UInt(dataLen.W))
-    val write = Output(new WriteControlBundle)
-    val cp0Control = Output(new CPControlBundle)
+    val write = Output(new WriteBundle)
+    val cp0 = Output(new CPBundle)
     val nextInstInDelaySlot = Output(Bool()) // ^
     val except = Output(Vec(exceptAmount, Bool()))
   })
@@ -42,14 +42,14 @@ class Decode extends Module {
 
   io.op1 := MuxLookup(io.signal.op1Type, 0.U,
     Array(
-      OP1_IMM -> imm32,
-      OP1_RS -> io.rsData,
+      OPn_IMM -> imm32,
+      OPn_RF -> io.rsData,
     )
   )
   io.op2 := MuxLookup(io.signal.op2Type, 0.U,
     Array(
-      OP1_IMM -> imm32,
-      OP2_RS -> io.rtData,
+      OPn_IMM -> imm32,
+      OPn_RF -> io.rtData,
     )
   )
 
@@ -61,10 +61,14 @@ class Decode extends Module {
       WRA_T3 -> GPR31,  // 31th register
     )
   )
+  io.write.data := DontCare
+  io.write.valid := false.B
 
-  io.cp0Control.enable := io.signal.operation === WO_MTC0
-  io.cp0Control.address := rd
-  io.cp0Control.sel := sel
+  io.cp0.enable := io.signal.operation === WO_MTC0
+  io.cp0.address := rd
+  io.cp0.sel := sel
+  io.cp0.data := DontCare
+  io.cp0.valid := false.B
 
   io.nextInstInDelaySlot := io.signal.instType === INST_BR
 

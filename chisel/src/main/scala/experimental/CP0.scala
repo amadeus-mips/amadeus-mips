@@ -8,7 +8,7 @@ import chisel3.util._
 import common.Util
 import cpu.common.CP0Struct
 import cpu.core.Constants._
-import cpu.core.bundles.CPControlBundle
+import cpu.core.bundles.CPBundle
 import cpu.core.components.CP0IO
 
 class CP0 extends Module {
@@ -27,13 +27,13 @@ class CP0 extends Module {
   /** interrupt will modify the cause[15:10] */
   regs.get(con_Cause) := Util.subwordModify(regs.get(con_Cause), (15, 10), io.intr)
 
-  def compareCP0(c: CPControlBundle, p: CP0Struct): Bool = {
+  def compareCP0(c: CPBundle, p: CP0Struct): Bool = {
     c.address === p.addr.U && c.sel === p.sel.U
   }
-  when(io.cp0Write.control.enable){
-    when(compareCP0(io.cp0Write.control, con_Count)){
+  when(io.cp0Write.enable){
+    when(compareCP0(io.cp0Write, con_Count)){
       regs.get(con_Count) := io.cp0Write.data
-    }.elsewhen(compareCP0(io.cp0Write.control, con_Status)){
+    }.elsewhen(compareCP0(io.cp0Write, con_Status)){
       regs.get(con_Status) := io.cp0Write.data
     }
   }
