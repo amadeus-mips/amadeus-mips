@@ -1,10 +1,10 @@
 // See README.md for license details.
 
-package cpu.core.pipeline.stage
+package cpu.core.pipeline.stage5
 
 import chisel3._
 import chisel3.util.MuxCase
-import cpu.core.bundles.stage.IDEXEBundle
+import cpu.core.bundles.stage5.IDEXEBundle
 import cpu.core.components.Stage
 
 class IDEXE(stageId: Int = 2) extends Stage(stageId, new IDEXEBundle) {

@@ -5,7 +5,7 @@ package cpu.core.pipeline
 import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles._
-import cpu.core.bundles.stage.{EXEMEMBundle, IDEXEBundle}
+import cpu.core.bundles.stage5.{EXEMEMBundle, IDEXEBundle}
 import cpu.core.components.{Div, Mult}
 import cpu.core.execute._
 import cpu.core.execute.components._

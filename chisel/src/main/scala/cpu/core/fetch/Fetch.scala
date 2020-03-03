@@ -5,7 +5,7 @@ package cpu.core.fetch
 import chisel3._
 import common.ValidBundle
 import cpu.core.Constants._
-import cpu.core.bundles.stage.IFIDBundle
+import cpu.core.bundles.stage5.IFIDBundle
 
 class Fetch extends Module {
   val io = IO(new Bundle {

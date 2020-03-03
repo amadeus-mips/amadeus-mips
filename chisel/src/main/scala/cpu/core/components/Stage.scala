@@ -4,7 +4,7 @@ package cpu.core.components
 
 import chisel3._
 import cpu.core.Constants.cpuStallLen
-import cpu.core.pipeline.stage.IDEXE
+import cpu.core.pipeline.stage5.IDEXE
 
 class StageIO[+T <: Data](gen: T) extends Bundle {
   val stall = Input(UInt(cpuStallLen.W))

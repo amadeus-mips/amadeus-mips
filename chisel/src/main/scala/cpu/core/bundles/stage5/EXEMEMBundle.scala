@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package cpu.core.bundles.stage
+package cpu.core.bundles.stage5
 
 import chisel3._
 import cpu.core.Constants._

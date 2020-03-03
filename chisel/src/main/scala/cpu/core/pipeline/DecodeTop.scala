@@ -6,7 +6,7 @@ import chisel3._
 import common.ValidBundle
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
-import cpu.core.bundles.stage.{IDEXEBundle, IFIDBundle}
+import cpu.core.bundles.stage5.{IDEXEBundle, IFIDBundle}
 import cpu.core.decode._
 import cpu.core.execute.components.Branch
 
