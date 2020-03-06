@@ -25,16 +25,9 @@ object Tester {
 
     val compiledFirrtl = build(optionsManager, conf)
     val simulator = TreadleTester(compiledFirrtl, optionsManager)
-//    var done = false
 
     // example of how to look at treadle's view of the symbol table
     simulator.engine.symbolTable.nameToSymbol.keys.toSeq.sorted.foreach { key => println(s"symbol: $key") }
     println(s"sr is ${simulator.peek("cpu.cpZero.regSR")}")
-//    while (!done) {
-//      simulator.step(1)
-//      if (simulator.peek("counter") == 14) {
-//        done = true
-//      }
-//    }
   }
 }

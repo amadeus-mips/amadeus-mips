@@ -298,8 +298,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   exToMEM.io.pipeIn.control.memSext := idToEX.io.pipeOut.control.memSext
   exToMEM.io.pipeIn.control.memWriteEnable := idToEX.io.pipeOut.control.memWriteEnable
   exToMEM.io.pipeIn.control.wbSelect := memReadEX
-  exToMEM.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeIn.control.isBranchDelaySlot
-  exToMEM.io.pipeIn.control.cp0Op := idToEX.io.pipeIn.control.cp0Op
+  exToMEM.io.pipeIn.control.isBranchDelaySlot := idToEX.io.pipeOut.control.isBranchDelaySlot
+  exToMEM.io.pipeIn.control.cp0Op := idToEX.io.pipeOut.control.cp0Op
   //--------------------------write back stage--------------------------
   exToMEM.io.pipeIn.control.wbEnable := idToEX.io.pipeOut.control.wbEnable
 
@@ -372,13 +372,11 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // TODO: catch exceptions from the memory stage
   // detect early ( prevent writes ), handle late
   // handle the exceptions here
-  cpZero.io.input.readEnable := exToMEM.io.pipeOut.control.cp0Op(0).asBool
   cpZero.io.input.writeEnable := exToMEM.io.pipeOut.control.cp0Op(1).asBool
   cpZero.io.input.dst := exToMEM.io.pipeOut.data.regRd
   cpZero.io.input.select := exToMEM.io.pipeOut.data.cp0Select
   cpZero.io.input.writeData := exToMEM.io.pipeOut.data.aluOutput
   cpZero.io.input.isBD := exToMEM.io.pipeOut.control.isBranchDelaySlot
-  cpZero.io.input.readEnable := false.B
   cpZero.io.input.cause := Mux(
     !exToMEM.io.pipeOut.exception.orR.asBool && memException,
     8.U,

@@ -174,7 +174,7 @@ object InstructionTests {
       "cp0read",
       Map("pipelined" -> 8),
       Map(),
-      Map(0 -> 0, 1 -> BigInt("3217032064", 10), 2 -> 3, 3 -> 4259585),
+      Map(0 -> 0, 1 -> BigInt("3217032064", 10), 2 -> 2, 3 -> 4259585),
       Map(),
       Map()
     )

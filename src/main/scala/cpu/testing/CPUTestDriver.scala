@@ -5,7 +5,6 @@ import cpu._
 import cpu.pipelined._
 import cpu.simulate.build
 import cpu.singleCycle.SingleCycleCPUInfo
-import firrtl.stage.FirrtlSourceAnnotation
 import org.scalatest.{FlatSpec, Matchers}
 import treadle.TreadleTester
 import treadle.executable.TreadleException
@@ -29,26 +28,12 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
   conf.cpuType = cpuType
   conf.memFile = hexName
 
-  // Convert the binary to a hex file that can be loaded by treadle
-  // (Do this after compiling the firrtl so the directory is created)
-//  val path = if (binary.endsWith(".riscv")) {
-//    s"src/test/resources/c/${binary}"
-//  } else {
-//    s"src/test/resources/risc-v/${binary}"
-
-//  }
-
   // This compiles the chisel to firrtl
   val compiledFirrtl = build(optionsManager, conf)
   //  val endPC = elfToHex(path, hexName)
-  val endPC = 200
-
-// Instantiate the simulator
-  val sourceAnnotation = FirrtlSourceAnnotation(compiledFirrtl)
-
   val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
-  //  val simulator = TreadleTester(sourceAnnotation +: optionsManager.toAnnotationSeq)
+  val endPC = 200
   var cycle = 0
 
   def reset(): Unit = {
@@ -225,6 +210,10 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
       simulator.step(1)
       cycle += 1
     }
+  }
+
+  def dumpSymbolNames(): Unit = {
+    simulator.engine.symbolTable.nameToSymbol.keys.toSeq.sorted.foreach { key => println(s"symbol: $key") }
   }
 }
 

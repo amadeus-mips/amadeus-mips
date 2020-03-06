@@ -22,6 +22,7 @@ object singlestep {
                    | dump all        : Show all modules and the values of their I/O
                    | dump list       : List the valid modules to dump
                    | dump [module]   : Show values of the I/O on a specific module
+                   | dump symbolNames: dump all the symbol names in the symbol table
                    |
                    | Printing pipeline registers (pipelined CPU only)
                    | ------------------------------------------------
@@ -102,6 +103,10 @@ object singlestep {
       }
       case "cp0" => {
         driver.printCP0Reg()
+        true
+      }
+      case "symbolNames" => {
+        driver.dumpSymbolNames()
         true
       }
       case "pipereg" => {

@@ -16,7 +16,6 @@ object excCodes {
 
 class CPZeroIn extends Bundle {
 
-  val readEnable = Input(Bool())
   val writeEnable = Input(Bool())
   val dst = Input(UInt(5.W))
   val select = Input(UInt(3.W))
@@ -84,9 +83,9 @@ class CPZero extends Module {
 
   //TODO: previledge checking for mtc0 and mfc0
 
-  io.output.regVal := DontCare
-  when(!isException && io.input.readEnable) {
-    io.output.regVal := MuxLookup(
+  io.output.regVal := Mux(
+    (!isException),
+    MuxLookup(
       io.input.dst,
       0.U,
       Array(
@@ -97,8 +96,9 @@ class CPZero extends Module {
         // this is not correct
         15.U -> regEBase
       )
-    )
-  }
+    ),
+    DontCare
+  )
 
   when(!isException && io.input.writeEnable) {
     switch(io.input.dst) {
