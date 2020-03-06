@@ -328,6 +328,8 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   val regDstMem = Wire(UInt(5.W))
   val regWriteEnableMem = Wire(Bool())
   val isExceptionPrevious = Wire(Bool())
+  val regRtBypass = Wire(UInt(32.W))
+  regRtBypass := Mux(hazard.io.output.forwardMemWriteData, wbDataToReg, writeDataMem)
 
   isExceptionPrevious := exToMEM.io.pipeOut.exception.orR.asBool
 
@@ -351,7 +353,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
 
   io.dmem.address := aluOutputMem
   // if data memory has a forward
-  io.dmem.writedata := Mux(hazard.io.output.forwardMemWriteData, wbDataToReg, writeDataMem)
+  io.dmem.writedata := regRtBypass
   // when I am selecting the mem read value to perform
   // a write back, I'm doing a write back
   // when I am selecting alu output to perform a write back
@@ -365,8 +367,6 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   // make it valid if I'm either reading or writing
   io.dmem.valid := (memWriteEnable | wbSelect)
 
-  wbDataMem := Mux(wbSelect, io.dmem.readdata, aluOutputMem)
-
   val memException = false.B
 
   // TODO: catch exceptions from the memory stage
@@ -375,7 +375,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   cpZero.io.input.writeEnable := exToMEM.io.pipeOut.control.cp0Op(1).asBool
   cpZero.io.input.dst := exToMEM.io.pipeOut.data.regRd
   cpZero.io.input.select := exToMEM.io.pipeOut.data.cp0Select
-  cpZero.io.input.writeData := exToMEM.io.pipeOut.data.aluOutput
+  cpZero.io.input.writeData := regRtBypass
   cpZero.io.input.isBD := exToMEM.io.pipeOut.control.isBranchDelaySlot
   cpZero.io.input.cause := Mux(
     !exToMEM.io.pipeOut.exception.orR.asBool && memException,
@@ -384,15 +384,19 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends BaseCPU {
   )
   cpZero.io.input.pcPlusFour := exToMEM.io.pipeOut.data.pcPlusFour
 
+  wbDataMem := Mux(
+    exToMEM.io.pipeOut.control.cp0Op(0).asBool,
+    cpZero.io.output.regVal,
+    Mux(wbSelect, io.dmem.readdata, aluOutputMem)
+  )
   hazard.io.input.isException := exToMEM.io.pipeOut.exception.orR.asBool || memException
+
   // pass the signals and data to the pipeline registers
   memToWB.io.valid := true.B
   memToWB.io.flush := hazard.io.output.memWBFlush
 
-  // pipe in the data values
-  // warning: assuming that there is no exception
-  //TODO: what if there is an exception going on
-  memToWB.io.pipeIn.data.wbData := Mux(exToMEM.io.pipeOut.control.cp0Op(0).asBool, cpZero.io.output.regVal, wbDataMem)
+  // data part
+  memToWB.io.pipeIn.data.wbData := wbDataMem
   memToWB.io.pipeIn.data.regDst := regDstMem
 
   // pipe in the control signals

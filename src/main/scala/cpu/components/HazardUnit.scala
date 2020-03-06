@@ -179,6 +179,7 @@ class HazardUnit extends Module {
     // pc+4 gets flushed and never enters ex, j proceeds
   }
 
+  // note: stalling supercedes bypass, bypass only work when there is no stalling
   //----------------------------------------------------------------------------------------
   //----------------------------------------------------------------------------------------
   //bypassing

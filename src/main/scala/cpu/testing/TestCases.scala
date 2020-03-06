@@ -170,11 +170,38 @@ object InstructionTests {
 
   val cp0Tests = List[CPUTestCase](
     CPUTestCase(
-      "cp0RW",
+      "cpZero",
       "cp0read",
       Map("pipelined" -> 8),
       Map(),
       Map(0 -> 0, 1 -> BigInt("3217032064", 10), 2 -> 2, 3 -> 4259585),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "cpZero",
+      "cp0write",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 2 -> 12),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "cpZero",
+      "cp0bypass",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 2 -> 12),
+      Map(),
+      Map()
+    ),
+    CPUTestCase(
+      "cpZero",
+      "cp0stall",
+      Map("pipelined" -> 20),
+      Map(),
+      Map(0 -> 0, 4 -> 25),
       Map(),
       Map()
     )
