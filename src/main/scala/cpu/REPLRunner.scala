@@ -18,16 +18,20 @@ object REPLRunner {
     * }}}
     */
   def main(args: Array[String]): Unit = {
-    require(args.length >= 2, "Error: Expected at least two argument\n" + helptext)
+    require(
+      args.length >= 3,
+      "Error: Expected at least three argument: cpu type, test dir name, and test mem file name\n"
+    )
 
-    println(s"Running test ${args(1)} on CPU design ${args(0)}")
+    println(s"Running test ${args(1)}/${args(2)} on CPU design ${args(0)}")
 
     //get the params, test name and cpu type
-    val test = InstructionTests.nameMap(args(1))
+    val test = InstructionTests.nameMap(args(1) + "/" + args(2))
     val cpuType = args(0)
 
     //setup test
-    val driver = new CPUTestDriver(cpuType, test.directoryName, test.memFile)
+    val driver = new CPUTestDriver(cpuType, args(1), args(2))
+    driver.reset()
     driver.initRegs(test.initRegs)
     driver.initMemory(test.initMem)
 

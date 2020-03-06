@@ -2,10 +2,11 @@ package cpu
 
 import java.io.{File, PrintWriter, RandomAccessFile}
 
+import chisel3.iotesters.TesterOptionsManager
 import chisel3.{ChiselExecutionSuccess, HasChiselExecutionOptions}
 import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 import net.fornwall.jelf.ElfFile
-import treadle.{HasTreadleOptions, TreadleOptionsManager, TreadleTester}
+import treadle.{HasTreadleOptions, TreadleOptionsManager}
 
 import scala.collection.SortedMap
 
@@ -71,7 +72,7 @@ object simulate {
     else 0x400L
   }
 
-  def build(optionsManager: SimulatorOptionsManager, conf: CPUConfig): String = {
+  def build(optionsManager: TesterOptionsManager, conf: CPUConfig): String = {
     optionsManager.firrtlOptions = optionsManager.firrtlOptions.copy(compilerName = "low")
 
     chisel3.Driver.execute(optionsManager, () => new Top(conf)) match {
@@ -87,105 +88,105 @@ object simulate {
     }
   }
 
-  def main(args: Array[String]): Unit = {
-    require(args.length >= 3, "Error: Expected at least three argument\n" + helptext)
-    //   don't use the binary, manually load the mem file
-//    require(args.length >= 1, "Error: Expected at least 1 argument\n" + helptext)
-    val optionsManager = new SimulatorOptionsManager
-    val cpuType = args(0)
-    val directoryName = args(1)
-    val memFile = args(2)
-
-    optionsManager.setTargetDirName("./simulator_run_dir")
-
-    val hexName = s"${optionsManager.targetDirName}/../testMemFile/$directoryName/$memFile"
-
-    // Create the CPU config. This sets the type of CPU and the binary to load
-    val conf = new CPUConfig()
-    conf.cpuType = cpuType
-    conf.memFile = hexName
-
-    // This compiles the chisel to firrtl
-    val compiledFirrtl = build(optionsManager, conf)
-
-    // this is working as expected in hex format
-    val endPC = 0x00000040
-    // Instantiate the simulator
-    val simulator = TreadleTester(compiledFirrtl, optionsManager)
-
-    // Make sure the system is in the reset state (5 cycles)
-    // for some reason, settings it back to 1 restores the initial PC to 0
-    simulator.reset(5)
-
-    // This is the actual simulation
-
-    var cycles = 0
-    val maxCycles =
-      if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
-//    val maxCycles = 2000000
-    // Simulate until the pc is the "endPC" or until max cycles has been reached
-    println("Running...")
-    // print the pc initial position
-    //    println(s"the position of the initial PC is ${simulator.peek("cpu.regPC")}")
-
-//  memory peek helper
-//     Note: this does work with written mem
-//    for (i <- 0 until 8) {
-//      println(s"the instruction at position $i is ${simulator.peekMemory("mem.physicalMem", i)}")
+//  def main(args: Array[String]): Unit = {
+//    require(args.length >= 3, "Error: Expected at least three argument\n" + helptext)
+//    //   don't use the binary, manually load the mem file
+////    require(args.length >= 1, "Error: Expected at least 1 argument\n" + helptext)
+//    val optionsManager = new SimulatorOptionsManager
+//    val cpuType = args(0)
+//    val directoryName = args(1)
+//    val memFile = args(2)
+//
+//    optionsManager.setTargetDirName("./simulator_run_dir")
+//
+//    val hexName = s"${optionsManager.targetDirName}/../testMemFile/$directoryName/$memFile"
+//
+//    // Create the CPU config. This sets the type of CPU and the binary to load
+//    val conf = new CPUConfig()
+//    conf.cpuType = cpuType
+//    conf.memFile = hexName
+//
+//    // This compiles the chisel to firrtl
+//    val compiledFirrtl = build(optionsManager, conf)
+//
+//    // this is working as expected in hex format
+//    val endPC = 0x00000040
+//    // Instantiate the simulator
+//    val simulator = TreadleTester(compiledFirrtl, optionsManager)
+//
+//    // Make sure the system is in the reset state (5 cycles)
+//    // for some reason, settings it back to 1 restores the initial PC to 0
+////    simulator.reset(5)
+//
+//    // This is the actual simulation
+//
+//    var cycles = 0
+//    val maxCycles =
+//      if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
+////    val maxCycles = 2000000
+//    // Simulate until the pc is the "endPC" or until max cycles has been reached
+//    println("Running...")
+//    // print the pc initial position
+//    //    println(s"the position of the initial PC is ${simulator.peek("cpu.regPC")}")
+//
+////  memory peek helper
+////     Note: this does work with written mem
+////    for (i <- 0 until 8) {
+////      println(s"the instruction at position $i is ${simulator.peekMemory("mem.physicalMem", i)}")
+////    }
+//
+//    // simulate until the max cycles are reached or the pc reaches the end pc
+//    while (simulator.peek("cpu.regPC") != endPC && cycles < maxCycles) {
+//
+//      // for small simulation, print pc every cycle
+//      println(s"Simulation results for cycle $cycles")
+//      // this is becasue PC is updated at the end of every cycle
+//
+//      // print pc position
+//      //      println(s"pc position is at ${simulator.peek("cpu.regPC")}")
+//      // print loaded instruction
+////      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
+//      // print alu signals
+////      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
+////      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
+////      println(s"alu offset selection is ${simulator.peek("cpu.alu.io_input_inputB")}")
+//      // print registers
+////      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
+////      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
+////      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
+////      // warning: the register values will be updated on the next cycle
+////      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
+//      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
+////      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
+////      println(s"response from actual mem signal is ${simulator.peek("dmem.io_bus_response_bits_data")}")
+////      println(s"valid signal response from actual mem is ${simulator.peek("dmem.io_bus_response_valid")}")
+////      println(s"operation signal is ${simulator.peek("dmem.io_bus_request_bits_operation")}")
+////      println(s"memory mask is ${simulator.peek("dmem.io_pipeline_maskmode")}")
+////      println(s"data passed to it is ${simulator.peek("dmem.io_pipeline_writedata")}")
+////      println(s"sext is ${simulator.peek("dmem.io_pipeline_sext")}")
+////      println(s"memory write data is ${simulator.peek("dmem.io_pipeline_mask")}")
+////      println(s"the memory mask signal is ${simulator.peek("cpu.controller.io_output_MemMask")}")
+////      println(s"the memory sign extend is ${simulator.peek("cpu.controller.io_output_MemSext")}")
+//
+//      // advance the simulator
+//      simulator.step(1)
+//      cycles += 1
+//
 //    }
-
-    // simulate until the max cycles are reached or the pc reaches the end pc
-    while (simulator.peek("cpu.regPC") != endPC && cycles < maxCycles) {
-
-      // for small simulation, print pc every cycle
-      println(s"Simulation results for cycle $cycles")
-      // this is becasue PC is updated at the end of every cycle
-
-      // print pc position
-      //      println(s"pc position is at ${simulator.peek("cpu.regPC")}")
-      // print loaded instruction
-//      println(s"intruction loaded is ${simulator.peek("cpu.controller.io_input_instr")}")
-      // print alu signals
-//      println(s"alu controller signal is ${simulator.peek("cpu.alu.io_input_controlSignal")}")
-//      println(s"alu output is ${simulator.peek("cpu.alu.io_output_aluOutput")}")
-//      println(s"alu offset selection is ${simulator.peek("cpu.alu.io_input_inputB")}")
-      // print registers
-//      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
-//      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
-//      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
-//      // warning: the register values will be updated on the next cycle
-//      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
-      println(s"register t2 is ${simulator.peek("cpu.regFile.regs_10")}")
-//      println(s"register t3 is ${simulator.peek("cpu.regFile.regs_11")}")
-//      println(s"response from actual mem signal is ${simulator.peek("dmem.io_bus_response_bits_data")}")
-//      println(s"valid signal response from actual mem is ${simulator.peek("dmem.io_bus_response_valid")}")
-//      println(s"operation signal is ${simulator.peek("dmem.io_bus_request_bits_operation")}")
-//      println(s"memory mask is ${simulator.peek("dmem.io_pipeline_maskmode")}")
-//      println(s"data passed to it is ${simulator.peek("dmem.io_pipeline_writedata")}")
-//      println(s"sext is ${simulator.peek("dmem.io_pipeline_sext")}")
-//      println(s"memory write data is ${simulator.peek("dmem.io_pipeline_mask")}")
-//      println(s"the memory mask signal is ${simulator.peek("cpu.controller.io_output_MemMask")}")
-//      println(s"the memory sign extend is ${simulator.peek("cpu.controller.io_output_MemSext")}")
-
-      // advance the simulator
-      simulator.step(1)
-      cycles += 1
-
-    }
-//    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
-    println(s"TOTAL CYCLES: $cycles")
-
-    // manually verify for now
-    // Note: verification should not be in the process of simulation, as this
-    // reg files will not "poke" correctly on the same cycle
-    //TODO: bridge an interface between simulation results and results from an actual simulator
-    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
-    if (!(simulator.peek("cpu.regFile.regs_10") == 20)) {
-      println("VERIFICATION FAILED")
-    } else {
-      println("VERIFICATION SUCCEEDED")
-    }
-  }
+////    println(s"actual data written is ${simulator.peekMemory("mem.physicalMem",24)}")
+//    println(s"TOTAL CYCLES: $cycles")
+//
+//    // manually verify for now
+//    // Note: verification should not be in the process of simulation, as this
+//    // reg files will not "poke" correctly on the same cycle
+//    //TODO: bridge an interface between simulation results and results from an actual simulator
+//    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
+//    if (!(simulator.peek("cpu.regFile.regs_10") == 20)) {
+//      println("VERIFICATION FAILED")
+//    } else {
+//      println("VERIFICATION SUCCEEDED")
+//    }
+//  }
 }
 
 case class SimulatorOptions(maxCycles: Int = 0) extends firrtl.ComposableOptions {}
@@ -205,7 +206,7 @@ trait HasSimulatorOptions {
     .text("Max number of cycles to simulate. Default is 0, to continue simulating")
 }
 
-class SimulatorOptionsManager extends TreadleOptionsManager with HasSimulatorSuite
+class SimulatorOptionsManager extends HasSimulatorSuite
 
 trait HasSimulatorSuite
     extends TreadleOptionsManager

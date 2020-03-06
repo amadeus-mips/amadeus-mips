@@ -100,6 +100,10 @@ object singlestep {
         driver.printRegs()
         true
       }
+      case "cp0" => {
+        driver.printCP0Reg()
+        true
+      }
       case "pipereg" => {
         driver.printPipeReg(tokens(2))
         true

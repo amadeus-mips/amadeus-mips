@@ -1,5 +1,6 @@
 package cpu.testing
 
+import chisel3.iotesters.TesterOptionsManager
 import cpu._
 import cpu.pipelined._
 import cpu.simulate.build
@@ -14,7 +15,9 @@ class CPUFlatSpec extends FlatSpec with Matchers
 //TODO: add support for loading binary in the future
 class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
 
-  val optionsManager = new SimulatorOptionsManager()
+  val optionsManager = new TesterOptionsManager {
+    treadleOptions = treadleOptions.copy(callResetAtStartUp = true)
+  }
 
   // set the target directory name
   optionsManager.setTargetDirName(s"./simulator_run_dir")
@@ -32,17 +35,20 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
 //    s"src/test/resources/c/${binary}"
 //  } else {
 //    s"src/test/resources/risc-v/${binary}"
+
 //  }
 
   // This compiles the chisel to firrtl
   val compiledFirrtl = build(optionsManager, conf)
-
-//  val endPC = elfToHex(path, hexName)
+  //  val endPC = elfToHex(path, hexName)
   val endPC = 200
 
-  // Instantiate the simulator
+// Instantiate the simulator
   val sourceAnnotation = FirrtlSourceAnnotation(compiledFirrtl)
-  val simulator = TreadleTester(sourceAnnotation +: optionsManager.toAnnotationSeq)
+
+  val simulator = TreadleTester(compiledFirrtl, optionsManager)
+
+  //  val simulator = TreadleTester(sourceAnnotation +: optionsManager.toAnnotationSeq)
   var cycle = 0
 
   def reset(): Unit = {
@@ -65,6 +71,14 @@ class CPUTestDriver(cpuType: String, directoryName: String, memFile: String) {
   def printReg(num: Int): Unit = {
     val v = simulator.peek(s"cpu.regFile.regs_$num")
     println(s"register ${num}: ${v}")
+  }
+
+  def printCP0Reg(): Unit = {
+    println(s"register count is ${simulator.peek(s"cpu.cpZero.regCount")}")
+    println(s"register status is ${simulator.peek(s"cpu.cpZero.regSR")}")
+    println(s"register cause is ${simulator.peek(s"cpu.cpZero.regCause")}")
+    println(s"register epc is ${simulator.peek(s"cpu.cpZero.regEPC")}")
+    println(s"register ebase is ${simulator.peek(s"cpu.cpZero.regEBase")}")
   }
 
   def printPC(): Unit = {

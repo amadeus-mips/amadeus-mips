@@ -136,6 +136,8 @@ class CPZero extends Module {
       )
     )
 
+    regEPC := Mux(isEret, regEPC, Mux(io.input.isBD, io.input.pcPlusFour - 8.U, io.input.pcPlusFour - 4.U))
+
     // set up the pc selection
     io.output.jToNextPC := isException
     io.output.nextPC := Mux(isEret, regEPC, regEBase)

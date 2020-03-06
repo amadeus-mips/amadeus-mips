@@ -14,6 +14,7 @@ object testRunner {
     val cpuType = args(0)
 
     val driver = new CPUTestDriver(cpuType, args(1), args(2))
+    driver.reset()
     driver.initRegs(test.initRegs)
     driver.initMemory(test.initMem)
 

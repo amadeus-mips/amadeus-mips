@@ -48,3 +48,12 @@ class PipelinedCPUHazardTester extends CPUFlatSpec {
     }
   }
 }
+
+class PipelinedCPUCP0Tester extends CPUFlatSpec {
+  behavior.of("pipelined CPU")
+  for (test <- InstructionTests.cp0Tests) {
+    it should s"run ${test.directoryName}/${test.memFile}" in {
+      CPUTestDriver("pipelined", test) should be(true)
+    }
+  }
+}
