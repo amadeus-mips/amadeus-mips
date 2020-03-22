@@ -39,8 +39,8 @@ class ICacheControllerToRamOut extends Bundle with CacheParameters {
 }
 
 class ICacheControllerToRamIO extends Bundle with CacheParameters {
-  val toRam = new ICacheControllerToRamIn
-  val fromRam = new ICacheControllerToRamOut
+  val toRam = new ICacheControllerToRamOut
+  val fromRam = new ICacheControllerToRamIn
 }
 
 class ICacheControllerToCacheIn extends Bundle with CacheParameters {
