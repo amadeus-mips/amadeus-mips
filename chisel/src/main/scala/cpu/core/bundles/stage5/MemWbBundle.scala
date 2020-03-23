@@ -6,7 +6,7 @@ import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, HILOValidBundle, WriteBundle}
 
-class MEMWBBundle extends Bundle {
+class MemWbBundle extends Bundle {
   val write = new WriteBundle
   val cp0 = new CPBundle
   val hilo = new HILOValidBundle

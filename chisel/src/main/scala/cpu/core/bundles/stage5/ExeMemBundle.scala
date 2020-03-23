@@ -6,7 +6,7 @@ import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, HILOValidBundle, WriteBundle}
 
-class EXEMEMBundle extends Bundle {
+class ExeMemBundle extends Bundle {
   val write = new WriteBundle
   val operation = UInt(opLen.W)
   val cp0 = new CPBundle
