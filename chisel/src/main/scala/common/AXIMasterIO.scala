@@ -22,7 +22,6 @@ class AXIDataWriteRespMasterIO extends Bundle {
   val resp = Input(UInt(2.W)) // 本次写请求是否成功完成  可忽略
   val valid = Input(Bool())   // 握手信号，写请求响应有效
   val ready = Output(Bool())  // 握手信号，master端准备好接受写响应
-
 }
 
 class AXIDataWriteMasterIO extends Bundle {
