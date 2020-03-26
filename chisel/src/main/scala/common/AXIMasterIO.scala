@@ -19,7 +19,7 @@ class AXIMasterIO extends Bundle {
 
 class AXIDataWriteRespMasterIO extends Bundle {
   val id = Input(UInt(4.W))   // ID号，同一请求的bid、wid和awid应一致
-  val resp = Input(UInt(2.W)) // 本次写请求是否成功完成  可忽略
+  val resp = Input(UInt(2.W)) // 本次写请求是否成功完成 (原子访问是否成功）
   val valid = Input(Bool())   // 握手信号，写请求响应有效
   val ready = Output(Bool())  // 握手信号，master端准备好接受写响应
 }
@@ -36,7 +36,7 @@ class AXIDataWriteMasterIO extends Bundle {
 class AXIDataReadMasterIO extends Bundle {
   val id = Input(UInt(4.W))      // ID 同一请求的rid应和arid一致  指令回来为0数据 回来为1
   val data = Input(UInt(32.W))   // 读回数据
-  val resp = Input(UInt(2.W))    // 本次读请求是否成功完成
+  val resp = Input(UInt(2.W))    // 本次读请求是否成功完成 (原子访问是否成功）
   val last = Input(Bool())       // 本次读请求的最后一拍数据的指示信号
   val valid = Input(Bool())      // 握手信号，读请求数据有效
   val ready = Output(Bool())     // 握手信号，master端准备好接受数据传输
