@@ -18,7 +18,7 @@ class QueueBundle extends Bundle {
   * @param id    AXI id
   * @param qSize address buffer queue size
   */
-class AXISlaveToSram(id: UInt, qSize: Int = 20) extends Module {
+class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   val io = IO(new Bundle {
     val bus = Flipped(new AXIMasterIO)
     val ram = new SimpleSramIO
