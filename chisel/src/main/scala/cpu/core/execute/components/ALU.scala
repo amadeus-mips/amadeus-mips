@@ -15,18 +15,18 @@ class ALU extends Module {
     val overflow = Output(Bool())
   })
 
-  val op2Com = (~io.op2).asUInt() + 1.U   // 补码 two's complement
   val add_result = io.op1 + io.op2
   val sub_result = io.op1 - io.op2
 
-  val addOverflow = (io.operation === ALU_ADD) &&
-    ((io.op1(31) & io.op2(31) & !add_result(31)) ||
-      (!io.op1(31) & !io.op2(31) & add_result(31)))
-  val subOverflow = (io.operation === ALU_SUB) &&
-    ((io.op1(31) & op2Com(31) & !sub_result(31)) ||
-      (!io.op1(31) & !op2Com(31) & sub_result(31)))
+  io.overflow := MuxLookup(
+    io.operation,
+    false.B,
+    Array(
+      ALU_ADD -> ((io.op1(31) === io.op2(31)) & (io.op1(31) ^ add_result(31))),
+      ALU_SUB -> ((io.op1(31) ^ io.op2(31)) & (io.op1(31) ^ sub_result(31)))
+    )
+  )
 
-  io.overflow := addOverflow || subOverflow
   io.result := MuxLookup(io.operation, 0.U,
     Array(
       // @formatter:off
