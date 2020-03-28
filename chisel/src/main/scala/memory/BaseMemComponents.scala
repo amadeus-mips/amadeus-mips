@@ -96,7 +96,7 @@ abstract class BaseDMemPort extends Module {
 
 abstract class BaseDMemPortForAXI extends Module {
   val io = IO(new Bundle {
-    val axi = new SimpleSramIO
+    val axi = Flipped(new SimpleSramIO)
     val bus = Flipped(new MemPortBusIO)
   })
 
@@ -108,7 +108,7 @@ abstract class BaseDMemPortForAXI extends Module {
 
 abstract class BaseIMemPortForAXI extends Module {
   val io = IO(new Bundle {
-    val axi = new SimpleSramIO
+    val axi = Flipped(new SimpleSramIO)
     val bus = Flipped(new MemPortBusIO)
   })
 

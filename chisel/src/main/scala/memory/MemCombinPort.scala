@@ -193,7 +193,7 @@ class DMemCombinationalPortForAXI extends BaseDMemPortForAXI {
 
       //subword read does not occur here
       // sign extension and subword read ignored
-      io.axi.read.data := io.bus.response.bits
+      io.axi.read.data := io.bus.response.bits.data
       io.axi.read.valid := io.bus.response.valid
     }
   }
