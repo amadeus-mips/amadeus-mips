@@ -4,6 +4,7 @@ package cpu.common
 
 import chisel3._
 
+//TODO: make this into a ready-valid interface
 /**
  * master IO. <br/>
  * out: .addr, .enable <br/>
