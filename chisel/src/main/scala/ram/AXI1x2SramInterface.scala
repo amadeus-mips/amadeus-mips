@@ -24,7 +24,11 @@ class AXI1x2SramInterface extends Module {
 
   // r
   val rIid = iCon.io.bus.r.valid
-  io.bus.r <> Mux(rIid, iCon.io.bus.r, dCon.io.bus.r)
+  when(rIid){
+    io.bus.r <> iCon.io.bus.r
+  }.otherwise {
+    io.bus.r <> dCon.io.bus.r
+  }
   iCon.io.bus.r.ready := rIid && io.bus.r.ready
   dCon.io.bus.r.ready := !rIid && io.bus.r.ready
 
