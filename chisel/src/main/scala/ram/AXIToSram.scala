@@ -23,6 +23,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
     val bus = Flipped(new AXIMasterIO)
     val ram = new SimpleSramIO
   })
+  assert(io.bus.ar.burst =/= 1.U && io.bus.ar.valid, "Unsupported burst type! Only support INCR burst")
 
   //---- read channel --------------------------------------------------
   val sRIdle :: sRWaitRam :: sRWaitBus :: Nil = Enum(3)
@@ -98,23 +99,53 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
 
 
   //---- write channel ----------------------------------------------------
-  val sWIdle :: sWWaitRam :: sWWaitBus :: sBWaitBus :: Nil = Enum(4)
+  val sWIdle :: sWWaitBus :: sBWaitBus :: Nil = Enum(3)
   val wState = RegInit(sWIdle)
 
   /** write queue */
   val wq = Module(new Queue(new QueueBundle, qSize))
 
   val wReady = RegInit(false.B)
-  switch(wState){
+  val ramWAddr = RegInit(0.U(32.W))
+  private val wLen = RegInit(0.U(4.W))
+  switch(wState) {
     is(sWIdle) {
-      ???
+      when(wq.io.deq.valid) {
+        wLen := wq.io.deq.bits.len
+        ramWAddr := wq.io.deq.bits.addr
+        wState := sWWaitBus
+      }
+    }
+    is(sWWaitBus) {
+      when(io.bus.w.valid && io.ram.write.valid) {
+        assert(!(wLen === 0.U ^ io.bus.w.last), "wLen conflict with last")
+        when(wLen === 0.U && io.bus.w.last) {
+          wState := sBWaitBus
+        }.otherwise {
+          ramWAddr := ramWAddr + 4.U
+          wLen := wLen - 1.U
+        }
+      }
+    }
+    is(sBWaitBus) {
+      when(io.bus.b.ready) {
+        wState := sWIdle
+      }
     }
   }
 
-  io.bus.aw.ready := rq.io.enq.ready // make sure the queue is not full
-  io.bus.w.ready := wReady
+  io.bus.aw.ready := wq.io.enq.ready // make sure the queue is not full
+  io.bus.w.ready := wState === sWWaitBus && io.bus.w.valid && io.ram.write.valid
+  io.bus.b.id := id
+  io.bus.b.resp := 0.U // fixed OKAY
+  io.bus.b.valid := wState === sBWaitBus
 
-  wq.io.deq.ready := wq.io.deq.valid && io.ram.write.valid
+  io.ram.write.addr := ramWAddr
+  io.ram.write.enable := wState === sWWaitBus && io.bus.w.valid
+  io.ram.write.sel := io.bus.w.strb
+  io.ram.write.data := io.bus.w.data
+
+  wq.io.deq.ready := wState === sWIdle && wq.io.deq.valid
   wq.io.enq.bits.addr := io.bus.aw.addr
   wq.io.enq.bits.len := io.bus.aw.len
   wq.io.enq.valid := io.bus.aw.ready && io.bus.aw.valid && io.bus.aw.id === id
