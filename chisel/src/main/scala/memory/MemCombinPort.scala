@@ -179,14 +179,17 @@ class DMemCombinationalPortForAXI extends BaseDMemPortForAXI {
   when (io.bus.response.valid) {
     // when it is a write , write back the modified data
     when (io.axi.write.enable) {
-      val writeData = Wire(UInt(32.W))
 
-      writeData := io.axi.write.data
-      //TODO: subword write does not occur here, but in the cache
+      val writeData = Wire(UInt(32.W))
+      val readData = Wire(UInt(32.W))
+
+      readData := io.bus.response.bits.data
+      writeData := Cat( (0 until 4) map (i => Mux(io.axi.write.sel(i), writeData(7 + 8*i, 8*i), readData(7 + 8*i, 8*i))))
+
       io.bus.request.bits.writedata := writeData
       io.axi.write.valid := io.bus.response.valid
     }.elsewhen(io.axi.read.enable) {
-      // when it is a read, pass back thedata that's being read
+      // when it is a read, pass back the data that's being read
 
       //subword read does not occur here
       // sign extension and subword read ignored
