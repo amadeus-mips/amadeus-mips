@@ -15,7 +15,9 @@ class TestTop extends Module {
   })
   io.success := DontCare
 
-  val memFile = s"./zero.txt"
+  // directory structure for sbt run is at the root directory of the project
+  // in this case: ./ = chisel/
+  val memFile = s"./src/main/scala/zero.txt"
 
   val cpu = Module(new CPUTop)
   val mem = Module(new DualPortedCombinMemory(1<<16, memFile))
@@ -32,7 +34,7 @@ class TestTop extends Module {
   cpu.io.debug := DontCare
 }
 
-object RegInitProblem {
+object TestTopRun {
   def build(optionsManager: TesterOptionsManager): String = {
     optionsManager.firrtlOptions =
       optionsManager.firrtlOptions.copy(compilerName = "low")

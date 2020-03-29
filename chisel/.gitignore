@@ -344,3 +344,6 @@ hs_err_pid*
 
 null/
 project/
+!/TestTop.anno.json
+!/TestTop.fir
+!/TestTop.lo.fir

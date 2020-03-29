@@ -185,8 +185,7 @@ class DMemCombinationalPortForAXI extends BaseDMemPortForAXI {
       val readData = Wire(UInt(32.W))
       writeData := io.axi.write.data
       readData := io.bus.response.bits.data
-      //      writeData := Cat( (0 until 4) map (i => Mux(io.axi.write.sel(i), writeData(7 + 8*i, 8*i), readData(7 + 8*i, 8*i))))
-      io.bus.request.bits.writedata := Cat(Mux(io.axi.write.sel(3), writeData(7 + 8 * 3, 8 * 3), readData(7 + 8 * 3, 8 * 3)), Mux(io.axi.write.sel(2), writeData(7 + 8 * 2, 8 * 2), readData(7 + 8 * 2, 8 * 2)), Mux(io.axi.write.sel(1), writeData(7 + 8 * 1, 8 * 1), readData(7 + 8 * 1, 8 * 1)), Mux(io.axi.write.sel(0), writeData(7 + 8 * 0, 8 * 0), readData(7 + 8 * 0, 8 * 0)))
+      io.bus.request.bits.writedata := Cat( (0 until 4) map (i => Mux(io.axi.write.sel(i), writeData(7 + 8*i, 8*i), readData(7 + 8*i, 8*i))))
       io.axi.write.valid := io.bus.response.valid
     }.elsewhen(io.axi.read.enable) {
       // when it is a read, pass back the data that's being read
