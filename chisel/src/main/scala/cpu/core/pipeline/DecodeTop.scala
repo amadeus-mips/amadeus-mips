@@ -18,19 +18,19 @@ class DecodeTop extends Module {
     val memWR = Input(new WriteBundle)
     val rsData = Input(UInt(dataLen.W)) // from register-file
     val rtData = Input(UInt(dataLen.W)) // ^
-    val inDelaySlot = Input(Bool())     // get from `IDEX`
+    val inDelaySlot = Input(Bool()) // get from `IDEX`
 
     val out = Output(new IdExeBundle)
     val nextInstInDelaySlot = Output(Bool())
     val branch = Output(new ValidBundle) // back to `Fetch`
-    val stallReq = Output(Bool())       // to pipeLine control
+    val stallReq = Output(Bool()) // to pipeLine control
   })
 
   val inst = Mux(io.in.instFetchExcept || io.in.pc === 0.U, 0.U, io.inst)
 
-  val hazard = Module(new Hazard)
-  val control = Module(new Control)
-  val decode = Module(new Decode)
+  val hazard = Module(new cpu.core.decode.Hazard)
+  val control = Module(new cpu.core.decode.Control)
+  val decode = Module(new cpu.core.decode.Decode)
   val branch = Module(new Branch)
 
   val rs = inst(25, 21)

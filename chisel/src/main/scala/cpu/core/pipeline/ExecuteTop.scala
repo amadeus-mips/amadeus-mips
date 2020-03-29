@@ -38,8 +38,8 @@ class ExecuteTop extends Module {
   val div = Module(new Div)
 
   /** Only used in `move` module */
-  val forward = Module(new Forward)
-  val control = Module(new Control)
+  val forward = Module(new cpu.core.execute.Forward)
+  val control = Module(new cpu.core.execute.Control)
 
   forward.io.rawHILO <> io.rawHILO
   forward.io.memHILO <> io.memHILO
@@ -47,6 +47,7 @@ class ExecuteTop extends Module {
 
   /** cp0 come from decode */
   forward.io.rawCP0 <> io.in.cp0
+
   /** cp0 data come from CP0 regfile */
   forward.io.rawCP0.data := io.cp0Data
   forward.io.memCP0 <> io.memCP0
@@ -69,7 +70,7 @@ class ExecuteTop extends Module {
 
   memory.io.op1 := io.in.op1
   memory.io.op2 := io.in.op2
-  memory.io.imm16 := io.in.imm26(15,0)
+  memory.io.imm16 := io.in.imm26(15, 0)
   memory.io.operation := io.in.operation
 
   control.io.instType := io.in.instType

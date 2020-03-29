@@ -18,6 +18,7 @@ class MemoryTop extends Module {
 
     /** load data from memory */
     val rData = new NiseSramReadIO
+
     /** save data to memory */
     val wData = new NiseSramWriteIO
 
@@ -29,10 +30,10 @@ class MemoryTop extends Module {
     val stallReq = Output(Bool())
   })
 
-  val control = Module(new Control)
-  val except = Module(new Except)
+  val control = Module(new cpu.core.memory.Control)
+  val except = Module(new cpu.core.memory.Except)
 
-  val forward = Module(new Forward)
+  val forward = Module(new cpu.core.memory.Forward)
 
   control.io.inWriteData := io.in.write.data
   control.io.inMemData := io.in.memData
