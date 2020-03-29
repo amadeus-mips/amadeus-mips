@@ -1,3 +1,6 @@
+addi $8, $0, 2
+addi $9, $0, 2
+addi $10, $0, 10
 addi $2, $0, 12
 addi $3, $0, 12
 beq $2, $3, branch

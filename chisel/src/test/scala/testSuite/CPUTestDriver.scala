@@ -320,9 +320,7 @@ case class CPUTestCase(
   directoryName: String,
   memFile:       String,
   cycles:        Int,
-  initRegs:      Map[Int, BigInt],
   checkRegs:     Map[Int, BigInt],
-  initMem:       Map[Int, BigInt],
   checkMem:      Map[Int, BigInt]
 ) {
   def name(): String = {

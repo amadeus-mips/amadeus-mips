@@ -9,45 +9,35 @@ object InstructionTests {
       "arith",
       "add",
       100,
-      Map(5 -> 1234, 8 -> 1248),
       Map(0 -> 0, 5 -> 1234, 8 -> 1248, 9 -> 2482),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "arith",
       "and",
       100,
-      Map(1 -> 124, 3 -> 212),
       Map(0 -> 0, 2 -> 84, 4 -> 84),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "arith",
       "or",
       100,
-      Map(9 -> 834, 12 -> 4482),
       Map(0 -> 0, 4 -> 5058),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "arith",
       "srav",
       100,
-      Map(10 -> -2, 11 -> 1),
       Map(0 -> 0, 9 -> twoscomp(-1)),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "arith",
       "sra",
       100,
-      Map(2 -> -2),
       Map(0 -> 0, 3 -> twoscomp(-1)),
-      Map(),
       Map()
     )
   )
@@ -56,18 +46,14 @@ object InstructionTests {
       "branch",
       "branchTrue",
       100,
-      Map(8 -> 2, 9 -> 2, 10 -> 10),
       Map(0 -> 0, 2 -> 11, 3 -> 12),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "branch",
       "branchFalse",
       100,
-      Map(),
       Map(0 -> 0, 2 -> 12, 3 -> 11),
-      Map(),
       Map()
     )
   )
@@ -78,81 +64,63 @@ object InstructionTests {
       "bypass",
       "memToEXRR",
       100,
-      Map(),
       Map(0 -> 0, 4 -> 7),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "wbToEXRR",
       100,
-      Map(),
       Map(0 -> 0, 4 -> 7),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "memToEXRM",
       100,
-      Map(),
       Map(0 -> 0, 3 -> 5, 5 -> 5),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "wbToEXRM",
       100,
-      Map(),
       Map(0 -> 0, 3 -> 5, 5 -> 5),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "memToEXMM",
       100,
-      Map(),
       Map(0 -> 0, 6 -> 5),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "wbToEXMM",
       100,
-      Map(),
       Map(0 -> 0, 6 -> 5),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "stall",
       100,
-      Map(),
       Map(0 -> 0, 6 -> 5),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "memToEXAddr",
       100,
-      Map(),
       Map(0 -> 0, 5 -> 300, 6 -> 300),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "bypass",
       "wbToEXAddr",
       100,
-      Map(),
       Map(0 -> 0, 5 -> 300, 6 -> 300),
-      Map(),
       Map()
     )
   )
@@ -161,9 +129,7 @@ object InstructionTests {
       "testBench",
       "t1",
       200,
-      Map(),
       Map(0 -> 0, 2 -> 1, 3 -> 12, 4 -> 1, 7 -> twoscomp(-4)),
-      Map(),
       Map()
     )
   )
@@ -173,36 +139,28 @@ object InstructionTests {
       "cpZero",
       "cp0read",
       100,
-      Map(),
       Map(0 -> 0, 1 -> BigInt("3217032064", 10), 2 -> 2, 3 -> 4259585),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "cpZero",
       "cp0write",
       100,
-      Map(),
       Map(0 -> 0, 2 -> 12),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "cpZero",
       "cp0bypass",
       100,
-      Map(),
       Map(0 -> 0, 2 -> 12),
-      Map(),
       Map()
     ),
     CPUTestCase(
       "cpZero",
       "cp0stall",
       100,
-      Map(),
       Map(0 -> 0, 4 -> 25),
-      Map(),
       Map()
     )
   )
@@ -212,9 +170,7 @@ object InstructionTests {
       "arith",
       "addi",
       100,
-      Map(5 -> 1234),
       Map(0 -> 0, 5 -> 1235),
-      Map(),
       Map()
     )
   )
@@ -224,9 +180,7 @@ object InstructionTests {
       "jump",
       "jal",
       100,
-      Map(),
       Map(0 -> 0, 2 -> 5, 31 -> 12),
-      Map(),
       Map()
     )
   )
