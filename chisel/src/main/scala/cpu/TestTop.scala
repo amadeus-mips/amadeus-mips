@@ -34,7 +34,7 @@ class TestTop extends Module {
   cpu.io.debug := DontCare
 }
 
-object TestTopRun {
+object RegInitProblem {
   def build(optionsManager: TesterOptionsManager): String = {
     optionsManager.firrtlOptions =
       optionsManager.firrtlOptions.copy(compilerName = "low")
