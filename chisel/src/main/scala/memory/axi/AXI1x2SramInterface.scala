@@ -19,8 +19,8 @@ class AXI1x2SramInterface extends Module {
   dCon.io.bus.ar <> io.bus.ar
   val arIid = io.bus.ar.id === Constants.INST_ID
   io.bus.ar.ready := Mux(arIid, iCon.io.bus.ar.ready, dCon.io.bus.ar.ready)
-  iCon.io.bus.ar.valid := arIid
-  dCon.io.bus.ar.valid := !arIid
+  iCon.io.bus.ar.valid := arIid && io.bus.ar.valid
+  dCon.io.bus.ar.valid := !arIid && io.bus.ar.valid
 
   // r
   val rIid = iCon.io.bus.r.valid
