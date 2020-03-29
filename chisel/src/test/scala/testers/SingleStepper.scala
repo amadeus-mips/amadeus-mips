@@ -3,7 +3,7 @@ package testers
 import testSuite.{CPUTestDriver, InstructionTests}
 
 object SingleStepper {
-  val helptext = "usage: singlestep <CPU type> <test directory> <test mem file>"
+  val helptext = "usage: singlestep <test directory> <test mem file>"
 
   val commands =
     """Help for the single stepper:
