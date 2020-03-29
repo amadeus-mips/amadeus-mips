@@ -23,7 +23,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
     val bus = Flipped(new AXIMasterIO)
     val ram = new SimpleSramIO
   })
-  assert(io.bus.ar.burst =/= 1.U && io.bus.ar.valid, "Unsupported burst type! Only support INCR burst")
+  assert(!(io.bus.ar.burst =/= 1.U && io.bus.ar.valid), "Unsupported burst type! Only support INCR burst")
 
   //---- read channel --------------------------------------------------
   val sRIdle :: sRWaitRam :: sRWaitBus :: Nil = Enum(3)

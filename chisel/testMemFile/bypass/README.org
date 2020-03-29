@@ -1,0 +1,8 @@
+* what is for
+  this directory contains memory file for testing the stalling and forwarding units
+* naming convention
+  AToBXY.asm
+  A is the stage of the first instruction
+  B is the stage of the instruction that needs forwarding ( stalling ) 
+  X is the type of the instruction in A
+  Y is the type of the instruction in B, R is r-type, M is memory type

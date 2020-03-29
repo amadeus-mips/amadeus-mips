@@ -9,7 +9,7 @@ import chisel3.iotesters.TesterOptionsManager
 import memory.{DMemCombinationalPortForAXI, DualPortedCombinMemory, IMemCombinationalPortForAXI}
 import ram.AXI1x2SramInterface
 
-class TestTop extends Module {
+class TestTop(memFile: String) extends Module {
   val io = IO(new Bundle() {
     val success = Output(Bool())
   })
@@ -17,7 +17,7 @@ class TestTop extends Module {
 
   // directory structure for sbt run is at the root directory of the project
   // in this case: ./ = chisel/
-  val memFile = s"./src/main/scala/zero.txt"
+  //  val memFile = s"./src/main/scala/zero.txt"
 
   val cpu = Module(new CPUTop)
   val mem = Module(new DualPortedCombinMemory(1<<16, memFile))
@@ -39,7 +39,8 @@ object RegInitProblem {
     optionsManager.firrtlOptions =
       optionsManager.firrtlOptions.copy(compilerName = "low")
 
-    chisel3.Driver.execute(optionsManager, () => new TestTop) match {
+    //TODO: delete this after done
+    chisel3.Driver.execute(optionsManager, () => new TestTop("./testMemFile/arith/add.txt")) match {
       case ChiselExecutionSuccess(Some(_), _, Some(firrtlExecutionResult)) =>
         firrtlExecutionResult match {
           case firrtl.FirrtlExecutionSuccess(_, compiledFirrtl) =>
@@ -65,13 +66,16 @@ object RegInitProblem {
 
     // example of how to look at treadle's view of the symbol table
     simulator.engine.symbolTable.nameToSymbol.keys.toSeq.sorted.foreach { key =>
+      //      if (key.startsWith("cpu.core.")) {
       println(s"symbol: $key")
+      //      }
     }
-    while (!done) {
-      simulator.step(1)
-      if (simulator.peek("counter") == 14) {
-        done = true
-      }
-    }
+    //    while (!done) {
+    //      simulator.step(1)
+    //      if (simulator.peek("cpu.core.fetch.pc") == 8) {
+    //        done = true
+    //      }
+    //    }
+    //    assert(done)
   }
 }
