@@ -43,7 +43,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val rd = r.nextInt(1 << 5)
 //    val sa = r.nextInt(1 << 5)
 //    val (name, inst, aluOp, unsignedALU, writeEnable) = f(rs, rt, rd, sa)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.inst, inst.U(32.W))
 //    val opData1 = BigInt(32, r)
@@ -66,7 +66,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val rt = r.nextInt(1 << 5)
 //    val imm = BigInt(16, r)
 //    val (name, inst, aluOp, immExt, unsignedALU, writeEnable) = f(rs, rt, imm)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.inst, inst.U(32.W))
 //    val opData1 = BigInt(32, r)
@@ -88,7 +88,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val rt = r.nextInt(1 << 5)
 //    val imm = BigInt(16, r)
 //    val (name, inst, memOp, immExt, unsignedALU, writeEnable) = f(rs, rt, imm)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.inst, inst.U(32.W))
 //    val opData1 = BigInt(32, r)
@@ -112,7 +112,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val opData1 = BigInt(32, r)
 //    val opData2 = BigInt(32, r)
 //    val (name, inst, branchFlag, branchTarget) = f(rs, rt, imm, pc, opData1, opData2)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.pc, pc)
 //    poke(de.io.ifIn.inst, inst.U(32.W))
@@ -131,7 +131,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val opData1 = BigInt(32, r)
 //    val opData2 = BigInt(32, r)
 //    val (name, inst, branchFlag, branchTarget, writeEnable) = f(rs, imm, pc, opData1, opData2)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.pc, pc)
 //    poke(de.io.ifIn.inst, inst.U(32.W))
@@ -148,7 +148,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val pc = BigInt(32, r)
 //    val index = BigInt(26, r)
 //    val (name, inst, branchTarget, writeEnable) = f(pc, index)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.pc, pc)
 //    poke(de.io.ifIn.inst, inst.U(32.W))
@@ -165,7 +165,7 @@ class DecodeTester extends ChiselFlatSpec {
 //    val rd = r.nextInt(1<<5)
 //    val opData1 = BigInt(32, r)
 //    val (name, inst, branchTarget, writeEnable) = f(rs, rd, opData1)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.inst, inst.U(32.W))
 //    poke(de.io.rsData, opData1)
@@ -179,7 +179,7 @@ class DecodeTester extends ChiselFlatSpec {
 //
 //  EX_golden.foreach(f => {
 //    val (name, inst, excNumber) = f(r)
-//    println(s"$a. $name testing")
+//    println(s"$a. $name testSuite")
 //    a += 1
 //    poke(de.io.ifIn.inst, inst.U(32.W))
 //    expect(de.io.except(excNumber), true)

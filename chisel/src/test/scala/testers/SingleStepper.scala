@@ -1,6 +1,6 @@
-package cpu
+package testers
 
-import cpu.testing.{CPUTestDriver, InstructionTests}
+import testSuite.{CPUTestDriver, InstructionTests}
 
 object SingleStepper {
   val helptext = "usage: singlestep <CPU type> <test directory> <test mem file>"
@@ -23,13 +23,8 @@ object SingleStepper {
       | print MemAXISlave     : print the axi slave connected to ram
       | print cpuAXI          : print the AXI master connected to CPU
       | print memController   : print the memory controller between the axi slave and CPU
-      |
-      | Printing module I/O (wires)
-      | ---------------------------
-      | dump all        : Show all modules and the values of their I/O
-      | dump list       : List the valid modules to dump
-      | dump [module]   : Show values of the I/O on a specific module
-      | dump symbolNames: dump all the symbol names in the symbol table
+      | print icacheCPU       : print the io between icache and CPU
+      | print icacheAXI       : print the io between icache and AXI
       |
       | Printing pipeline registers (pipelined CPU only)
       | ------------------------------------------------
@@ -63,9 +58,9 @@ object SingleStepper {
       val tokens = scala.io.StdIn.readLine("Single stepper> ").split(" ")
       if (tokens.length > 0) {
         tokens(0) match {
-          case "?" => println(commands)
+          case "?"       => println(commands)
           case "q" | "Q" => done = true
-          case "step" => if (!doStep(tokens, driver)) println(commands)
+          case "step"    => if (!doStep(tokens, driver)) println(commands)
           case "print" => {
             if (tokens.length > 1) {
               if (!doPrint(tokens, driver)) println(commands)
@@ -135,6 +130,14 @@ object SingleStepper {
       }
       case "cpuAXI" => {
         driver.printCPUAXIMaster()
+        true
+      }
+      case "icacheCPU" => {
+        driver.printICacheCPUIO()
+        true
+      }
+      case "icacheAXI" => {
+        driver.printICacheAXIIO()
         true
       }
       case "inst" => {

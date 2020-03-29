@@ -1,4 +1,4 @@
-package cpu.testing
+package testSuite
 
 object InstructionTests {
 

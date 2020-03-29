@@ -1,6 +1,6 @@
-package cpu
+package testers
 
-import cpu.testing.{CPUTestDriver, InstructionTests}
+import testSuite.{CPUTestDriver, InstructionTests}
 import treadle.TreadleOptionsManager
 import treadle.repl.HasReplConfig
 

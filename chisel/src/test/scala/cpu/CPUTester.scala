@@ -1,6 +1,6 @@
 package cpu
 
-import cpu.testing.{CPUFlatSpec, CPUTestDriver, InstructionTests}
+import testSuite.{CPUFlatSpec, CPUTestDriver, InstructionTests}
 
 class PipeLinedCPUBRTester extends CPUFlatSpec {
   behavior.of("pipelined CPU")

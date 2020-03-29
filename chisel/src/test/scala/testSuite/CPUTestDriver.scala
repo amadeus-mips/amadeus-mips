@@ -1,8 +1,8 @@
-package cpu.testing
+package testSuite
 
 import chisel3.iotesters.TesterOptionsManager
 import cpu._
-import cpu.Simulate.build
+import testers.Simulate.build
 import org.scalatest.{FlatSpec, Matchers}
 import treadle.TreadleTester
 import treadle.executable.TreadleException
@@ -30,6 +30,19 @@ class CPUTestDriver(directoryName: String, memFile: String) {
 
   val endPC = 200
   var cycle = 0
+
+  def getSeq(strPrefix: String): Seq[String] = {
+    simulator.engine.validNames
+      .filter(name =>
+        (name.startsWith(strPrefix) && !name.endsWith("/in") && !name.contains("_T_") && !name.contains("_GEN_"))
+      )
+      .toList
+      .sorted
+  }
+
+  def stripPrefix(symbolName: String, prefix: String): String = {
+    symbolName.drop(prefix.length)
+  }
 
   def reset(): Unit = {
     simulator.reset(5)
@@ -69,17 +82,19 @@ class CPUTestDriver(directoryName: String, memFile: String) {
 
   def printDMemAXISlave(): Unit = {
     println(s"Here are the signals of the data communication channel")
-    val symsOfD = simulator.engine.validNames.filter(name => (name.startsWith(s"memAXISlave.dCon.") && !name.contains("_T_") && !name.contains("_GEN_")))
+    val prefixString = "memAXISlave.dCon."
+    val symsOfD = getSeq(prefixString)
     for (symbol <- symsOfD) {
-      println(s"${symbol.drop("memAXISlave.dCon.".length)} is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixString)} is ${simulator.peek(symbol)}")
     }
   }
 
   def printIMemAXISlave(): Unit = {
     println(s"Here are the signals of the instruction communication channel")
-    val symsOfI = simulator.engine.validNames.filter(name => name.startsWith(s"memAXISlave.iCon.") && !name.contains("_T_") && !name.contains("_GEN_"))
+    val prefixString = "memAXISlave.iCon."
+    val symsOfI = getSeq(prefixString)
     for (symbol <- symsOfI) {
-      println(s"${symbol.drop("memAXISlave.iCon.".length)} is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixString)} is ${simulator.peek(symbol)}")
     }
   }
 
@@ -89,29 +104,32 @@ class CPUTestDriver(directoryName: String, memFile: String) {
   }
 
   def printDMemController(): Unit = {
-    val symsOfAXI = simulator.engine.validNames.filter(name => (name.startsWith(s"dmem.io_axi_") && !name.endsWith("/in")))
+    val prefixStringAXI = "dmem.io_axi_"
+    val symsOfAXI = getSeq(prefixStringAXI)
     println(s"here are the signals that communicate with the AXI slave of the data memory")
     for (symbol <- symsOfAXI) {
-      println(s"$symbol is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixStringAXI)} is ${simulator.peek(symbol)}")
     }
-    val symsOfRam = simulator.engine.validNames.filter(name => (name.startsWith(s"dmem.io_bus_") && !name.endsWith("/in")))
+    val prefixStringIO = "dmem.io_bus_"
+    val symsOfRam = getSeq(prefixStringIO)
     println(s"here are the signals that communicate with the data ram")
     for (symbol <- symsOfRam) {
-      println(s"$symbol is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixStringIO)} is ${simulator.peek(symbol)}")
     }
   }
 
-
   def printIMemController(): Unit = {
-    val symsOfAXI = simulator.engine.validNames.filter(name => (name.startsWith(s"imem.io_axi_") && !name.endsWith("/in"))).toList.sorted
+    val prefixStringAXI = "imem.io_axi_"
+    val symsOfAXI = getSeq(prefixStringAXI)
     println(s"here are the signals that communicate with the AXI slave of the instruction memory")
     for (symbol <- symsOfAXI) {
-      println(s"$symbol is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixStringAXI)} is ${simulator.peek(symbol)}")
     }
-    val symsOfRam = simulator.engine.validNames.filter(name => (name.startsWith(s"imem.io_bus_") && !name.endsWith("/in"))).toList.sorted
+    val prefixStringRam = "imem.io_bus_"
+    val symsOfRam = getSeq(prefixStringRam)
     println(s"here are the signals that communicate with the ram")
     for (symbol <- symsOfRam) {
-      println(s"$symbol is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, prefixStringRam)} is ${simulator.peek(symbol)}")
     }
   }
 
@@ -120,6 +138,23 @@ class CPUTestDriver(directoryName: String, memFile: String) {
     printIMemController()
   }
 
+  def printICacheCPUIO(): Unit = {
+    val namePrefix = "cpu.iCache.iCache.io_"
+    val syms = getSeq(namePrefix)
+    println("here are the IO between CPU and iCache")
+    for (symbol <- syms) {
+      println(s"${stripPrefix(symbol, namePrefix)} is ${simulator.peek(symbol)}")
+    }
+  }
+
+  def printICacheAXIIO(): Unit = {
+    val namePrefix = "cpu.iCache.io_axi"
+    val syms = getSeq(namePrefix)
+    println("here are the IO between icache and AXI")
+    for (symbol <- syms) {
+      println(s"${stripPrefix(symbol, namePrefix)} is ${simulator.peek(symbol)}")
+    }
+  }
 
   //TODO: strip all strings of prefix
   def printCPUAXIMaster(): Unit = {
@@ -127,7 +162,7 @@ class CPUTestDriver(directoryName: String, memFile: String) {
     val syms = simulator.engine.validNames.filter(name => name.startsWith(namePrefix))
     println("this is the signal of the AXI master connected to CPU")
     for (symbol <- syms) {
-      println(s"${symbol.drop(namePrefix.length)} is ${simulator.peek(symbol)}")
+      println(s"${stripPrefix(symbol, namePrefix)} is ${simulator.peek(symbol)}")
     }
   }
 
@@ -207,18 +242,23 @@ class CPUTestDriver(directoryName: String, memFile: String) {
   def printPipeReg(module: String): Unit = {
     println(s"these are the values for $module")
     println("--------------------------------")
-    val symsRegValue =
-      simulator.engine.validNames.filter(name => name.startsWith(s"cpu.core.$module.pipeReg_"))
-    println(s"this registers hold values of")
+    val modulePrefix = s"cpu.core.$module.pipeReg_"
+    val symsRegValue = getSeq(modulePrefix)
+    println(s"register $module hold values of")
     for (sym <- symsRegValue) {
       val value = simulator.peek(sym)
-      println(s"${sym.drop((s"cpu.core.$module.pipeReg_").length)} has decimal value: ${value} hex value: (0x${value.toInt.toHexString})")
+      println(
+        s"${stripPrefix(sym, modulePrefix)} has decimal value: ${value} hex value: (0x${value.toInt.toHexString})"
+      )
     }
-    val symsIO = simulator.engine.validNames.filter(name => name.startsWith(s"cpu.core.$module.io_"))
+    val ioPrefix = s"cpu.core.$module.io_"
+    val symsIO = getSeq(ioPrefix)
     println(s"these are the io values")
     for (sym <- symsIO) {
       val value = simulator.peek(sym)
-      println(s"${sym.drop((s"cpu.core.$module.io_").length)} has decimal value: $value and hex value: (0x${value.toInt.toHexString})")
+      println(
+        s"${stripPrefix(sym, ioPrefix)} has decimal value: $value and hex value: (0x${value.toInt.toHexString})"
+      )
     }
     println("-------------------------------")
   }
@@ -277,14 +317,14 @@ class CPUTestDriver(directoryName: String, memFile: String) {
 }
 
 case class CPUTestCase(
-                        directoryName: String,
-                        memFile: String,
-                        cycles: Int,
-                        initRegs: Map[Int, BigInt],
-                        checkRegs: Map[Int, BigInt],
-                        initMem: Map[Int, BigInt],
-                        checkMem: Map[Int, BigInt]
-                      ) {
+  directoryName: String,
+  memFile:       String,
+  cycles:        Int,
+  initRegs:      Map[Int, BigInt],
+  checkRegs:     Map[Int, BigInt],
+  initMem:       Map[Int, BigInt],
+  checkMem:      Map[Int, BigInt]
+) {
   def name(): String = {
     directoryName + "/" + memFile
   }

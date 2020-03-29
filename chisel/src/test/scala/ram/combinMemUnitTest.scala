@@ -1,4 +1,4 @@
-// Unit tests for testing combinational memory reads and writes using combinational data ports
+// Unit tests for testSuite combinational memory reads and writes using combinational data ports
 
 package ram
 

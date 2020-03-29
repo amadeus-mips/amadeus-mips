@@ -1,9 +1,10 @@
-package cpu
+package testers
 
 import java.io.{File, PrintWriter, RandomAccessFile}
 
 import chisel3.iotesters.TesterOptionsManager
 import chisel3.{ChiselExecutionSuccess, HasChiselExecutionOptions}
+import cpu.TestTop
 import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 import net.fornwall.jelf.ElfFile
 import treadle.{HasTreadleOptions, TreadleOptionsManager}
@@ -93,7 +94,7 @@ object Simulate {
   //    require(args.length >= 3, "Error: Expected at least three argument\n" + helptext)
   //    //   don't use the binary, manually load the mem file
   ////    require(args.length >= 1, "Error: Expected at least 1 argument\n" + helptext)
-  //    val optionsManager = new SimulatorOptionsManager
+  //    val optionsManager = new testers.SimulatorOptionsManager
   //    val cpuType = args(0)
   //    val directoryName = args(1)
   //    val memFile = args(2)
@@ -125,7 +126,7 @@ object Simulate {
   //    val maxCycles =
   //      if (optionsManager.simulatorOptions.maxCycles > 0) optionsManager.simulatorOptions.maxCycles else 200
   ////    val maxCycles = 2000000
-  //    // Simulate until the pc is the "endPC" or until max cycles has been reached
+  //    // testers.Simulate until the pc is the "endPC" or until max cycles has been reached
   //    println("Running...")
   //    // print the pc initial position
   //    //    println(s"the position of the initial PC is ${simulator.peek("cpu.regPC")}")
