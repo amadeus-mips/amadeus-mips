@@ -26,7 +26,7 @@ class DecodeTop extends Module {
     val stallReq = Output(Bool())       // to pipeLine control
   })
 
-  val inst = Mux(io.in.instFetchExcept || io.in.pc === 0.U, 0.U, io.inst)
+  val inst = Mux(io.in.instFetchExcept || !io.in.instValid, 0.U, io.inst)
 
   val hazard = Module(new Hazard)
   val control = Module(new Control)
