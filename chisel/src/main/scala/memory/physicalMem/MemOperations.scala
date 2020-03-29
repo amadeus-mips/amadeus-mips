@@ -1,4 +1,4 @@
-package memory
+package memory.physicalMem
 
 import chisel3.experimental.ChiselEnum
 

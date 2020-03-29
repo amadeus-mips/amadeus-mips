@@ -6,8 +6,8 @@ import firrtl.stage.FirrtlSourceAnnotation
 import org.scalatest.{FreeSpec, Matchers}
 import treadle.{TreadleOption, TreadleOptionsManager, TreadleTester}
 import chisel3.iotesters.TesterOptionsManager
-import memory.{DMemCombinationalPortForAXI, DualPortedCombinMemory, IMemCombinationalPortForAXI}
-import ram.AXI1x2SramInterface
+import memory.axi.AXI1x2SramInterface
+import memory.physicalMem.{DMemCombinationalPortForAXI, DualPortedCombinMemory, IMemCombinationalPortForAXI}
 
 class TestTop(memFile: String) extends Module {
   val io = IO(new Bundle() {

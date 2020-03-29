@@ -347,3 +347,4 @@ project/
 !/TestTop.anno.json
 !/TestTop.fir
 !/TestTop.lo.fir
+simulator_run_dir/

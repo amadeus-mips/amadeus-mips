@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package ram
+package memory.axi
 
 import chisel3._
 import chisel3.util._

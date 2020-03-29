@@ -1,13 +1,13 @@
-package memory
+package memory.physicalMem
 
 import chisel3._
 import chisel3.util._
 
 // A Bundle used for representing a memory access by instruction memory or data memory.
 class Request extends Bundle {
-  val address      = UInt(32.W)
-  val writedata    = UInt(32.W)
-  val operation    = MemOperations()
+  val address = UInt(32.W)
+  val writedata = UInt(32.W)
+  val operation = MemOperations()
 }
 
 // A bundle used for representing the memory's response to a memory read operation, which

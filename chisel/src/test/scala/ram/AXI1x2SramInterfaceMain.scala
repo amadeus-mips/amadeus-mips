@@ -1,6 +1,7 @@
 package ram
 
 import chisel3.Driver
+import memory.axi.AXI1x2SramInterface
 
 object AXI1x2SramInterfaceMain {
   def main(args: Array[String]): Unit = {

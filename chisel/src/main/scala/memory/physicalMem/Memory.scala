@@ -1,20 +1,22 @@
-package memory
+package memory.physicalMem
 
 import chisel3._
 
 /**
-  * This is the actual memory. You should never directly use this in the CPU.
-  * This module should only be instantiated in the Top file.
-  *
-  * The I/O for this module is defined in [[MemPortBusIO]].
-  */
-import memory.MemOperations._
-class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedMemory (size, memfile) {
+ * This is the actual memory. You should never directly use this in the CPU.
+ * This module should only be instantiated in the Top file.
+ *
+ * The I/O for this module is defined in [[MemPortBusIO]].
+ */
+import memory.physicalMem.MemOperations._
+
+class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedMemory(size, memfile) {
   def wireMemPipe(portio: MemPortBusIO): Unit = {
     portio.response.valid := false.B
     // Combinational memory is inherently always ready for port requests
     portio.request.ready := true.B
   }
+
   // Instruction port
 
   wireMemPipe(io.imem)

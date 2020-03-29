@@ -1,19 +1,19 @@
-package memory
+package memory.physicalMem
 
 import chisel3._
 
 
 /**
-  * A generic ready/valid interface for MemPort modules, whose IOs extend this.
-  *
-  * This interface corresponds with the pipeline <=> port interface between the
-  * pipelined CPU and the memory port.
-  *
-  * Input:  address, the address of a piece of data in memory.
-  * Input:  valid, true when the address specified is valid
-  * Output: good, true when memory is responding with a piece of data (used to un-stall the pipeline)
-  *
-  */
+ * A generic ready/valid interface for MemPort modules, whose IOs extend this.
+ *
+ * This interface corresponds with the pipeline <=> port interface between the
+ * pipelined CPU and the memory port.
+ *
+ * Input:  address, the address of a piece of data in memory.
+ * Input:  valid, true when the address specified is valid
+ * Output: good, true when memory is responding with a piece of data (used to un-stall the pipeline)
+ *
+ */
 class MemPortIO extends Bundle {
   // Pipeline <=> Port
   val address  = Input(UInt(32.W))

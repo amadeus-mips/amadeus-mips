@@ -1,4 +1,4 @@
-package memory
+package memory.physicalMem
 
 import chisel3._
 import chisel3.util.{Cat, Fill}
@@ -8,7 +8,7 @@ import chisel3.util.{Cat, Fill}
  *
  * The I/O for this module is defined in [[IMemPortIO]].
  */
-import memory.MemOperations._
+import memory.physicalMem.MemOperations._
 
 class ICombinMemPort extends BaseIMemPort {
   // When the pipeline is supplying a high valid signal

@@ -1,10 +1,11 @@
 // Unit tests for testing combinational memory reads and writes using combinational data ports
 
-package test.memory
+package ram
 
 import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import memory._
+import memory.physicalMem.{DCombinMemPort, DMemPortIO, DualPortedCombinMemory, ICombinMemPort, IMemPortIO}
 
 /**
  * Testing harness for the combinational memory
@@ -14,7 +15,7 @@ import memory._
  *
  * Also serves as an example on how to set up the combinational memory in
  * an actual CPU by connecting the imem and dmem ports to the memory.
-
+ *
  * See: [[IMemPortIO]] and [[DMemPortIO]]
  */
 class CombinMemoryTestHarness(size: Int, memFile: String) extends Module {

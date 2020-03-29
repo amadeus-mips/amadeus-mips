@@ -1,14 +1,14 @@
-package memory
+package memory.physicalMem
 
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
 import firrtl.annotations.MemoryLoadFileType
-import ram.SimpleSramIO
+import memory.axi.SimpleSramIO
 
 /**
-* Base class for all modular backing memories. Simply declares the IO and the memory file.
-*/
+ * Base class for all modular backing memories. Simply declares the IO and the memory file.
+ */
 abstract class BaseDualPortedMemory(size: Int, memfile: String) extends Module {
 
 
