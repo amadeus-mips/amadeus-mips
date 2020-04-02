@@ -4,7 +4,7 @@ package cpu.core.components
 
 import chisel3._
 import cpu.core.Constants.cpuStallLen
-import cpu.core.pipeline.stage5.IDEXE
+import cpu.core.pipeline.stage5.IdExe
 
 class StageIO[+T <: Data](gen: T) extends Bundle {
   val stall = Input(UInt(cpuStallLen.W))
@@ -23,7 +23,7 @@ class StageIO[+T <: Data](gen: T) extends Bundle {
  * If want to modify IOBundle, you need to extend the StageIO and override the Stage.io.
  * For more details,
  *
- * @see [[IDEXE]]
+ * @see [[IdExe]]
  * @param stageNumber the serial number of this stage.
  * @param gen         the instance of the bundle
  * @tparam T the input and output bundle type.

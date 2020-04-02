@@ -33,13 +33,11 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   val rq = Module(new Queue(new QueueBundle, qSize))
 
   val rData = RegInit(0.U(32.W))
-  val rLast = RegInit(false.B)
   val rValid = RegInit(false.B)
   val ramRAddr = RegInit(0.U(32.W))
-  private val rLen = RegInit(0.U(4.W))
+  val rLen = RegInit(0.U(4.W))
   switch(rState) {
     is(sRIdle) {
-      rLast := false.B
       rValid := false.B
       when(rq.io.deq.valid) {
         rLen := rq.io.deq.bits.len
@@ -53,7 +51,6 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
         rValid := true.B
         when(io.bus.r.ready) {
           when(rLen === 0.U) { // finish
-            rLast := true.B
             rState := sRIdle
           }.otherwise { // hold
             ramRAddr := ramRAddr + 4.U
@@ -70,7 +67,6 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
       when(io.bus.r.ready) {
         rValid := false.B // in this cycle, data has been sent
         when(rLen === 0.U) { // finish
-          rLast := true.B
           rState := sRIdle
         }.otherwise { // wait ram
           ramRAddr := ramRAddr + 4.U
@@ -85,7 +81,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   io.bus.r.id := id
   io.bus.r.data := rData
   io.bus.r.resp := 0.U // fixed OKAY
-  io.bus.r.last := rLast
+  io.bus.r.last := rLen === 0.U && rValid
   io.bus.r.valid := rValid
 
   io.ram.read.addr := ramRAddr
@@ -107,7 +103,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
 
   val wReady = RegInit(false.B)
   val ramWAddr = RegInit(0.U(32.W))
-  private val wLen = RegInit(0.U(4.W))
+  val wLen = RegInit(0.U(4.W))
   switch(wState) {
     is(sWIdle) {
       when(wq.io.deq.valid) {

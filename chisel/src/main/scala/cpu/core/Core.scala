@@ -35,7 +35,7 @@ class Core extends MultiIOModule {
 
   // stages
   val if_id = Module(new Stage(1, new IfIdBundle))
-  val id_exe = Module(new IDEXE)
+  val id_exe = Module(new IdExe)
   val exe_mem = Module(new Stage(3, new ExeMemBundle))
   val mem_wb = Module(new Stage(4, new MemWbBundle))
 
