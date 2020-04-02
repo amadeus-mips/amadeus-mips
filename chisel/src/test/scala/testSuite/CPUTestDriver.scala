@@ -314,6 +314,11 @@ class CPUTestDriver(directoryName: String, memFile: String) {
   def dumpSymbolNames(): Unit = {
     simulator.engine.symbolTable.nameToSymbol.keys.toSeq.sorted.foreach { key => println(s"symbol: $key") }
   }
+
+  def dumpToVCD(): Unit = {
+    simulator.report
+  }
+
 }
 
 case class CPUTestCase(
@@ -330,9 +335,13 @@ case class CPUTestCase(
 
 // the companion object
 object CPUTestDriver {
-  def apply(testCase: CPUTestCase): Boolean = {
+  def apply(testCase: CPUTestCase, genVCD: Boolean): Boolean = {
     val driver = new CPUTestDriver(testCase.directoryName, testCase.memFile)
     driver.run(testCase.cycles)
+    //    Don't dump vcd here, as this is run in batch and could cause a lot if littering
+    if (genVCD) {
+      driver.dumpToVCD()
+    }
     val success = driver.checkRegs(testCase.checkRegs)
     success && driver.checkMemory(testCase.checkMem)
   }
