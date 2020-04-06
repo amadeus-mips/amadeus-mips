@@ -10,11 +10,10 @@ import treadle.executable.TreadleException
 class CPUFlatSpec extends FlatSpec with Matchers
 
 //TODO: add support for loading binary in the future
-//TODO: refactor this, use functions to determine the values
-class CPUTestDriver(directoryName: String, memFile: String) {
+class CPUTestDriver(directoryName: String, memFile: String, dumpVCD: Boolean = false) {
 
   val optionsManager = new TesterOptionsManager {
-    treadleOptions = treadleOptions.copy(callResetAtStartUp = true)
+    treadleOptions = treadleOptions.copy(callResetAtStartUp = true, writeVCD = dumpVCD)
   }
 
   // set the target directory name
@@ -336,7 +335,8 @@ case class CPUTestCase(
 // the companion object
 object CPUTestDriver {
   def apply(testCase: CPUTestCase, genVCD: Boolean): Boolean = {
-    val driver = new CPUTestDriver(testCase.directoryName, testCase.memFile)
+    // to speed up testing
+    val driver = new CPUTestDriver(testCase.directoryName, testCase.memFile, dumpVCD = genVCD)
     driver.run(testCase.cycles)
     //    Don't dump vcd here, as this is run in batch and could cause a lot if littering
     if (genVCD) {
