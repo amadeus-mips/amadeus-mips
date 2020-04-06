@@ -1,7 +1,7 @@
 TOPDIR=$(shell pwd)
 
 #export LD_PRELOAD =
-CFLAGS := -D_KERNEL -fno-builtin -mips1 -DMEMSTART=0x80000000 -DMEMSIZE=0x04000 -DCPU_COUNT_PER_US=1000 -I $(TOPDIR)/include 
+CFLAGS := -D_KERNEL -fno-builtin -mips1 -DMEMSTART=0x80000000 -DMEMSIZE=0x04000 -DCPU_COUNT_PER_US=1000 -I $(TOPDIR)/include
 CFLAGS += -fno-reorder-blocks -fno-reorder-functions
 
 OBJDIR = ./obj
@@ -24,12 +24,12 @@ compile:main.bin main.data convert
 	cp $(OBJDIR)/inst_ram.mif  $(OBJDIR)/axi_ram.mif
 
 main.bin:main.elf
-	${CROSS_COMPILE}objcopy -O binary -j .text $< $@ 
+	${CROSS_COMPILE}objcopy -O binary -j .text $< $@
 
 main.data:main.elf
-	${CROSS_COMPILE}objcopy -O binary -j .data $< $@ 
+	${CROSS_COMPILE}objcopy -O binary -j .data $< $@
 
-main.elf: start.o libinst.a 
+main.elf: start.o libinst.a
 	${CROSS_COMPILE}gcc -E -P -Umips -D_LOADER -U_MAIN $(CFLAGS) bin.lds.S -o bin.lds
 	${CROSS_COMPILE}ld -g -T  bin.lds  -o $@ start.o -L . -linst
 	${CROSS_COMPILE}objdump -alD $@ > test.s
@@ -41,7 +41,7 @@ convert:convert.c
 	gcc  $(ALIGNED) -std=c99 -o convert  convert.c
 
 clean:
-	rm -f *.o *.a 
+	rm -f *.o *.a
 	rm -rf obj
 	make -C inst clean
 
