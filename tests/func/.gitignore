@@ -1,0 +1,6 @@
+*/obj/
+*.code-workspace
+*.a
+*.o
+bin.lds
+convert
