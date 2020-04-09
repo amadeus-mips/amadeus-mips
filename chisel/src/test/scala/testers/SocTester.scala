@@ -12,7 +12,7 @@ class SocTester extends ChiselFlatSpec {
   "running with --generate-vcd-output on" should "generate vcd files" in {
     iotesters.Driver.execute(
       Array("--generate-vcd-output", "on", "-td", "test_run_dir/soc/vcd", "--top-name", "soc"),
-      () => new TestTop("./testMemFile/testBench/t1.txt")
+      () => new TestTop("./testMemFile/arith/add.txt")
     ) {
       c => new SocUnitTester(c)
     } should be(true)

@@ -1,6 +1,7 @@
 package memory.physicalMem
 
 import chisel3._
+import chisel3.util.Cat
 
 /**
  * This is the actual memory. You should never directly use this in the CPU.
@@ -31,12 +32,8 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
     // TODO: Revert this back to the assert form "assert (request.address < size.U)"
     // TODO: once CSR is integrated into CPU
-    when (request.address < size.U) {
-      io.imem.response.valid := true.B
-      io.imem.response.bits.data := physicalMem(request.address >> 2)
-    } .otherwise {
-      io.imem.response.valid := false.B
-    }
+    io.imem.response.valid := true.B
+    io.imem.response.bits.data := physicalMem.read((request.address(19, 0) >> 2).asUInt())
   } .otherwise {
     io.imem.response.valid := false.B
   }
@@ -45,7 +42,7 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
   wireMemPipe(io.dmem)
 
-  val memAddress = io.dmem.request.bits.address
+  val memAddress =  Cat(0.U(12.W), io.dmem.request.bits.address(19, 0))
   val memWriteData = io.dmem.request.bits.writedata
 
   when (io.dmem.request.valid) {
@@ -58,12 +55,12 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
     // Read path
     //TODO: read address is byte aligned, acutal reference address for mem is word aligned
-    io.dmem.response.bits.data := physicalMem.read(memAddress >> 2)
+    io.dmem.response.bits.data := physicalMem.read((memAddress >> 2).asUInt())
     io.dmem.response.valid := true.B
 
     // Write path
     when (request.operation === ReadWrite) {
-      physicalMem(memAddress >> 2) := memWriteData
+      physicalMem.write((memAddress >> 2).asUInt(), memWriteData)
     }
   } .otherwise {
     io.dmem.response.valid := false.B

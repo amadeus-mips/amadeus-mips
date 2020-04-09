@@ -28,20 +28,28 @@
       <w>bltzl</w>
       <w>bnel</w>
       <w>bready</w>
+      <w>confreg</w>
       <w>csignals</w>
       <w>deret</w>
+      <w>discreater</w>
       <w>divu</w>
       <w>doubleword</w>
       <w>eret</w>
       <w>exel</w>
       <w>exemem</w>
       <w>exmem</w>
+      <w>ffec</w>
+      <w>fffc</w>
       <w>firrtl</w>
       <w>gezal</w>
       <w>halfword</w>
       <w>halfwords</w>
+      <w>hbfaf</w>
       <w>hbfbffffc</w>
       <w>hbfc</w>
+      <w>hffec</w>
+      <w>hfff</w>
+      <w>hfffc</w>
       <w>hilo</w>
       <w>idex</w>
       <w>idexe</w>
@@ -52,6 +60,7 @@
       <w>jalr</w>
       <w>jalx</w>
       <w>ldxc</w>
+      <w>loongson</w>
       <w>ltzal</w>
       <w>luxc</w>
       <w>lwxc</w>
@@ -76,6 +85,7 @@
       <w>nmadd</w>
       <w>nmsub</w>
       <w>prefx</w>
+      <w>prog</w>
       <w>prot</w>
       <w>rdata</w>
       <w>rdhwr</w>
@@ -91,6 +101,7 @@
       <w>rvalid</w>
       <w>sdbbp</w>
       <w>sdxc</w>
+      <w>simu</w>
       <w>sllv</w>
       <w>slti</w>
       <w>sltiu</w>
@@ -117,6 +128,7 @@
       <w>tltiu</w>
       <w>tltu</w>
       <w>tnei</w>
+      <w>uart</w>
       <w>ulim</w>
       <w>verilator</w>
       <w>verilog</w>

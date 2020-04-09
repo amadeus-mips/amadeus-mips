@@ -146,7 +146,7 @@ object SingleStepper {
           true
         } else if (tokens.length == 3) {
           try {
-            driver.printInst(tokens(2).toInt)
+            driver.printInst(tokens(2).toLong)
             true
           } catch {
             case e: NumberFormatException => false

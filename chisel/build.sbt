@@ -51,6 +51,8 @@ libraryDependencies ++= Seq("chisel3", "chisel-iotesters").map {
 
 libraryDependencies += "net.fornwall.jelf" % "jelf" % "0.4.1"
 
+libraryDependencies += "org.typelevel" %% "spire" % "0.14.1"
+
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
