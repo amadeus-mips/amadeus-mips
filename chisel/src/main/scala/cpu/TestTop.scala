@@ -15,7 +15,7 @@ class TestTop(memFile: String) extends Module {
   //  val memFile = s"./src/main/scala/zero.txt"
 
   val cpu = Module(new CPUTop)
-  val mem = Module(new DualPortedCombinMemory(1 << 16, memFile))
+  val mem = Module(new DualPortedCombinMemory(1 << 18, memFile))
   val imem = Module(new IMemCombinationalPortForAXI)
   val dmem = Module(new DMemCombinationalPortForAXI)
   mem.wireMemAXIPort(imem, dmem)

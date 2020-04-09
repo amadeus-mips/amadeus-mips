@@ -117,8 +117,7 @@ trait opConstants {
 }
 
 trait valueConstants {
-//  val startPC  = "hbfc00000".U(32.W)
-val startPC = 0.U(32.W)
+  val startPC  = "hbfc00000".U(32.W)
   val exceptPC = "hbfc00380".U(32.W)
   val zeroWord = 0.U(32.W)
   val GPR31 = "b11111".U(5.W)

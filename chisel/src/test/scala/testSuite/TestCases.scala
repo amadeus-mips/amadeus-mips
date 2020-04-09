@@ -180,7 +180,7 @@ object InstructionTests {
       "jump",
       "jal",
       100,
-      Map(0 -> 0, 2 -> 5, 31 -> 12),
+      Map(0 -> 0, 2 -> 5, 31 -> BigInt("bfc0000c", 16)),
       Map()
     )
   )

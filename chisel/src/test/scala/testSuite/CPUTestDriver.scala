@@ -28,7 +28,7 @@ class CPUTestDriver(directoryName: String, memFile: String) {
   //  val endPC = elfToHex(path, hexName)
   val simulator = TreadleTester(compiledFirrtl, optionsManager)
 
-  val endPC = 200
+  val endPC = BigInt("bfc00000", 16) + 200
   var cycle = 0
 
   def getSeq(strPrefix: String): Seq[String] = {
@@ -73,11 +73,12 @@ class CPUTestDriver(directoryName: String, memFile: String) {
     println(s"PC:    0x${v.toInt.toHexString}")
   }
 
-  def printInst(addr: Int = -1): Unit = {
-    val pc = if (addr < 0) simulator.peek("cpu.core.fetch.pc").toInt else addr
+  def printInst(addr: Long = -1): Unit = {
+    val pc = if (addr < 0) simulator.peek("cpu.core.fetch.pc") else BigInt(addr)
+    val memAddr = (pc & BigInt("fffff", 16)).toInt // get low 20 bits
     // the data at the pc
-    val v = simulator.peekMemory("mem.physicalMem", pc / 4)
-    println(s"the instruction at 0x${pc.toHexString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
+    val v = simulator.peekMemory("mem.physicalMem", memAddr >> 2)
+    println(s"the instruction at 0x${pc.toInt.toHexString.padTo(3, ' ')} has hex value of 0x${v.toInt.toHexString}")
   }
 
   def printDMemAXISlave(): Unit = {
