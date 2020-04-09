@@ -28,6 +28,7 @@
       <w>bltzl</w>
       <w>bnel</w>
       <w>bready</w>
+      <w>confreg</w>
       <w>csignals</w>
       <w>deret</w>
       <w>discreater</w>
@@ -37,12 +38,18 @@
       <w>exel</w>
       <w>exemem</w>
       <w>exmem</w>
+      <w>ffec</w>
+      <w>fffc</w>
       <w>firrtl</w>
       <w>gezal</w>
       <w>halfword</w>
       <w>halfwords</w>
+      <w>hbfaf</w>
       <w>hbfbffffc</w>
       <w>hbfc</w>
+      <w>hffec</w>
+      <w>hfff</w>
+      <w>hfffc</w>
       <w>hilo</w>
       <w>idex</w>
       <w>idexe</w>
@@ -94,6 +101,7 @@
       <w>rvalid</w>
       <w>sdbbp</w>
       <w>sdxc</w>
+      <w>simu</w>
       <w>sllv</w>
       <w>slti</w>
       <w>sltiu</w>
