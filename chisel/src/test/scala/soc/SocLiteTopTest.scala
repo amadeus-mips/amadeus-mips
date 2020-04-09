@@ -7,9 +7,7 @@ import scala.io.Source
 class SocLiteTopTest extends ChiselFlatSpec {
   behavior.of("Soc")
 
-//  val instFile = "./../tests/func/obj/inst_ram.coe"
-  val instFile = "./../../Vivado/sim/func_test_v0.01/soft/func/obj/inst_ram.coe"
-
+  val instFile = "./src/test/resources/loongsonFunc/inst_ram.coe"
   "pc" should "run to 0xbfc00100" in {
     Driver.execute(Array(), () => new SocLiteTop(simulation = true, memFile = instFile)) { c =>
       new SocLiteTopUnitTester(c)
@@ -17,15 +15,26 @@ class SocLiteTopTest extends ChiselFlatSpec {
   }
 
   it should "satisfy golden_trace" in {
-    Driver.execute(Array(), () => new SocLiteTop(simulation = true, memFile = instFile)) { c =>
-      new SocLiteTopUnitTester(c, trace = true)
+    Driver.execute(Array("--backend-name", "verilator"), () => new SocLiteTop(simulation = true, memFile = instFile)) {
+      c => new SocLiteTopUnitTester(c, trace = true)
     }
   }
   it should "generate gcd file" in {
     Driver.execute(
-      Array("--generate-vcd-output", "on", "-td", "test_run_dir/soc_lite/vcd", "--top-name", "soc"),
+      Array(
+        "--backend-name",
+        "verilator",
+        "--generate-vcd-output",
+        "on",
+        "-td",
+        "test_run_dir/soc_lite/vcd",
+        "--top-name",
+        "soc"
+      ),
       () => new SocLiteTop(simulation = true, memFile = instFile)
-    ) { c => new SocLiteTopUnitTester(c, trace = false) } should be(true)
+    ) { c =>
+      new SocLiteTopUnitTester(c, trace = false)
+    } should be(true)
   }
 
 }
@@ -34,7 +43,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
 
   import chisel3._
 
-  val trace_file = "./../../Vivado/sim/func_test_v0.01/cpu132_gettrace/golden_trace.txt"
+  val trace_file = "./src/test/resources/loongsonFunc/golden_trace.txt"
   val source = Source.fromFile(trace_file)
   val lines = source.getLines()
   var trace_line = lines.next().split(" ").map(BigInt(_, 16))
