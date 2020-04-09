@@ -42,7 +42,7 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
   wireMemPipe(io.dmem)
 
-  val memAddress =  Cat(0.U(12.W), io.dmem.request.bits.address(19, 0))
+  val memAddress =  io.dmem.request.bits.address(19, 0)
   val memWriteData = io.dmem.request.bits.writedata
 
   when (io.dmem.request.valid) {
@@ -51,7 +51,7 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
     // Check that non-combin write isn't being used
     assert (request.operation =/= Write)
     // Check that address is pointing to a valid location in memory
-    assert (request.address < size.U)
+    // assert (request.address < size.U)
 
     // Read path
     //TODO: read address is byte aligned, acutal reference address for mem is word aligned

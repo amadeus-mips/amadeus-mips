@@ -120,8 +120,8 @@ class Confreg(simulation: Boolean = false) extends Module {
 
   /** wrote in [[axi_interfaceHandle()]]. */
   val conf_we = Wire(Bool())
-  val conf_addr = Wire(Bool())
-  val conf_wdata = Wire(Bool())
+  val conf_addr = Wire(UInt(32.W))
+  val conf_wdata = Wire(UInt(32.W))
 
   axi_interfaceHandle()
   confreg_registerHandle()
