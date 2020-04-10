@@ -23,14 +23,14 @@ class AXI1x2SramInterface extends Module {
   dCon.io.bus.ar.valid := !arIid && io.bus.ar.valid
 
   // r
-  val rIid = iCon.io.bus.r.valid
-  when(rIid){
+  val dIid = dCon.io.bus.r.valid
+  when(!dIid){
     io.bus.r <> iCon.io.bus.r
   }.otherwise {
     io.bus.r <> dCon.io.bus.r
   }
-  iCon.io.bus.r.ready := rIid && io.bus.r.ready
-  dCon.io.bus.r.ready := !rIid && io.bus.r.ready
+  iCon.io.bus.r.ready := !dIid && io.bus.r.ready
+  dCon.io.bus.r.ready := dIid && io.bus.r.ready
 
   // aw
   dCon.io.bus.aw <> io.bus.aw

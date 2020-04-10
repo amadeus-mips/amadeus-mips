@@ -36,6 +36,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   val rValid = RegInit(false.B)
   val ramRAddr = RegInit(0.U(32.W))
   val rLen = RegInit(0.U(4.W))
+  val rLast = RegInit(false.B)
   switch(rState) {
     is(sRIdle) {
       rValid := false.B
@@ -49,6 +50,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
       when(io.ram.read.valid) {
         rData := io.ram.read.data
         rValid := true.B
+        rLast := rLen === 0.U
         when(io.bus.r.ready) {
           when(rLen === 0.U) { // finish
             rState := sRIdle
@@ -81,7 +83,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   io.bus.r.id := id
   io.bus.r.data := rData
   io.bus.r.resp := 0.U // fixed OKAY
-  io.bus.r.last := rLen === 0.U && rValid
+  io.bus.r.last := rLast
   io.bus.r.valid := rValid
 
   io.ram.read.addr := ramRAddr
