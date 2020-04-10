@@ -40,7 +40,8 @@ class SocLiteTopTest extends ChiselFlatSpec {
 
 }
 
-class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolean = false) extends PeekPokeTester(c) {
+class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolean = false, needAssert: Boolean = false)
+    extends PeekPokeTester(c) {
 
   import chisel3._
 
@@ -64,38 +65,48 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
   poke(c.io.gp.btn_key_row, 0.U(4.W))
   poke(c.io.gp.btn_step, 3.U(2.W))
   reset(3)
-  var break = false
-  while (pc != pcEnd && !break) {
-    val current = System.currentTimeMillis()
-    if (pc != 0) {
-      lastDebugInfo = debugInfo
-      if (current - before > 5000) {
-        info(lastDebugInfo)
-        before = current
-      }
-      if (trace) {
-        if (wen != 0 && wnum != 0) {
-          if (trace_line(0) != 0) {
-            if (!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))) {
-              err(lastDebugInfo)
-              break = true
-            }
-          }
-          if (lines.hasNext) trace_line = lines.next().split(" ").map(BigInt(_, 16))
-          else break = true
-        }
-      }
-    }
-    if(!(current - before < 20000)) {
-      err(lastDebugInfo)
-      break = true
-    }
-    update(1)
-  }
+  var iCount = 0
+  var cCount = 1 // avoid divide 0
+  val result = run()
+  if (needAssert) assert(result)
   step(10)
   info("Finished!")
+  info(s"run $cCount cycles, $iCount instructions")
+  info(s"IPC is ${iCount.toFloat / cCount}")
 
+  def run(): Boolean = {
+    while (pc != pcEnd) {
+      val current = System.currentTimeMillis()
+      if (pc != 0) {
+        iCount = iCount + 1
+        lastDebugInfo = debugInfo
+        if (current - before > 5000) {
+          info(lastDebugInfo)
+          before = current
+        }
+        if (trace) {
+          if (wen != 0 && wnum != 0) {
+            if (trace_line(0) != 0) {
+              if (!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))) {
+                err(lastDebugInfo)
+                return false
+              }
+            }
+            if (lines.hasNext) trace_line = lines.next().split(" ").map(BigInt(_, 16))
+            else return true
+          }
+        }
+      }
+      if (!(current - before < 20000)) {
+        err(lastDebugInfo)
+        return false
+      }
+      update(1)
+    }
+    true
+  }
   def update(n: Int): Unit = {
+    cCount = cCount + 1
     pc = peek(c.io.debug.wbPC)
     wen = peek(c.io.debug.wbRegFileWEn)
     wnum = peek(c.io.debug.wbRegFileWNum)
@@ -108,6 +119,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
   def err(msg: String) = {
     println(Console.RED + "Error: " + msg + Console.RESET)
   }
+
   def info(msg: String) = {
     if (!banLog) {
       println(Console.CYAN + "Info: " + msg + Console.RESET)
