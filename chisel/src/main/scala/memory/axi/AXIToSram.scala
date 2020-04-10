@@ -4,7 +4,7 @@ package memory.axi
 
 import chisel3._
 import chisel3.util._
-import common.AXIMasterIO
+import common.{AXIIO, AXIMasterIO}
 
 class QueueBundle extends Bundle {
   val addr = UInt(32.W)
@@ -20,7 +20,7 @@ class QueueBundle extends Bundle {
   */
 class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   val io = IO(new Bundle {
-    val bus = Flipped(new AXIMasterIO)
+    val bus = AXIIO.slave()
     val ram = new SimpleSramIO
   })
   assert(!(io.bus.ar.burst =/= 1.U && io.bus.ar.valid), "Unsupported burst type! Only support INCR burst")

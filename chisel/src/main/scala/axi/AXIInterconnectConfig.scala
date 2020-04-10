@@ -101,12 +101,12 @@ class AXIInterconnectConfig
   def aUserWidth = if (awUserWidth > arUserWidth) awUserWidth else arUserWidth
 
   private def err(msg: String) = {
-    println(Console.RED + "Error: " + msg)
+    println(Console.RED + "Error: " + msg + Console.RESET)
   }
 
   private def info(msg: String) = {
     if (!banLog)
-      println(Console.YELLOW + "Info: " + msg)
+      println(Console.YELLOW + "Info: " + msg + Console.RESET)
   }
 
   private def configureCheck: Boolean = {
