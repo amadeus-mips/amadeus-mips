@@ -85,13 +85,14 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
         }
       }
     }
-    if(!(current - before < 60000)) {
+    if(!(current - before < 20000)) {
       err(lastDebugInfo)
       break = true
     }
     update(1)
   }
   step(10)
+  info("Finished!")
 
   def update(n: Int): Unit = {
     pc = peek(c.io.debug.wbPC)

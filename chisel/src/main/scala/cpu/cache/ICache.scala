@@ -12,13 +12,13 @@ import cpu.common.DefaultConfig._
  *  |   tag     |   index     |   bankOffset      | 0.U(2.W)  | <Br/>
  *  | `tagLen`  | `indexLen`  | `log2(bankAmount)`|     2     |
  */
-class ICache extends Module {
+class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val wayAmount = 2   // 每组路数
-  val depth = 128     // 组数
+//  val depth = 128     // 组数
   val indexLen = log2Ceil(depth)  // index宽度
-  val blockSize = 32*8/8    // 每块字节数
   val bankSize = 32/8       // 每bank字节数
-  val bankAmount = blockSize / bankSize // 每块bank数
+  val blockSize = bankAmount * bankSize    // 每块字节数
+//  val bankAmount = blockSize / bankSize // 每块bank数
   val tagLen = 32 - indexLen - log2Ceil(blockSize) // tag宽度
 
   val io = IO(new Bundle {
