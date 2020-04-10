@@ -15,9 +15,10 @@ class SocLiteTopTest extends ChiselFlatSpec {
   }
 
   it should "satisfy golden_trace" in {
-    Driver.execute(Array("--backend-name", "verilator"), () => new SocLiteTop(simulation = true, memFile = instFile)) {
-      c => new SocLiteTopUnitTester(c, trace = true)
-    }
+    Driver.execute(
+      Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
+      () => new SocLiteTop(simulation = true, memFile = instFile)
+    ) { c => new SocLiteTopUnitTester(c, trace = true) }
   }
   it should "generate vcd file" in {
     Driver.execute(
@@ -75,7 +76,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
       if (trace) {
         if (wen != 0 && wnum != 0) {
           if (trace_line(0) != 0) {
-            if(!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))){
+            if (!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))) {
               err(lastDebugInfo)
               break = true
             }
@@ -105,7 +106,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
   def debugInfo = f"pc--0x$pc%08x, wen--${(wen != 0).toString}%5s, wnum--$wnum%02x, wdata--0x$wdata%08x"
 
   def err(msg: String) = {
-    println(Console.RED + "Error: " + msg + Console.RESET )
+    println(Console.RED + "Error: " + msg + Console.RESET)
   }
   def info(msg: String) = {
     if (!banLog) {
