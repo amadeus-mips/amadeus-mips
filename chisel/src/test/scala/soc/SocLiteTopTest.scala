@@ -19,7 +19,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       c => new SocLiteTopUnitTester(c, trace = true)
     }
   }
-  it should "generate gcd file" in {
+  it should "generate vcd file" in {
     Driver.execute(
       Array(
         "--backend-name",
@@ -64,25 +64,31 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
   poke(c.io.gp.btn_step, 3.U(2.W))
   reset(3)
   var break = false
-  while (pc != pcEnd && !break && pc != BigInt("bfc016d8", 16)) {
+  while (pc != pcEnd && !break) {
     val current = System.currentTimeMillis()
     if (pc != 0) {
       lastDebugInfo = debugInfo
       if (current - before > 5000) {
-        printDebug(lastDebugInfo)
+        info(lastDebugInfo)
         before = current
       }
       if (trace) {
         if (wen != 0 && wnum != 0) {
           if (trace_line(0) != 0) {
-            assert(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3), lastDebugInfo)
+            if(!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))){
+              err(lastDebugInfo)
+              break = true
+            }
           }
           if (lines.hasNext) trace_line = lines.next().split(" ").map(BigInt(_, 16))
           else break = true
         }
       }
     }
-    assert(current - before < 60000, lastDebugInfo) // if pc keep 0 in 60s
+    if(!(current - before < 60000)) {
+      err(lastDebugInfo)
+      break = true
+    }
     update(1)
   }
   step(10)
@@ -94,11 +100,15 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
     wdata = peek(c.io.debug.wbRegFileWData)
     super.step(n)
   }
+
   def debugInfo = f"pc--0x$pc%08x, wen--${(wen != 0).toString}%5s, wnum--$wnum%02x, wdata--0x$wdata%08x"
 
-  def printDebug(msg: String) = {
+  def err(msg: String) = {
+    println(Console.RED + "Error: " + msg + Console.RESET )
+  }
+  def info(msg: String) = {
     if (!banLog) {
-      println("Debug: " + msg)
+      println(Console.CYAN + "Info: " + msg + Console.RESET)
     }
   }
 
