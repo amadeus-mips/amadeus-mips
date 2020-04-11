@@ -45,7 +45,7 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val lastState = RegInit(sIdle)
   val state = RegInit(sIdle)
   // cnt is a pseudo write mask, we should just use a real counter 0-7
-  val cnt = RegInit(0.U((bankAmount + 1).W))
+  val cnt = RegInit(0.U(bankAmount.W))
   val miss = RegInit(false.B)
 
   //-------------------------------------------------------------------------------
@@ -148,9 +148,9 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
         }
       }
       is(sMiss) {
-        when(!cnt(bankAmount) && io.busData.valid) {
+        when(!cnt(bankAmount - 1) && io.busData.valid) {
           cnt := cnt << 1
-        }.elsewhen(cnt(bankAmount)) {
+        }.elsewhen(cnt(bankAmount - 1)) {
           valid(lruLine)(index) := true.B
           cnt := 0.U
           state := sIdle
@@ -171,10 +171,8 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
     */
   when(inAMiss && io.busData.valid) {
     // write data into banks until all data has finished
-    when(!cnt(bankAmount)) {
-      we(lruLine) := cnt(bankAmount - 1, 0).asBools()
-      we((~(lruLine.asBool())).asUInt) := 0.U.asTypeOf(Vec(16, Bool()))
-    }
+    we(lruLine) := cnt.asBools()
+    we((~(lruLine.asBool())).asUInt) := 0.U.asTypeOf(Vec(16, Bool()))
     // write the tag during the first cycle data returns from AXI
     when(cnt(0)) {
       tagWe(lruLine) := cnt(0).asBool()
