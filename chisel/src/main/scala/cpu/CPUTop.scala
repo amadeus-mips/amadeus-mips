@@ -3,7 +3,7 @@
 package cpu
 
 import chisel3._
-import _root_.common.{AXIMasterIO, DebugBundle}
+import _root_.common.{AXIIO, DebugBundle}
 import cpu.cache.{DCacheAXIWrap, ICacheAXIWrap}
 import cpu.core.Core_ls
 
@@ -13,7 +13,7 @@ class CPUTop extends Module {
     /** hardware interrupt */
     val intr = Input(UInt(6.W))
 
-    val bus_axi = new AXIMasterIO()
+    val axi = AXIIO.master()
 
     val debug = Output(new DebugBundle)
   })
@@ -38,6 +38,6 @@ class CPUTop extends Module {
   axiInterface.io.data <> dCache.io.axi
   axiInterface.io.flush := core.io_ls.flush
 
-  io.bus_axi <> axiInterface.io.bus
+  io.axi <> axiInterface.io.bus
   io.debug <> core.io_ls.debug
 }

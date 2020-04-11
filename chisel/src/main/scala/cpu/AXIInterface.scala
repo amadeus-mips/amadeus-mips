@@ -3,14 +3,14 @@
 package cpu
 
 import chisel3._
-import _root_.common.AXIMasterIO
+import _root_.common.AXIIO
 import chisel3.util._
 
 class AXIInterface extends Module {
   val io = IO(new Bundle {
-    val bus = new AXIMasterIO
-    val inst = Flipped(new AXIMasterIO)
-    val data = Flipped(new AXIMasterIO)
+    val bus = AXIIO.master()
+    val inst = AXIIO.slave()
+    val data = AXIIO.slave()
     val flush = Input(Bool())
   })
 

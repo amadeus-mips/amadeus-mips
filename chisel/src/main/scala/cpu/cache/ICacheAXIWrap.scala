@@ -4,14 +4,14 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util.{Cat, log2Ceil}
-import common.AXIMasterIO
+import common.AXIIO
 import common.Constants._
 import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
 
 class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val io = IO(new Bundle {
-    val axi = new AXIMasterIO
+    val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
     val flush = Input(Bool())
   })

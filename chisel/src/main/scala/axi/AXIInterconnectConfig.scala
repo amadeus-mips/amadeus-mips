@@ -106,7 +106,7 @@ class AXIInterconnectConfig
 
   private def info(msg: String) = {
     if (!banLog)
-      println(Console.YELLOW + "Info: " + msg + Console.RESET)
+      println(Console.CYAN + "Info: " + msg + Console.RESET)
   }
 
   private def configureCheck: Boolean = {
