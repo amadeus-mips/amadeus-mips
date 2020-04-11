@@ -56,6 +56,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package soc
 
 /** Modified by Discreater */
+import Chisel.ValidIO
 import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import common.{DebugBundle, GPIO}
@@ -63,9 +64,15 @@ import confreg.Confreg
 import cpu.CPUTop
 import memory.memoryAXIWrap
 
+/**
+  *
+  * @param simulation will impact the behavior of perf test, if it is true, the each perf test will run 10 times
+  * @param memFile the file will be write to memory
+  */
 class SocLiteTop(simulation: Boolean = false, memFile: String) extends Module {
   val io = IO(new Bundle {
     val gp = new GPIO
+    val uart = new ValidIO(UInt(8.W))
     val debug = Output(new DebugBundle)
   })
 
@@ -76,11 +83,12 @@ class SocLiteTop(simulation: Boolean = false, memFile: String) extends Module {
   val confreg = Module(new Confreg(simulation))
   val ram = Module(new memoryAXIWrap(memFile))
 
-  axiInterconnect.io.slaves(0) <> cpu.io.bus_axi
+  axiInterconnect.io.slaves(0) <> cpu.io.axi
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 
   cpu.io.intr := 0.U // high active
   io.gp <> confreg.io.gp
+  io.uart <> confreg.io.uart
   io.debug <> cpu.io.debug
 }

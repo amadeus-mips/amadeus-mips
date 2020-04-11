@@ -2,11 +2,11 @@
 package memory.axi
 
 import chisel3._
-import common.{AXIMasterIO, Constants}
+import common.{AXIIO, Constants}
 
 class AXI1x2SramInterface extends Module {
   val io = IO(new Bundle {
-    val bus = Flipped(new AXIMasterIO)
+    val bus = AXIIO.slave()
     val iram = new SimpleSramIO
     val dram = new SimpleSramIO
   })

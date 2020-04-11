@@ -4,14 +4,14 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util.Cat
-import common.AXIMasterIO
+import common.AXIIO
 import common.Constants._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.common.DefaultConfig._
 
 class DCacheAXIWrap extends Module {
   val io = IO(new Bundle {
-    val axi = new AXIMasterIO
+    val axi = AXIIO.master()
     val rData = Flipped(new NiseSramReadIO)
     val wData = Flipped(new NiseSramWriteIO)
     val exeAddr = Input(UInt(addrLen.W))

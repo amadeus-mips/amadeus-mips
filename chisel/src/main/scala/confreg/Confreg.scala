@@ -88,6 +88,7 @@ class Confreg(simulation: Boolean = false) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.slave()
     val gp = new GPIO
+    val uart = new ValidIO(UInt(8.W))
     // for lab 6 -- ???
     val ram_random_mask = Output(UInt(5.W))
   })
@@ -289,7 +290,9 @@ class Confreg(simulation: Boolean = false) extends Module {
   }
 
   def virtual_uartHandle(): Unit = {
-    when(conf_we & (conf_addr(15, 0) === VIRTUAL_UART_ADDR)) {
+    io.uart.bits := conf_wdata(7,0)
+    io.uart.valid := conf_we & (conf_addr(15, 0) === VIRTUAL_UART_ADDR)
+    when(io.uart.valid) {
       virtual_uart_data := conf_wdata(7, 0)
     }
   }

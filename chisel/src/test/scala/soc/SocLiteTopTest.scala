@@ -5,50 +5,83 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import scala.io.Source
 
 class SocLiteTopTest extends ChiselFlatSpec {
-  behavior.of("Soc")
+  behavior.of("func_test")
+  val funcFile = "./src/test/resources/loongson/func/inst_ram.coe"
 
-  val instFile = "./src/test/resources/loongsonFunc/inst_ram.coe"
-  "pc" should "run to 0xbfc00100" in {
-    Driver.execute(Array(), () => new SocLiteTop(simulation = true, memFile = instFile)) { c =>
+  it should "use no backend" in {
+    Driver.execute(
+      Array(),
+      () => new SocLiteTop(simulation = true, memFile = funcFile)
+    ) { c =>
       new SocLiteTopUnitTester(c)
     } should be(true)
   }
 
-  it should "satisfy golden_trace" in {
+  it should "use verilator without vcd file" in {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
-      () => new SocLiteTop(simulation = true, memFile = instFile)
-    ) { c => new SocLiteTopUnitTester(c, trace = true) }
-  }
-  it should "generate vcd file" in {
-    Driver.execute(
-      Array(
-        "--backend-name",
-        "verilator",
-        "--generate-vcd-output",
-        "on",
-        "-td",
-        "test_run_dir/soc_lite/vcd",
-        "--top-name",
-        "soc"
-      ),
-      () => new SocLiteTop(simulation = true, memFile = instFile)
+      () => new SocLiteTop(simulation = true, memFile = funcFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, trace = false)
+      new SocLiteTopUnitTester(c, trace = true)
+    } should be(true)
+  }
+
+  it should "use verilator to generate vcd file" in {
+    Driver.execute(
+      Array("--backend-name", "verilator"),
+      () => new SocLiteTop(simulation = true, memFile = funcFile)
+    ) { c =>
+      new SocLiteTopUnitTester(c)
+    } should be(true)
+  }
+
+  behavior.of("perf_test")
+  val perfFile = "./src/test/resources/loongson/perf/axi_ram.coe"
+
+  it should "use verilator without vcd file" in {
+    Driver.execute(
+      Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
+      () => new SocLiteTop(simulation = false, memFile = perfFile)
+    ) { c =>
+      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 1)
+    } should be(true)
+  }
+  it should "use verilator to generate vcd file" in {
+    Driver.execute(
+      Array("--backend-name", "verilator"),
+      () => new SocLiteTop(simulation = false, memFile = perfFile)
+    ) { c =>
+      new SocLiteTopUnitTester(c, banLog = true)
     } should be(true)
   }
 
 }
 
-class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolean = false, needAssert: Boolean = false)
-    extends PeekPokeTester(c) {
+/**
+  *
+  * @param c  The Soc
+  * @param banLog Will disable the log info, but the error message will still be output
+  * @param trace Will compare to trace, only valid for func test
+  * @param needAssert For auto test, if needAsert is true, the test will break when cpu goes wrong
+  * @param perfNumber For perf test, it choose which test case to run. For func test, it should be 0
+  */
+class SocLiteTopUnitTester(
+  c:          SocLiteTop,
+  banLog:     Boolean = false,
+  trace:      Boolean = false,
+  needAssert: Boolean = false,
+  perfNumber: Int = 0,
+) extends PeekPokeTester(c) {
+  assert(perfNumber >= 0 && perfNumber <= 10)
 
   import chisel3._
 
-  val trace_file = "./src/test/resources/loongsonFunc/golden_trace.txt"
+  val trace_file = "./src/test/resources/loongson/func/golden_trace.txt"
   val source = Source.fromFile(trace_file)
   val lines = source.getLines()
   var trace_line = lines.next().split(" ").map(BigInt(_, 16))
+
+
 
   var before = System.currentTimeMillis()
   val pcEnd = BigInt("bfc00100", 16)
@@ -60,8 +93,10 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
 
   var lastDebugInfo = ""
 
+  def switchData = if(perfNumber == 0) BigInt("ff", 16).toInt else 15 - perfNumber
+
   step(1)
-  poke(c.io.gp.switch, "hff".U(8.W))
+  poke(c.io.gp.switch, switchData.U(8.W))
   poke(c.io.gp.btn_key_row, 0.U(4.W))
   poke(c.io.gp.btn_step, 3.U(2.W))
   reset(3)
@@ -74,6 +109,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
   info(s"run $cCount cycles, $iCount instructions")
   info(s"IPC is ${iCount.toFloat / cCount}")
 
+
   def run(): Boolean = {
     while (pc != pcEnd) {
       val current = System.currentTimeMillis()
@@ -81,7 +117,7 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
         iCount = iCount + 1
         lastDebugInfo = debugInfo
         if (current - before > 5000) {
-          info(lastDebugInfo)
+          info(s"running: $lastDebugInfo")
           before = current
         }
         if (trace) {
@@ -111,7 +147,13 @@ class SocLiteTopUnitTester(c: SocLiteTop, banLog: Boolean = false, trace: Boolea
     wen = peek(c.io.debug.wbRegFileWEn)
     wnum = peek(c.io.debug.wbRegFileWNum)
     wdata = peek(c.io.debug.wbRegFileWData)
-    super.step(n)
+    uartSimu()
+    step(n)
+  }
+  def uartSimu(): Unit = {
+    if (peek(c.io.uart.valid) != 0) {
+      print(peek(c.io.uart.bits).toChar)
+    }
   }
 
   def debugInfo = f"pc--0x$pc%08x, wen--${(wen != 0).toString}%5s, wnum--$wnum%02x, wdata--0x$wdata%08x"
