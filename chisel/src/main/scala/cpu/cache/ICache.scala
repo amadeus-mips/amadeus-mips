@@ -112,10 +112,18 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   lastState := state
   io.hit := hit
   // TODO: always check if this signal is correct
-  // TODO: de-assert after a ready
   // asserted until ar ready
   // if there is a miss, then don't change it; if miss is false and there is a miss, change it
   io.miss := miss
+  //TODO: there is still a cycle's latency for a read miss
+  // expected behavior:
+  // cycle    0   |  1  |  2  |  3  |
+  //  hit?    hit | miss| -     -
+  // io.miss  low |  low|high
+
+  //  when((lastState === sIdle) && (!tagMatch) && (state === sIdle) && (!io.flush) && (io.addr.valid)) {
+  //    io.miss := true.B
+  //  }
   //  io.miss := Mux(miss, miss, !hit)
   // this is also wrong, as it will never de-assert
   //  io.miss := ((state === sIdle) && !tagMatch && (lastState =/= sMiss)) || inAMiss
