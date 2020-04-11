@@ -22,8 +22,7 @@ class DCache extends Module {
     val bus_rValid = Input(Bool())
     val bus_wReady = Input(Bool())           // write to axi bus ready
     val bus_bValid = Input(Bool())           // write to axi bus response valid
-
-    val flush = Input(Bool())
+    
     // TODO convert to `NiseSramIO`
     val cpu_addr = Input(UInt(addrLen.W))   // address from cpu
     val cpu_ren = Input(Bool())             // read enable from cpu

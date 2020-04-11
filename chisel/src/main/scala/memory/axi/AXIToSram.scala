@@ -23,7 +23,7 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
     val bus = AXIIO.slave()
     val ram = new SimpleSramIO
   })
-  assert(!(io.bus.ar.burst =/= 1.U && io.bus.ar.valid), "Unsupported burst type! Only support INCR burst")
+  assert(!(io.bus.ar.bits.burst =/= 1.U && io.bus.ar.valid), "Unsupported burst type! Only support INCR burst")
 
   //---- read channel --------------------------------------------------
   val sRIdle :: sRWaitRam :: sRWaitBus :: Nil = Enum(3)
@@ -80,19 +80,19 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   }
 
   io.bus.ar.ready := rq.io.enq.ready // make sure the queue is not full
-  io.bus.r.id := id
-  io.bus.r.data := rData
-  io.bus.r.resp := 0.U // fixed OKAY
-  io.bus.r.last := rLast
+  io.bus.r.bits.id := id
+  io.bus.r.bits.data := rData
+  io.bus.r.bits.resp := 0.U // fixed OKAY
+  io.bus.r.bits.last := rLast
   io.bus.r.valid := rValid
 
   io.ram.read.addr := ramRAddr
   io.ram.read.enable := rState === sRWaitRam
 
   rq.io.deq.ready := rq.io.deq.valid && rState === sRIdle
-  rq.io.enq.bits.addr := io.bus.ar.addr
-  rq.io.enq.bits.len := io.bus.ar.len
-  rq.io.enq.valid := io.bus.ar.ready && io.bus.ar.valid && io.bus.ar.id === id
+  rq.io.enq.bits.addr := io.bus.ar.bits.addr
+  rq.io.enq.bits.len := io.bus.ar.bits.len
+  rq.io.enq.valid := io.bus.ar.ready && io.bus.ar.valid && io.bus.ar.bits.id === id
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
@@ -116,8 +116,8 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
     }
     is(sWWaitBus) {
       when(io.bus.w.valid && io.ram.write.valid) {
-        assert(!(wLen === 0.U ^ io.bus.w.last), "wLen conflict with last")
-        when(wLen === 0.U && io.bus.w.last) {
+        assert(!(wLen === 0.U ^ io.bus.w.bits.last), "wLen conflict with last")
+        when(wLen === 0.U && io.bus.w.bits.last) {
           wState := sBWaitBus
         }.otherwise {
           ramWAddr := ramWAddr + 4.U
@@ -134,19 +134,19 @@ class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
 
   io.bus.aw.ready := wq.io.enq.ready // make sure the queue is not full
   io.bus.w.ready := wState === sWWaitBus && io.bus.w.valid && io.ram.write.valid
-  io.bus.b.id := id
-  io.bus.b.resp := 0.U // fixed OKAY
+  io.bus.b.bits.id := id
+  io.bus.b.bits.resp := 0.U // fixed OKAY
   io.bus.b.valid := wState === sBWaitBus
 
   io.ram.write.addr := ramWAddr
   io.ram.write.enable := wState === sWWaitBus && io.bus.w.valid
-  io.ram.write.sel := io.bus.w.strb
-  io.ram.write.data := io.bus.w.data
+  io.ram.write.sel := io.bus.w.bits.strb
+  io.ram.write.data := io.bus.w.bits.data
 
   wq.io.deq.ready := wState === sWIdle && wq.io.deq.valid
-  wq.io.enq.bits.addr := io.bus.aw.addr
-  wq.io.enq.bits.len := io.bus.aw.len
-  wq.io.enq.valid := io.bus.aw.ready && io.bus.aw.valid && io.bus.aw.id === id
+  wq.io.enq.bits.addr := io.bus.aw.bits.addr
+  wq.io.enq.bits.len := io.bus.aw.bits.len
+  wq.io.enq.valid := io.bus.aw.ready && io.bus.aw.valid && io.bus.aw.bits.id === id
   //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 }

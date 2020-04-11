@@ -57,10 +57,10 @@ class AXIInterface extends Module {
         when(io.bus.r.valid && rready_reg){
           when(cntEn && cnt =/= 1.U){
             rready_reg := true.B
-            when(io.bus.r.last){
+            when(io.bus.r.bits.last){
               cnt := cnt - 1.U
             }
-          }.elsewhen(io.bus.r.last) {
+          }.elsewhen(io.bus.r.bits.last) {
             rState := sRFinish
             cnt := 0.U
             rready_reg := false.B
@@ -107,7 +107,7 @@ class AXIInterface extends Module {
     }
     is(sWWait){
       when(wvalid_reg && io.bus.w.ready){
-        when(io.bus.w.last){
+        when(io.bus.w.bits.last){
           wState := sWFinish
           wvalid_reg := false.B
         }

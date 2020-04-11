@@ -146,9 +146,9 @@ class Confreg(simulation: Boolean = false) extends Module {
     val R_or_W = RegInit(false.B)
     //  val swready = ???
     val ar_enter = io.axi.ar.valid & io.axi.ar.ready
-    val r_retire = io.axi.r.valid & io.axi.r.ready & io.axi.r.last
+    val r_retire = io.axi.r.valid & io.axi.r.ready & io.axi.r.bits.last
     val aw_enter = io.axi.aw.valid & io.axi.aw.ready
-    val w_enter = io.axi.w.valid & io.axi.w.ready & io.axi.w.last
+    val w_enter = io.axi.w.valid & io.axi.w.ready & io.axi.w.bits.last
     val b_retire = io.axi.b.valid & io.axi.b.ready
 
     io.axi.ar.ready := !busy & (!R_or_W | !io.axi.aw.valid)
@@ -167,17 +167,17 @@ class Confreg(simulation: Boolean = false) extends Module {
 
     when(ar_enter | aw_enter) {
       R_or_W := ar_enter
-      buf_id := Mux(ar_enter, io.axi.ar.id, io.axi.aw.id)
-      buf_addr := Mux(ar_enter, io.axi.ar.addr, io.axi.aw.addr)
-      buf_len := Mux(ar_enter, io.axi.ar.len, io.axi.aw.len)
-      buf_size := Mux(ar_enter, io.axi.ar.size, io.axi.aw.size)
+      buf_id := Mux(ar_enter, io.axi.ar.bits.id, io.axi.aw.bits.id)
+      buf_addr := Mux(ar_enter, io.axi.ar.bits.addr, io.axi.aw.bits.addr)
+      buf_len := Mux(ar_enter, io.axi.ar.bits.len, io.axi.aw.bits.len)
+      buf_size := Mux(ar_enter, io.axi.ar.bits.size, io.axi.aw.bits.size)
     }
 
     val conf_wready_reg = RegInit(false.B)
     io.axi.w.ready := conf_wready_reg
     when(aw_enter) {
       conf_wready_reg := true.B
-    }.elsewhen(w_enter & io.axi.w.last) {
+    }.elsewhen(w_enter & io.axi.w.bits.last) {
       conf_wready_reg := false.B
     }
 
@@ -185,9 +185,9 @@ class Confreg(simulation: Boolean = false) extends Module {
     val conf_rdata_reg = RegInit(0.U(32.W))
     val conf_rvalid_reg = RegInit(false.B)
     val conf_rlast_reg = RegInit(false.B)
-    io.axi.r.data := conf_rdata_reg
+    io.axi.r.bits.data := conf_rdata_reg
     io.axi.r.valid := conf_rvalid_reg
-    io.axi.r.last := conf_rlast_reg
+    io.axi.r.bits.last := conf_rlast_reg
     when(busy & R_or_W & !r_retire) {
       conf_rvalid_reg := true.B
       conf_rlast_reg := true.B
@@ -216,7 +216,7 @@ class Confreg(simulation: Boolean = false) extends Module {
     // conf write, only support a word write
     conf_we := w_enter
     conf_addr := buf_addr
-    conf_wdata := io.axi.w.data
+    conf_wdata := io.axi.w.bits.data
 
     val conf_bvalid_reg = RegInit(false.B)
     io.axi.b.valid := conf_bvalid_reg
@@ -226,10 +226,10 @@ class Confreg(simulation: Boolean = false) extends Module {
       conf_bvalid_reg := false.B
     }
 
-    io.axi.r.id := buf_id
-    io.axi.b.id := buf_id
-    io.axi.b.resp := 0.U
-    io.axi.r.resp := 0.U
+    io.axi.r.bits.id := buf_id
+    io.axi.b.bits.id := buf_id
+    io.axi.b.bits.resp := 0.U
+    io.axi.r.bits.resp := 0.U
   }
 
   def confreg_registerHandle(): Unit = {

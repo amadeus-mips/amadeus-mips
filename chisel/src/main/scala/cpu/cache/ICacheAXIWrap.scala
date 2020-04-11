@@ -25,25 +25,25 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
 
   io.axi := DontCare
 
-  io.axi.ar.id := INST_ID
-  io.axi.ar.addr := Mux(
+  io.axi.ar.bits.id := INST_ID
+  io.axi.ar.bits.addr := Mux(
     cachedTrans,
     Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
     virToPhy(addr)
   )
-  io.axi.ar.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 8 or 1
-  io.axi.ar.size := "b010".U(3.W) // 4 Bytes
-  io.axi.ar.burst := "b01".U(2.W) // Incrementing-address burst
-  io.axi.ar.lock := 0.U
-  io.axi.ar.cache := 0.U
-  io.axi.ar.prot := 0.U
+  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 8 or 1
+  io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
+  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
+  io.axi.ar.bits.lock := 0.U
+  io.axi.ar.bits.cache := 0.U
+  io.axi.ar.bits.prot := 0.U
   io.axi.ar.valid := !io.flush && Mux(cachedTrans, iCache.io.miss, io.rInst.enable)
 
   io.rInst.valid := cachedTrans && iCache.io.hit
   io.rInst.data := iCache.io.inst
 
-  iCache.io.busData.bits := io.axi.r.data
-  iCache.io.busData.valid := io.axi.r.id === INST_ID && io.axi.r.valid
+  iCache.io.busData.bits := io.axi.r.bits.data
+  iCache.io.busData.valid := io.axi.r.bits.id === INST_ID && io.axi.r.valid
   iCache.io.flush := io.flush
   iCache.io.addr.bits := io.rInst.addr
   iCache.io.addr.valid := io.rInst.enable
