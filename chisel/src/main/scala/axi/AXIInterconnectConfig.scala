@@ -88,7 +88,7 @@ class AXIInterconnectConfig
   val mSecure: Seq[Boolean],
   banLog: Boolean = false,
 ) {
-  def strbWidth = dataWidth / 32
+  def strbWidth = dataWidth / 8
   def clsCount = log2Ceil(sCount)
   def clmCount = log2Ceil(mCount)
   def mConnectRead: Vec[Vec[Bool]] = {

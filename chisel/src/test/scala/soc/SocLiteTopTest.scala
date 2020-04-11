@@ -43,7 +43,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 1)
+      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 4)
     } should be(true)
   }
   it should "use verilator to generate vcd file" in {
@@ -51,7 +51,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       Array("--backend-name", "verilator"),
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true)
+      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 4)
     } should be(true)
   }
 
@@ -72,7 +72,7 @@ class SocLiteTopUnitTester(
   needAssert: Boolean = false,
   perfNumber: Int = 0,
 ) extends PeekPokeTester(c) {
-  assert(perfNumber >= 0 && perfNumber <= 10)
+  require(perfNumber >= 0 && perfNumber <= 10)
 
   import chisel3._
 
@@ -103,7 +103,7 @@ class SocLiteTopUnitTester(
   var iCount = 0
   var cCount = 1 // avoid divide 0
   val result = run()
-  if (needAssert) assert(result)
+  if (needAssert) require(result)
   step(10)
   info("Finished!")
   info(s"run $cCount cycles, $iCount instructions")
@@ -114,6 +114,10 @@ class SocLiteTopUnitTester(
     while (pc != pcEnd) {
       val current = System.currentTimeMillis()
       if (pc != 0) {
+        if(pc < BigInt("9fc00000", 16) || (perfNumber != 0 && pc == BigInt("bfc00384", 16))){
+          err(lastDebugInfo)
+          return false
+        }
         iCount = iCount + 1
         lastDebugInfo = debugInfo
         if (current - before > 5000) {
