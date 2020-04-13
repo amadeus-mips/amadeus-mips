@@ -74,7 +74,7 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
 
   // LRU points to the least recently used item in each set
   // we can do this because it is only 2 way set associative now
-  //TODO: change the LRU to support more ways
+  //TODO: change the LRU to support more ways, note to change everywhere
   /** LRU(index) */
   val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
 
@@ -96,21 +96,9 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
 
   //TODO: should I check for the LSB in the address here?
   val hit = !io.flush && state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
-  // here is what happens on a write during a miss
-  // every cycle, 4 bytes of data will be transferred by AXI, exactly a bank
-  //  for (i <- 0 until wayAmount) {
-  //    val writing = state === sMiss && !cnt(bankAmount) && io.busData.valid
-  //    when(writing && LRU(index) === i.U) {
-  //      for (j <- 0 until bankAmount) {
-  //        we(i)(j) := cnt(j)
-  //      }
-  //    }.otherwise {
-  //      we(i) := 0.U.asTypeOf(Vec(bankAmount, Bool()))
-  //    }
-  //    tagWe(i) := state === sMiss && cnt(0) && io.busData.valid && LRU(index) === i.U
-  //  }
   lastState := state
   io.hit := hit
+
   // TODO: always check if this signal is correct
   // asserted until ar ready
   // if there is a miss, then don't change it; if miss is false and there is a miss, change it
@@ -142,12 +130,10 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
           miss := !tagMatch
           state := Mux(tagMatch, sIdle, sMiss)
           when(tagMatch) {
-            // when there is a hit, update the LRU
-            // if the way of the hit is the line lru
-            // then update lru to point at the other line
-            when(lruLine === hitWay) {
-              LRU(index) := (~(lruLine.asBool)).asUInt()
-            }
+            // when there is a hit, update the LRU to point
+            // at the other side
+            LRU(index) := (~(hitWay.asBool)).asUInt()
+            //            }
           }.otherwise {
             // during a miss, set the lowest bit of cnt to be true
             // this means we'll start writing from here
@@ -163,6 +149,9 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
           cnt := 0.U
           state := sIdle
           miss := false.B
+          // during the last cycle of a miss, update LRU to point
+          // at the line just brought into cache
+          LRU(index) := (~(index.asBool)).asUInt
         }
       }
     }
