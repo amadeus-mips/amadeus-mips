@@ -33,7 +33,6 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val io = IO(new Bundle {
     val busData = Input(new ValidBundle)
 
-    val flush = Input(Bool())
     val addr = Input(new ValidBundle)
     val inst = Output(UInt(dataLen.W))
     val hit = Output(Bool())
@@ -95,7 +94,7 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   }
 
   //TODO: should I check for the LSB in the address here?
-  val hit = !io.flush && state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
+  val hit = state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
   // here is what happens on a write during a miss
   // every cycle, 4 bytes of data will be transferred by AXI, exactly a bank
   //  for (i <- 0 until wayAmount) {
@@ -130,40 +129,34 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   io.inst := bankData(RegNext(hitWay))(RegNext(bankOffset))
 
   // the FSM transformation
-  when(io.flush) {
-    miss := false.B
-    cnt := 0.U
-    state := sIdle
-  }.otherwise {
-    switch(state) {
-      is(sIdle) {
-        //TODO: make sure the fetch stage does not pass valid signal when the address is not aligned
-        when(io.addr.valid) {
-          miss := !tagMatch
-          state := Mux(tagMatch, sIdle, sMiss)
-          when(tagMatch) {
-            // when there is a hit, update the LRU
-            // if the way of the hit is the line lru
-            // then update lru to point at the other line
-            when(lruLine === hitWay) {
-              LRU(index) := (~(lruLine.asBool)).asUInt()
-            }
-          }.otherwise {
-            // during a miss, set the lowest bit of cnt to be true
-            // this means we'll start writing from here
-            cnt := 1.U
+  switch(state) {
+    is(sIdle) {
+      //TODO: make sure the fetch stage does not pass valid signal when the address is not aligned
+      when(io.addr.valid) {
+        miss := !tagMatch
+        state := Mux(tagMatch, sIdle, sMiss)
+        when(tagMatch) {
+          // when there is a hit, update the LRU
+          // if the way of the hit is the line lru
+          // then update lru to point at the other line
+          when(lruLine === hitWay) {
+            LRU(index) := (~(lruLine.asBool)).asUInt()
           }
+        }.otherwise {
+          // during a miss, set the lowest bit of cnt to be true
+          // this means we'll start writing from here
+          cnt := 1.U
         }
       }
-      is(sMiss) {
-        when(!cnt(bankAmount - 1) && io.busData.valid) {
-          cnt := cnt << 1
-        }.elsewhen(cnt(bankAmount - 1)) {
-          valid(lruLine)(index) := true.B
-          cnt := 0.U
-          state := sIdle
-          miss := false.B
-        }
+    }
+    is(sMiss) {
+      when(!cnt(bankAmount - 1) && io.busData.valid) {
+        cnt := cnt << 1
+      }.elsewhen(cnt(bankAmount - 1)) {
+        valid(lruLine)(index) := true.B
+        cnt := 0.U
+        state := sIdle
+        miss := false.B
       }
     }
   }

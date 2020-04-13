@@ -13,7 +13,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
-    val flush = Input(Bool())
   })
   // this is not a circuit component, so use require ( at elaboration time ) instead of assert
   require(bankAmount <= 16 && bankAmount >= 1, s"bank amount is $bankAmount! Need between 1 and 16")
@@ -37,14 +36,13 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
   io.axi.ar.bits.lock := 0.U
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U
-  io.axi.ar.valid := !io.flush && Mux(cachedTrans, iCache.io.miss, io.rInst.enable)
+  io.axi.ar.valid := Mux(cachedTrans, iCache.io.miss, io.rInst.enable)
 
   io.rInst.valid := cachedTrans && iCache.io.hit
   io.rInst.data := iCache.io.inst
 
   iCache.io.busData.bits := io.axi.r.bits.data
   iCache.io.busData.valid := io.axi.r.bits.id === INST_ID && io.axi.r.valid
-  iCache.io.flush := io.flush
   iCache.io.addr.bits := io.rInst.addr
   iCache.io.addr.valid := io.rInst.enable
 
