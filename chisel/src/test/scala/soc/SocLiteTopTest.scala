@@ -31,7 +31,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       Array("--backend-name", "verilator"),
       () => new SocLiteTop(simulation = true, memFile = funcFile)
     ) { c =>
-      new SocLiteTopUnitTester(c)
+      new SocLiteTopUnitTester(c, trace = true)
     } should be(true)
   }
 
@@ -129,6 +129,7 @@ class SocLiteTopUnitTester(
             if (trace_line(0) != 0) {
               if (!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))) {
                 err(lastDebugInfo)
+                err(s"Should be ${trace_line.foldLeft("")(_ + " " + _.toString(16))}")
                 return false
               }
             }

@@ -132,6 +132,8 @@ trait exceptConstants {
   val EXCEPT_OVERFLOW = 5
   val EXCEPT_LOAD = 6
   val EXCEPT_STORE = 7
+
+  /** External interrupt */
   val EXCEPT_INTR = 8
 }
 

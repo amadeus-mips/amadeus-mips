@@ -33,7 +33,6 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val io = IO(new Bundle {
     val busData = Input(new ValidBundle)
 
-    val flush = Input(Bool())
     val addr = Input(new ValidBundle)
     val inst = Output(UInt(dataLen.W))
     val hit = Output(Bool())
@@ -74,7 +73,7 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
 
   // LRU points to the least recently used item in each set
   // we can do this because it is only 2 way set associative now
-  //TODO: change the LRU to support more ways, note to change everywhere
+  //TODO: change the LRU to support more ways
   /** LRU(index) */
   val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
 
@@ -95,64 +94,52 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   }
 
   //TODO: should I check for the LSB in the address here?
-  val hit = !io.flush && state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
+  val hit = state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
+  // here is what happens on a write during a miss
+  // every cycle, 4 bytes of data will be transferred by AXI, exactly a bank
+
   lastState := state
   io.hit := hit
 
-  // TODO: always check if this signal is correct
-  // asserted until ar ready
+  // asserted until ar ready is asserted
   // if there is a miss, then don't change it; if miss is false and there is a miss, change it
   io.miss := miss
-  //TODO: there is still a cycle's latency for a read miss
-  // expected behavior:
-  // cycle    0   |  1  |  2  |  3  |
-  //  hit?    hit | miss| -     -
-  // io.miss  low |  low|high
 
-  //  when((lastState === sIdle) && (!tagMatch) && (state === sIdle) && (!io.flush) && (io.addr.valid)) {
-  //    io.miss := true.B
-  //  }
-  //  io.miss := Mux(miss, miss, !hit)
-  // this is also wrong, as it will never de-assert
-  //  io.miss := ((state === sIdle) && !tagMatch && (lastState =/= sMiss)) || inAMiss
   io.inst := bankData(RegNext(hitWay))(RegNext(bankOffset))
 
   // the FSM transformation
-  when(io.flush) {
-    miss := false.B
-    cnt := 0.U
-    state := sIdle
-  }.otherwise {
-    switch(state) {
-      is(sIdle) {
-        //TODO: make sure the fetch stage does not pass valid signal when the address is not aligned
-        when(io.addr.valid) {
-          miss := !tagMatch
-          state := Mux(tagMatch, sIdle, sMiss)
-          when(tagMatch) {
-            // when there is a hit, update the LRU to point
-            // at the other side
+  switch(state) {
+    is(sIdle) {
+      //TODO: make sure the fetch stage does not pass valid signal when the address is not aligned
+      when(io.addr.valid) {
+        miss := !tagMatch
+        state := Mux(tagMatch, sIdle, sMiss)
+        when(tagMatch) {
+          // when there is a hit, update the LRU
+          // if the way of the hit is the line lru
+          // then update lru to point at the other line
+          when(lruLine === hitWay) {
             LRU(index) := (~(hitWay.asBool)).asUInt()
-            //            }
-          }.otherwise {
-            // during a miss, set the lowest bit of cnt to be true
-            // this means we'll start writing from here
-            cnt := 1.U
           }
+        }.otherwise {
+          // during a miss, set the lowest bit of cnt to be true
+          // this means we'll start writing from here
+          // also, set io.miss to true. This will save a cycle
+          io.miss := true.B
+          cnt := 1.U
         }
       }
-      is(sMiss) {
-        when(!cnt(bankAmount - 1) && io.busData.valid) {
-          cnt := cnt << 1
-        }.elsewhen(cnt(bankAmount - 1)) {
-          valid(lruLine)(index) := true.B
-          cnt := 0.U
-          state := sIdle
-          miss := false.B
-          // during the last cycle of a miss, update LRU to point
-          // at the line just brought into cache
-          LRU(index) := (~(index.asBool)).asUInt
-        }
+    }
+    is(sMiss) {
+      when(!cnt(bankAmount - 1) && io.busData.valid) {
+        cnt := cnt << 1
+        // on the first transfer of data, de-assert ar valid which
+        // is io.miss here
+        io.miss := false.B
+      }.elsewhen(cnt(bankAmount - 1)) {
+        valid(lruLine)(index) := true.B
+        cnt := 0.U
+        state := sIdle
       }
     }
   }

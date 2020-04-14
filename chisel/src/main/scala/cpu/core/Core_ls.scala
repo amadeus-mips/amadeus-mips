@@ -10,13 +10,10 @@ import cpu.core.Constants._
 class Core_ls extends Core {
   val io_ls = IO(new Bundle {
     val ex_addr = Output(UInt(addrLen.W))
-    val flush = Output(Bool())
     val debug = Output(new DebugBundle)
   })
 
   io_ls.ex_addr := executeTop.io.out.memAddr
-
-  io_ls.flush := ctrl.io.flush
 
   io_ls.debug.wbPC := mem_wb.io.out.pc
   io_ls.debug.wbRegFileWEn := Fill(4, mem_wb.io.out.write.enable)
