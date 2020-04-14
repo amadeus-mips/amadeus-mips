@@ -43,7 +43,6 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val sIdle :: sMiss :: Nil = Enum(2)
   val lastState = RegInit(sIdle)
   val state = RegInit(sIdle)
-  // cnt is a pseudo write mask, we should just use a real counter 0-7
   val cnt = RegInit(0.U(bankAmount.W))
   val miss = RegInit(false.B)
 
@@ -97,35 +96,14 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val hit = state === sIdle && tagMatch || io.addr.bits(1, 0) =/= 0.U
   // here is what happens on a write during a miss
   // every cycle, 4 bytes of data will be transferred by AXI, exactly a bank
-  //  for (i <- 0 until wayAmount) {
-  //    val writing = state === sMiss && !cnt(bankAmount) && io.busData.valid
-  //    when(writing && LRU(index) === i.U) {
-  //      for (j <- 0 until bankAmount) {
-  //        we(i)(j) := cnt(j)
-  //      }
-  //    }.otherwise {
-  //      we(i) := 0.U.asTypeOf(Vec(bankAmount, Bool()))
-  //    }
-  //    tagWe(i) := state === sMiss && cnt(0) && io.busData.valid && LRU(index) === i.U
-  //  }
+
   lastState := state
   io.hit := hit
-  // TODO: always check if this signal is correct
-  // asserted until ar ready
+
+  // asserted until ar ready is asserted
   // if there is a miss, then don't change it; if miss is false and there is a miss, change it
   io.miss := miss
-  //TODO: there is still a cycle's latency for a read miss
-  // expected behavior:
-  // cycle    0   |  1  |  2  |  3  |
-  //  hit?    hit | miss| -     -
-  // io.miss  low |  low|high
 
-  //  when((lastState === sIdle) && (!tagMatch) && (state === sIdle) && (!io.flush) && (io.addr.valid)) {
-  //    io.miss := true.B
-  //  }
-  //  io.miss := Mux(miss, miss, !hit)
-  // this is also wrong, as it will never de-assert
-  //  io.miss := ((state === sIdle) && !tagMatch && (lastState =/= sMiss)) || inAMiss
   io.inst := bankData(RegNext(hitWay))(RegNext(bankOffset))
 
   // the FSM transformation
@@ -140,11 +118,13 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
           // if the way of the hit is the line lru
           // then update lru to point at the other line
           when(lruLine === hitWay) {
-            LRU(index) := (~(lruLine.asBool)).asUInt()
+            LRU(index) := (~(hitWay.asBool)).asUInt()
           }
         }.otherwise {
           // during a miss, set the lowest bit of cnt to be true
           // this means we'll start writing from here
+          // also, set io.miss to true. This will save a cycle
+          io.miss := true.B
           cnt := 1.U
         }
       }
@@ -152,11 +132,13 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
     is(sMiss) {
       when(!cnt(bankAmount - 1) && io.busData.valid) {
         cnt := cnt << 1
+        // on the first transfer of data, de-assert ar valid which
+        // is io.miss here
+        io.miss := false.B
       }.elsewhen(cnt(bankAmount - 1)) {
         valid(lruLine)(index) := true.B
         cnt := 0.U
         state := sIdle
-        miss := false.B
       }
     }
   }
