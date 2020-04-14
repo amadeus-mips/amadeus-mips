@@ -6,22 +6,23 @@ import chisel3._
 import chisel3.util._
 import common.ValidBundle
 import cpu.common.DefaultConfig._
+import cpu.performance.CachePerformanceMonitorIO
 
 /**
   * only for 2 way
   * |   tag     |   index     |   bankOffset      | 0.U(2.W)  | <Br/>
   * | `tagLen`  | `indexLen`  | `log2(bankAmount)`|     2     |
   */
-//TODO: fix the "send the request next cycle" behaviour
 //TODO: implement a pipeline
 //TODO: way amount can't parameterize as of now
+//TODO: write to lru regardless of msr valid or not, should this change?
 /**
   * generate icache with number of sets = depth, split amongst bank amount banks
   *
   * @param depth      how many sets there are in the i-cache
   * @param bankAmount how many cache banks there are for the cache lines
   */
-class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
+class ICache(depth: Int = 128, bankAmount: Int = 16, performanceMonitor: Boolean = false) extends Module {
   val wayAmount = 2 // 每组路数
   require(depth % 2 == 0, "depth of the cache must be a power of 2")
   val indexLen = log2Ceil(depth) // index宽度
@@ -37,15 +38,32 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
     val inst = Output(UInt(dataLen.W))
     val hit = Output(Bool())
     val miss = Output(Bool())
+
+    // additional performance monitor IO
+    val monitorIO = if (performanceMonitor) Some(new CachePerformanceMonitorIO) else None
   })
   //-------------------------------------------------------------------------------
   //--------------------set up the states and register of FSM----------------------
   val sIdle :: sMiss :: Nil = Enum(2)
-  val lastState = RegInit(sIdle)
   val state = RegInit(sIdle)
   // cnt is a pseudo write mask, we should just use a real counter 0-7
   val cnt = RegInit(0.U(bankAmount.W))
   val miss = RegInit(false.B)
+
+  if (performanceMonitor) {
+    // performance counter to count how many misses and how many hits are there
+    val missCycleCounter = RegInit(0.U(32.W))
+    val hitCycleCounter = RegInit(0.U(32.W))
+    when(state === sIdle) {
+      hitCycleCounter := hitCycleCounter + 1.U
+    }.otherwise {
+      missCycleCounter := missCycleCounter + 1.U
+    }
+    val performanceMonitorWire = Wire(new CachePerformanceMonitorIO)
+    performanceMonitorWire.hitCycles := hitCycleCounter
+    performanceMonitorWire.missCycles := missCycleCounter
+    io.monitorIO.get := performanceMonitorWire
+  }
 
   //-------------------------------------------------------------------------------
   //-------------------- setup some values to use----------------------------------
@@ -98,7 +116,6 @@ class ICache(depth: Int = 128, bankAmount: Int = 16) extends Module {
   // here is what happens on a write during a miss
   // every cycle, 4 bytes of data will be transferred by AXI, exactly a bank
 
-  lastState := state
   io.hit := hit
 
   // asserted until ar ready is asserted

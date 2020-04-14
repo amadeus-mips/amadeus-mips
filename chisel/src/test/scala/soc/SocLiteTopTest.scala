@@ -4,6 +4,7 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 
 import scala.io.Source
 
+//TODO: implicit parameter passing
 class SocLiteTopTest extends ChiselFlatSpec {
   behavior.of("func_test")
   val funcFile = "./src/test/resources/loongson/func/inst_ram.coe"
@@ -20,9 +21,9 @@ class SocLiteTopTest extends ChiselFlatSpec {
   it should "use verilator without vcd file" in {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
-      () => new SocLiteTop(simulation = true, memFile = funcFile)
+      () => new SocLiteTop(simulation = true, memFile = funcFile, performanceMonitorEnable = true)
     ) { c =>
-      new SocLiteTopUnitTester(c, trace = true)
+      new SocLiteTopUnitTester(c, trace = true, performanceMonitorEnable = true)
     } should be(true)
   }
 
@@ -66,11 +67,12 @@ class SocLiteTopTest extends ChiselFlatSpec {
   * @param perfNumber For perf test, it choose which test case to run. For func test, it should be 0
   */
 class SocLiteTopUnitTester(
-  c:          SocLiteTop,
-  banLog:     Boolean = false,
-  trace:      Boolean = false,
-  needAssert: Boolean = false,
-  perfNumber: Int = 0,
+  c:                        SocLiteTop,
+  banLog:                   Boolean = false,
+  trace:                    Boolean = false,
+  needAssert:               Boolean = false,
+  perfNumber:               Int = 0,
+  performanceMonitorEnable: Boolean = false
 ) extends PeekPokeTester(c) {
   require(perfNumber >= 0 && perfNumber <= 10)
 
@@ -80,8 +82,6 @@ class SocLiteTopUnitTester(
   val source = Source.fromFile(trace_file)
   val lines = source.getLines()
   var trace_line = lines.next().split(" ").map(BigInt(_, 16))
-
-
 
   var before = System.currentTimeMillis()
   val pcEnd = BigInt("bfc00100", 16)
@@ -93,7 +93,7 @@ class SocLiteTopUnitTester(
 
   var lastDebugInfo = ""
 
-  def switchData = if(perfNumber == 0) BigInt("ff", 16).toInt else 15 - perfNumber
+  def switchData = if (perfNumber == 0) BigInt("ff", 16).toInt else 15 - perfNumber
 
   step(1)
   poke(c.io.gp.switch, switchData.U(8.W))
@@ -108,13 +108,17 @@ class SocLiteTopUnitTester(
   info("Finished!")
   info(s"run $cCount cycles, $iCount instructions")
   info(s"IPC is ${iCount.toFloat / cCount}")
-
+  if (performanceMonitorEnable) {
+    info(
+      s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses"
+    )
+  }
 
   def run(): Boolean = {
     while (pc != pcEnd) {
       val current = System.currentTimeMillis()
       if (pc != 0) {
-        if(pc < BigInt("9fc00000", 16) || (perfNumber != 0 && pc == BigInt("bfc00384", 16))){
+        if (pc < BigInt("9fc00000", 16) || (perfNumber != 0 && pc == BigInt("bfc00384", 16))) {
           err(lastDebugInfo)
           return false
         }

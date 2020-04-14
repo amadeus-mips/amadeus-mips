@@ -62,27 +62,31 @@ import chisel3._
 import common.{DebugBundle, GPIO}
 import confreg.Confreg
 import cpu.CPUTop
+import cpu.performance.SocPerformanceIO
 import memory.memoryAXIWrap
 
 /**
   *
   * @param simulation will impact the behavior of perf test, if it is true, the each perf test will run 10 times
-  * @param memFile the file will be write to memory
+  * @param memFile    the file will be write to memory
   */
-class SocLiteTop(simulation: Boolean = false, memFile: String) extends Module {
+class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonitorEnable: Boolean = false)
+    extends Module {
   val io = IO(new Bundle {
     val gp = new GPIO
     val uart = new ValidIO(UInt(8.W))
     val debug = Output(new DebugBundle)
+    val performance = if (performanceMonitorEnable) Some(new SocPerformanceIO) else None
   })
 
-  val cpu = Module(new CPUTop)
+  val cpu = Module(new CPUTop(performanceMonitorEnable = performanceMonitorEnable))
 
   /** 1x2 interconnect */
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func))
   val confreg = Module(new Confreg(simulation))
   val ram = Module(new memoryAXIWrap(memFile))
 
+  // the optional performance IO
   axiInterconnect.io.slaves(0) <> cpu.io.axi
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
@@ -91,4 +95,7 @@ class SocLiteTop(simulation: Boolean = false, memFile: String) extends Module {
   io.gp <> confreg.io.gp
   io.uart <> confreg.io.uart
   io.debug <> cpu.io.debug
+  if (performanceMonitorEnable) {
+    io.performance.get.cpu := cpu.io.performance.get
+  }
 }

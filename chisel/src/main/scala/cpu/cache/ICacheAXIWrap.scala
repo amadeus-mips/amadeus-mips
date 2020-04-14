@@ -8,11 +8,13 @@ import common.AXIIO
 import common.Constants._
 import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
+import cpu.performance.CachePerformanceMonitorIO
 
-class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
+class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitor: Boolean = false) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
+    val performanceMonitorIO = if (performanceMonitor) Some(new CachePerformanceMonitorIO) else None
   })
   // this is not a circuit component, so use require ( at elaboration time ) instead of assert
   require(bankAmount <= 16 && bankAmount >= 1, s"bank amount is $bankAmount! Need between 1 and 16")
@@ -20,7 +22,12 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16) extends Module {
   val addr = io.rInst.addr
   val cachedTrans = true.B
 
-  val iCache = Module(new ICache(depth, bankAmount))
+  val iCache = Module(new ICache(depth, bankAmount, performanceMonitor))
+
+  // cache performance io
+  if (performanceMonitor) {
+    io.performanceMonitorIO.get := iCache.io.monitorIO.get
+  }
 
   io.axi := DontCare
 
