@@ -5,11 +5,11 @@ package experimental
 import _root_.experimental.Marcos._
 import chisel3._
 import chisel3.util._
-import common.Util
 import cpu.common.CP0Struct
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
 import cpu.core.components.CP0IO
+import shared.Util
 
 class CP0 extends Module {
   val io = IO(new CP0IO)

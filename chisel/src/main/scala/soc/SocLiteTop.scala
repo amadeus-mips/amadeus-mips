@@ -56,14 +56,14 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package soc
 
 /** Modified by Discreater */
-import Chisel.ValidIO
 import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
-import common.{DebugBundle, GPIO}
+import chisel3.util.ValidIO
 import confreg.Confreg
 import cpu.CPUTop
 import cpu.performance.SocPerformanceIO
 import memory.memoryAXIWrap
+import shared.{DebugBundle, GPIO}
 
 /**
   *

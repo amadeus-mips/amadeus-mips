@@ -4,9 +4,9 @@ package cpu.core.memory
 
 import chisel3._
 import chisel3.util.{Cat, Fill, MuxLookup}
-import common.Util
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
+import shared.Util
 
 class Control extends Module {
   val io = IO(new Bundle {

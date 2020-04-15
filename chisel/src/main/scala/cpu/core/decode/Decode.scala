@@ -4,9 +4,9 @@ package cpu.core.decode
 
 import chisel3._
 import chisel3.util._
-import common.Util._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, WriteBundle}
+import shared.Util
 
 class Decode extends Module {
   val io = IO(new Bundle {
@@ -33,10 +33,10 @@ class Decode extends Module {
   // 根据IMMType选择imm
   val imm32 = MuxLookup(io.signal.immType, 0.U,
     Array(
-      IMM_LSE -> signedExtend(imm16),
-      IMM_LZE -> zeroExtend(imm16),
+      IMM_LSE -> Util.signedExtend(imm16),
+      IMM_LZE -> Util.zeroExtend(imm16),
       IMM_HZE -> Cat(imm16, Fill(16, 0.U)),
-      IMM_SHT -> zeroExtend(sa)
+      IMM_SHT -> Util.zeroExtend(sa)
     )
   )
 

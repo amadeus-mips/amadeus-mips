@@ -3,8 +3,8 @@
 package cpu.core.execute.components
 
 import chisel3._
-import common.Util
 import cpu.core.Constants._
+import shared.Util
 
 class Memory extends Module {
   val io = IO(new Bundle {

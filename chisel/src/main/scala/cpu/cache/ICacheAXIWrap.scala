@@ -3,12 +3,12 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.util.{log2Ceil, Cat}
-import common.AXIIO
-import common.Constants._
+import chisel3.util.{Cat, log2Ceil}
 import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
 import cpu.performance.CachePerformanceMonitorIO
+import shared.AXIIO
+import shared.Constants._
 
 class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitor: Boolean = false) extends Module {
   val io = IO(new Bundle {

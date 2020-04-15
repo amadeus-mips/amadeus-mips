@@ -1,7 +1,7 @@
 package gs132
 
-import _root_.common._
 import chisel3._
+import shared.{AXIIO, DebugBundle}
 
 /**
   * Can't work

@@ -3,7 +3,6 @@ package cpu.core.decode
 import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import cpu.core.Constants._
-import common.{Limits, Util}
 
 import scala.language.implicitConversions
 import scala.util.Random

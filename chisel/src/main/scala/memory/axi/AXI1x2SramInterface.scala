@@ -2,7 +2,7 @@
 package memory.axi
 
 import chisel3._
-import common.{AXIIO, Constants}
+import shared.{AXIIO, Constants}
 
 class AXI1x2SramInterface extends Module {
   val io = IO(new Bundle {

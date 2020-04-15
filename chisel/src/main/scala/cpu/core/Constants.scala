@@ -3,8 +3,8 @@
 package cpu.core
 
 import chisel3._
-import common.Util
 import cpu.common.{CP0Constants, DefaultWireLength, Instructions}
+import shared.Util
 
 trait opConstants {
   // @formatter:off

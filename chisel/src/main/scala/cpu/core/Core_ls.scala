@@ -4,8 +4,8 @@ package cpu.core
 
 import chisel3._
 import chisel3.util.Fill
-import common.DebugBundle
 import cpu.core.Constants._
+import shared.DebugBundle
 
 class Core_ls extends Core {
   val io_ls = IO(new Bundle {

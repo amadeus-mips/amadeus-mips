@@ -1,6 +1,6 @@
 // See README.md for license details.
 
-package common
+package shared
 
 import chisel3._
 

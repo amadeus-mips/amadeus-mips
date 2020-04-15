@@ -1,6 +1,6 @@
 import chisel3.Driver
 import chisel3._
-import common.Util
+import shared.Util
 
 object ChiselTest {
 

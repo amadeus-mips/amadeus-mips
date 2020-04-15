@@ -4,9 +4,8 @@ package cpu.core.execute.components
 
 import chisel3._
 import chisel3.util.{Cat, MuxLookup}
-import common.Util.signedExtend
-import common.ValidBundle
 import cpu.core.Constants._
+import shared.{ValidBundle, Util}
 
 class Branch extends Module {
   val io = IO(new Bundle {
@@ -19,7 +18,7 @@ class Branch extends Module {
   })
   val pcPlus4 = io.pc + 4.U
   val imm16 = io.imm26(15, 0)
-  val BImmExt = Cat(signedExtend(imm16, to = 30), 0.U(2.W))
+  val BImmExt = Cat(Util.signedExtend(imm16, to = 30), 0.U(2.W))
   val BTarget = pcPlus4 + BImmExt
   val JTarget = Cat(pcPlus4(31, 28), io.imm26, 0.U(2.W))
 

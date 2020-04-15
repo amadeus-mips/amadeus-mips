@@ -4,10 +4,10 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util.Cat
-import common.AXIIO
-import common.Constants._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.common.DefaultConfig._
+import shared.AXIIO
+import shared.Constants._
 
 class DCacheAXIWrap extends Module {
   val io = IO(new Bundle {

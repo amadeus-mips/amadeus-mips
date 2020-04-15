@@ -29,7 +29,7 @@ package axi
 
 import chisel3._
 import chisel3.util._
-import common.AXIIO
+import shared.AXIIO
 
 class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   val clsCount = log2Ceil(cfg.sCount)

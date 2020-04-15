@@ -3,12 +3,11 @@
 package cpu.core.pipeline
 
 import chisel3._
-import common.ValidBundle
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stage5.{IdExeBundle, IfIdBundle}
-import cpu.core.decode._
 import cpu.core.execute.components.Branch
+import shared.ValidBundle
 
 class DecodeTop extends Module {
   val io = IO(new Bundle {

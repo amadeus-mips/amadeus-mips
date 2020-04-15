@@ -3,10 +3,10 @@
 package cpu
 
 import chisel3._
-import _root_.common.{AXIIO, DebugBundle}
 import cpu.cache.{DCacheAXIWrap, ICacheAXIWrap}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
+import shared.{AXIIO, DebugBundle}
 
 /**
   * instantiate the top level module of the CPU

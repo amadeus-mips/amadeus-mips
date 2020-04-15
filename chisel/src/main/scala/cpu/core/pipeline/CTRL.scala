@@ -4,8 +4,8 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.MuxCase
-import common.{Buffer, ValidBundle}
 import cpu.core.Constants._
+import shared.ValidBundle
 
 class CTRL extends Module {
   val io = IO(new Bundle {

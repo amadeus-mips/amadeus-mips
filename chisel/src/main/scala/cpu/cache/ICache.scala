@@ -4,9 +4,9 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util._
-import common.ValidBundle
 import cpu.common.DefaultConfig._
 import cpu.performance.CachePerformanceMonitorIO
+import shared.ValidBundle
 
 /**
   * only for 2 way

@@ -3,9 +3,8 @@
 package cpu.core.bundles
 
 import chisel3._
-import chisel3.util.ValidIO
-import common.ValidBundle
 import cpu.core.Constants._
+import shared.ValidBundle
 
 /**
  * hi and lo are ValidIO

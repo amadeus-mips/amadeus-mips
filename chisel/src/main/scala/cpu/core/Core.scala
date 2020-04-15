@@ -3,7 +3,6 @@
 package cpu.core
 
 import chisel3._
-import common.Buffer
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.stage5.{ExeMemBundle, IfIdBundle, MemWbBundle}
@@ -11,6 +10,7 @@ import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
 import cpu.core.pipeline.stage5._
+import shared.Buffer
 
 class Core extends MultiIOModule {
   val io = IO(new Bundle {
