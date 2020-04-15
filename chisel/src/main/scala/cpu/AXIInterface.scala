@@ -16,7 +16,7 @@ class AXIInterface extends Module {
   val sRIdle :: sARWait :: sARFinish :: sRWait :: sRFinish :: Nil = Enum(5)
   val rState = RegInit(sRIdle)
   val arvalid_reg = RegInit(false.B)
-  val rready_reg = RegInit(false.B)
+  val rready_reg = RegInit(true.B)
 
   /** I forgot it :( */
   val rvalid_s =
@@ -24,9 +24,11 @@ class AXIInterface extends Module {
 
   switch(rState) {
     is(sRIdle) {
+      // wait for the slave to become ready
       when(io.bus.ar.valid && !io.bus.ar.ready) {
         rState := sARWait
         arvalid_reg := true.B
+        // TODO: waht is this
       }.elsewhen(io.bus.ar.valid && io.bus.ar.ready) {
         rState := sARFinish
         arvalid_reg := false.B
@@ -50,6 +52,7 @@ class AXIInterface extends Module {
         }
       }
     }
+    // why is there a seperate r finish state?
     is(sRFinish) {
       rState := sRIdle
     }

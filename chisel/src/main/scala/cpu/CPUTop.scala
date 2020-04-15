@@ -28,7 +28,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
   val axiInterface = Module(new AXIInterface)
 
-  val iCache = Module(new ICacheAXIWrap(performanceMonitor = performanceMonitorEnable))
+  val iCache = Module(new ICacheAXIWrap(performanceMonitorEnable = performanceMonitorEnable))
   val dCache = Module(new DCacheAXIWrap)
 
   val core = Module(new Core_ls)

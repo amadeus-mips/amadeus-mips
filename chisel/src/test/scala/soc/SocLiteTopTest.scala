@@ -18,7 +18,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
     } should be(true)
   }
 
-  it should "use verilator without vcd file" in {
+  it should "use verilator without vcd file with performance metrics enabled" in {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
       () => new SocLiteTop(simulation = true, memFile = funcFile, performanceMonitorEnable = true)
