@@ -134,7 +134,7 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   })
 
   /** slave side mux */
-  val s_select = Wire(UInt((if (cfg.clsCount > 0) cfg.clsCount - 1 else 0).W))
+  val s_select = Wire(UInt((if (cfg.clsCount > 0) cfg.clsCount else 1).W))
 
   val current_s_axi_awid = io.slaves(s_select).aw.bits.id
   val current_s_axi_awaddr = io.slaves(s_select).aw.bits.addr
