@@ -29,7 +29,7 @@ package axi
 
 import chisel3._
 import chisel3.util._
-import common.AXIIO
+import common.{AXIAddrBundle, AXIIO}
 
 class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   val clsCount = log2Ceil(cfg.sCount)
@@ -239,8 +239,8 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
     BLOCK = "ACKNOWLEDGE",
     LSB_PRIORITY = "HIGH")
   )
-  arbiter.io.request := request.asUInt()
-  arbiter.io.acknowledge := acknowledge.asUInt()
+  arbiter.io.request := Cat((cfg.sCount * 2 - 1 to 0 by -1) map (i => request(i))) // reverse it
+  arbiter.io.acknowledge := Cat((cfg.sCount * 2 - 1 to 0 by -1) map (i => acknowledge(i))) // ^
   arbiter.io.grant <> grant
 
   for (i <- 0 until cfg.sCount) {
@@ -460,7 +460,7 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
       }
     }
     is(sWaitIdle){
-      when(!grant.valid || (acknowledge.asUInt() =/= 0.U)){
+      when(!grant.valid || acknowledge.asUInt().orR()){
         state := sIdle
       }.otherwise{
         state := sWaitIdle

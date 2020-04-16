@@ -81,13 +81,14 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
 
   val cpu = Module(new CPUTop(performanceMonitorEnable = performanceMonitorEnable))
 
-  /** 1x2 interconnect */
-  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func))
+  /** 2x2 interconnect */
+  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.criticalWord))
   val confreg = Module(new Confreg(simulation))
   val ram = Module(new memoryAXIWrap(memFile))
 
   // the optional performance IO
-  axiInterconnect.io.slaves(0) <> cpu.io.axi
+  axiInterconnect.io.slaves(0) <> cpu.io.dataAXI
+  axiInterconnect.io.slaves(1) <> cpu.io.instAXI
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 

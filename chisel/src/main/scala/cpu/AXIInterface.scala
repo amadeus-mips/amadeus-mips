@@ -9,7 +9,7 @@ import chisel3.util._
 class AXIInterface extends Module {
   val io = IO(new Bundle {
     val bus = AXIIO.master()
-    val inst = AXIIO.slave()
+//    val inst = AXIIO.slave()
     val data = AXIIO.slave()
   })
 
@@ -110,21 +110,14 @@ class AXIInterface extends Module {
     }
   }
 
-  io.inst.aw := DontCare
-  io.inst.w := DontCare
-  io.inst.b := DontCare
-  io.inst.ar := DontCare
   io.data.ar := DontCare
 
-  when(io.inst.ar.valid) {
-    io.bus.ar <> io.inst.ar
-  }.otherwise {
-    io.bus.ar <> io.data.ar
-  }
-  val arvalid_s = io.inst.ar.valid || io.data.ar.valid
+
+
+  io.bus.ar <> io.data.ar
+  val arvalid_s = io.data.ar.valid
   io.bus.ar.valid := Mux(rState === sRIdle, arvalid_s, arvalid_reg)
 
-  io.inst.r <> io.bus.r
   io.data.r <> io.bus.r
   io.bus.r.ready := rready_reg
   io.data.r.valid := io.bus.r.valid && rready_reg

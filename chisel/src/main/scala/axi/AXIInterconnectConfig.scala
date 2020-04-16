@@ -218,4 +218,21 @@ object AXIInterconnectConfig {
       Seq(16, 0, 0, 0, 0)
     )
   )
+
+  /** 2 * 2 */
+  def criticalWord = new AXIInterconnectConfig(
+    sCount = 2,
+    mCount = 2,
+    idWidth = 4,
+    forwardID = true,
+    mRegions = 5,
+    mBaseAddr = Seq(
+      Seq("h1fc00000".U(32.W), "h20000000".U(32.W), "h40000000".U(32.W), "h80000000".U(32.W), "h00000000".U(32.W)),
+      Seq("h1faf0000".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W))
+    ),
+    mAddrWidth = Seq(
+      Seq(22, 29, 30, 31, 28),
+      Seq(16, 0, 0, 0, 0)
+    )
+  )
 }

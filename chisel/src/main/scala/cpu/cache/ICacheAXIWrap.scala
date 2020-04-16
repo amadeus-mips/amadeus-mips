@@ -46,7 +46,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
-  assert(io.rInst.valid && (!io.rInst.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
+  assert(!(io.rInst.valid && io.rInst.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
 
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
@@ -159,7 +159,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
       when(io.rInst.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
-          LRU(index) := Mux(lruLine === hitWay, (~(hitWay.asBool)).asUInt(), lruLine)
+          LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           cnt := 1.U
           state := sWait
@@ -196,11 +196,11 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   when(isWait && io.axi.r.bits.id === INST_ID && io.axi.r.fire) {
     // write data into banks until all data has finished
     we(lruLine) := cnt.asBools()
-    we((~(lruLine.asBool())).asUInt) := 0.U.asTypeOf(Vec(16, Bool()))
+    we((~lruLine.asBool()).asUInt) := 0.U.asTypeOf(Vec(16, Bool()))
     // write the tag during the first cycle data returns from AXI
     when(cnt(0)) {
       tagWe(lruLine) := cnt(0).asBool()
-      tagWe((~(lruLine.asBool())).asUInt) := false.B
+      tagWe((~lruLine.asBool()).asUInt) := false.B
     }
   }
 

@@ -48,7 +48,7 @@ class PriorityEncoder(WIDTH: Int = 4, LSB_PRIORITY: String = "LOW") extends Modu
   assert(WIDTH >= 1)
   assert(LSB_PRIORITY == "LOW" || LSB_PRIORITY == "HIGH")
   val io = IO(new PriorityEncoderIO(WIDTH))
-  val k = PriorityEncoderOH
+
   if(WIDTH == 1){
     // one input
     io.out.valid := io.in.bits
@@ -65,20 +65,15 @@ class PriorityEncoder(WIDTH: Int = 4, LSB_PRIORITY: String = "LOW") extends Modu
     val W1 = 1 << log2Ceil(WIDTH)
     val W2 = W1 / 2
 
-    val out1 = Wire(UInt(log2Ceil(WIDTH).W))
-    val out2 = Wire(UInt(log2Ceil(WIDTH).W))
-    val valid1 = Wire(Bool())
-    val valid2 = Wire(Bool())
-
     val inst1 = Module(new PriorityEncoder(W2, LSB_PRIORITY))
     inst1.io.in.bits := io.in.bits(W2-1, 0)
-    valid1 := inst1.io.out.valid
-    out1 := inst1.io.out.encoded
+    val valid1 = inst1.io.out.valid
+    val out1 = inst1.io.out.encoded
 
     val inst2 = Module(new PriorityEncoder(W2, LSB_PRIORITY))
     inst2.io.in.bits := io.in.bits(WIDTH-1, W2)
-    valid2 := inst2.io.out.valid
-    out2 := inst2.io.out.encoded
+    val valid2 = inst2.io.out.valid
+    val out2 = inst2.io.out.encoded
 
     io.out.valid := valid1 || valid2
     if(LSB_PRIORITY == "LOW") {
