@@ -10,11 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v2
     - name: Set up Verilator
       run: sudo apt-get install verilator
     - name: Run tests
       run: |
         cd $GITHUB_WORKSPACE/chisel
-        pwd
-        ls
         sbt 'testOnly soc.AutoTest'
