@@ -1,4 +1,4 @@
-name: FuncTest
+name: func-test
 
 on:
   push:
