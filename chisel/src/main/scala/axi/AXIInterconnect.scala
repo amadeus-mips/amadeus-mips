@@ -23,7 +23,7 @@ THE SOFTWARE.
 Modified from
 https://github.com/alexforencich/verilog-axi/blob/master/rtl/axi_interconnect.v
 by Discreater
-*/
+ */
 
 package axi
 
@@ -134,7 +134,7 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   })
 
   /** slave side mux */
-  val s_select = Wire(UInt((if (cfg.clsCount > 0) cfg.clsCount - 1 else 0).W))
+  val s_select = Wire(UInt((if (cfg.clsCount > 0) cfg.clsCount else 1).W))
 
   val current_s_axi_awid = io.slaves(s_select).aw.bits.id
   val current_s_axi_awaddr = io.slaves(s_select).aw.bits.addr
@@ -233,14 +233,11 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   val read = grant.encoded(0)
   s_select := grant.encoded >> 1
 
-  val arbiter = Module(new Arbiter(
-    PORTS = cfg.sCount * 2,
-    TYPE = "ROUND_ROBIN",
-    BLOCK = "ACKNOWLEDGE",
-    LSB_PRIORITY = "HIGH")
+  val arbiter = Module(
+    new Arbiter(PORTS = cfg.sCount * 2, TYPE = "ROUND_ROBIN", BLOCK = "ACKNOWLEDGE", LSB_PRIORITY = "HIGH")
   )
-  arbiter.io.request := request.asUInt()
-  arbiter.io.acknowledge := acknowledge.asUInt()
+  arbiter.io.request := Cat((cfg.sCount * 2 - 1 to 0 by -1).map(i => request(i))) // reverse it
+  arbiter.io.acknowledge := Cat((cfg.sCount * 2 - 1 to 0 by -1).map(i => acknowledge(i))) // ^
   arbiter.io.grant <> grant
 
   for (i <- 0 until cfg.sCount) {
@@ -249,7 +246,10 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
     request(2 * i + 1) := io.slaves(i).ar.valid
     // acknowledge generation
     acknowledge(2 * i) := grant.bits(2 * i) && io.slaves(i).b.valid && io.slaves(i).b.ready
-    acknowledge(2 * i + 1) := grant.bits(2 * i + 1) && io.slaves(i).r.valid && io.slaves(i).r.ready && io.slaves(i).r.bits.last
+    acknowledge(2 * i + 1) := grant.bits(2 * i + 1) && io.slaves(i).r.valid && io
+      .slaves(i)
+      .r
+      .ready && io.slaves(i).r.bits.last
   }
 
   hit := false.B
@@ -332,7 +332,8 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
               (!cfg.mSecure(i).B || !axi_prot_reg(1)) &&
                 ((Mux(read, cfg.mConnectWrite.asUInt(), cfg.mConnectRead.asUInt()) &
                   (1.U << (s_select + (i * cfg.sCount).U)).asUInt()) =/= 0.U) &&
-                ((axi_addr_reg >> cfg.mAddrWidth(i)(j)).asUInt() === (cfg.mBaseAddr(i)(j) >> cfg.mAddrWidth(i)(j)).asUInt())
+                ((axi_addr_reg >> cfg.mAddrWidth(i)(j)).asUInt() === (cfg.mBaseAddr(i)(j) >> cfg.mAddrWidth(i)(j))
+                  .asUInt())
             ) {
               m_select_reg := i.U
               axi_region_reg := j.U
@@ -343,20 +344,20 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
         }
       }
       when(flag) {
-        when(read){
+        when(read) {
           // reading
           m_axi_rready_reg(m_select_reg) := s_axi_rready_int_early
           state := sRead
-        }.otherwise{
+        }.otherwise {
           s_axi_wready_reg(s_select) := m_axi_wready_int_early
           state := sWrite
         }
-      }.otherwise{
+      }.otherwise {
         // no match; return decode error
-        when(read){
+        when(read) {
           // reading
           state := sReadDrop
-        }otherwise{
+        }.otherwise {
           // writing
           axi_bresp_reg := 3.U(2.W)
           s_axi_wready_reg(s_select) := true.B
@@ -364,7 +365,7 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
         }
       }
     }
-    is(sWrite){
+    is(sWrite) {
       // write state; store and forward write data
       s_axi_wready_reg(s_select) := m_axi_wready_int_early
 
@@ -372,20 +373,20 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
         m_axi_awvalid_reg(m_select_reg) := true.B
       }
       axi_addr_valid_reg := false.B
-      when(current_s_axi_wready && current_s_axi_wvalid){
+      when(current_s_axi_wready && current_s_axi_wvalid) {
         m_axi_wdata_int := current_s_axi_wdata
         m_axi_wstrb_int := current_s_axi_wstrb
         m_axi_wlast_int := current_s_axi_wlast
-//        m_axi_wuser_int := current_s_axi_wuser
+        //        m_axi_wuser_int := current_s_axi_wuser
         m_axi_wvalid_int := true.B
         when(current_s_axi_wlast) {
           s_axi_wready_reg(s_select) := false.B
           m_axi_bready_reg(m_select_reg) := true.B
           state := sWriteResp
-        }.otherwise{
+        }.otherwise {
           state := sWrite
         }
-      }.otherwise{
+      }.otherwise {
         state := sWrite
       }
     }
@@ -393,31 +394,31 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
       // write response state; store and forward write response
       m_axi_bready_reg(m_select_reg) := true.B
 
-      when(current_m_axi_bready && current_m_axi_bvalid){
+      when(current_m_axi_bready && current_m_axi_bvalid) {
         m_axi_bready_reg(m_select_reg) := false.B
         axi_bresp_reg := current_m_axi_bresp
         s_axi_bvalid_reg(s_select) := true.B
         state := sWaitIdle
-      }.otherwise{
+      }.otherwise {
         state := sWriteResp
       }
     }
-    is(sWriteDrop){
+    is(sWriteDrop) {
       // write drop state; drop write data
       s_axi_wready_reg(s_select) := true.B
       axi_addr_valid_reg := false.B
-      when(current_s_axi_wready && current_s_axi_wvalid){
+      when(current_s_axi_wready && current_s_axi_wvalid) {
         s_axi_wready_reg(s_select) := false.B
         s_axi_bvalid_reg(s_select) := true.B
         state := sWaitIdle
-      }.otherwise{
+      }.otherwise {
         state := sWriteDrop
       }
     }
-    is(sRead){
+    is(sRead) {
       // read state; store and forward read response
       m_axi_rready_reg(m_select_reg) := s_axi_rready_int_early
-      when(axi_addr_valid_reg){
+      when(axi_addr_valid_reg) {
         m_axi_arvalid_reg(m_select_reg) := true.B
       }
       axi_addr_valid_reg := false.B
@@ -426,61 +427,61 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
         s_axi_rdata_int := current_m_axi_rdata
         s_axi_rresp_int := current_m_axi_rresp
         s_axi_rlast_int := current_m_axi_rlast
-//        s_axi_ruser_int := current_m_axi_ruser
+        //        s_axi_ruser_int := current_m_axi_ruser
         s_axi_rvalid_int := true.B
-        when(current_m_axi_rlast){
+        when(current_m_axi_rlast) {
           m_axi_rready_reg(m_select_reg) := true.B
           state := sWaitIdle
-        }.otherwise{
+        }.otherwise {
           state := sRead
         }
-      }.otherwise{
+      }.otherwise {
         state := sRead
       }
     }
-    is(sReadDrop){
+    is(sReadDrop) {
       // read drop state; generate decode error read response
 
       s_axi_rid_int := axi_id_reg
       s_axi_rdata_int := 0.U
       s_axi_rresp_int := 3.U(2.W)
       s_axi_rlast_int := axi_len_reg === 0.U
-//      s_axi_ruser_int := 0.U
+      //      s_axi_ruser_int := 0.U
       s_axi_rvalid_int := true.B
 
       when(s_axi_rready_int_reg) {
         axi_len_reg := axi_len_reg - 1.U
         when(axi_len_reg === 0.U) {
           state := sWaitIdle
-        }.otherwise{
+        }.otherwise {
           state := sReadDrop
         }
-      }.otherwise{
+      }.otherwise {
         state := sReadDrop
       }
     }
-    is(sWaitIdle){
-      when(!grant.valid || (acknowledge.asUInt() =/= 0.U)){
+    is(sWaitIdle) {
+      when(!grant.valid || (acknowledge.asUInt() =/= 0.U)) {
         state := sIdle
-      }.otherwise{
+      }.otherwise {
         state := sWaitIdle
       }
     }
   }
 
   // output datapath logic (R channel)
-  val s_axi_rid_reg    = RegInit(0.U(cfg.idWidth.W))
-  val s_axi_rdata_reg  = RegInit(0.U(cfg.dataWidth.W))
-  val s_axi_rresp_reg  = RegInit(0.U(2.W))
-  val s_axi_rlast_reg  = RegInit(false.B)
-//  val s_axi_ruser_reg  = RegInit(0.U(cfg.rUserWidth.W))
+  val s_axi_rid_reg = RegInit(0.U(cfg.idWidth.W))
+  val s_axi_rdata_reg = RegInit(0.U(cfg.dataWidth.W))
+  val s_axi_rresp_reg = RegInit(0.U(2.W))
+  val s_axi_rlast_reg = RegInit(false.B)
+  //  val s_axi_ruser_reg  = RegInit(0.U(cfg.rUserWidth.W))
   val s_axi_rvalid_reg = RegInit(VecInit(Seq.fill(cfg.sCount)(false.B)))
 
-  val temp_s_axi_rid_reg    = RegInit(0.U(cfg.idWidth.W))
-  val temp_s_axi_rdata_reg  = RegInit(0.U(cfg.dataWidth.W))
-  val temp_s_axi_rresp_reg  = RegInit(0.U(2.W))
-  val temp_s_axi_rlast_reg  = RegInit(false.B)
-//  val temp_s_axi_ruser_reg  = RegInit(0.U(cfg.rUserWidth))
+  val temp_s_axi_rid_reg = RegInit(0.U(cfg.idWidth.W))
+  val temp_s_axi_rdata_reg = RegInit(0.U(cfg.dataWidth.W))
+  val temp_s_axi_rresp_reg = RegInit(0.U(2.W))
+  val temp_s_axi_rlast_reg = RegInit(false.B)
+  //  val temp_s_axi_ruser_reg  = RegInit(0.U(cfg.rUserWidth))
   val temp_s_axi_rvalid_reg = RegInit(false.B)
 
   // datapath control
@@ -505,18 +506,18 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   store_axi_r_int_to_output := false.B
   store_axi_r_int_to_temp := false.B
   store_axi_r_temp_to_output := false.B
-  when(s_axi_rready_int_reg){
+  when(s_axi_rready_int_reg) {
     // input is ready
-    when(current_s_axi_rready | !current_s_axi_rvalid){
+    when(current_s_axi_rready | !current_s_axi_rvalid) {
       // output is ready or currently not valid, transfer data to output
       s_axi_rvalid_reg(s_select) := s_axi_rvalid_int
       store_axi_r_int_to_output := true.B
-    }.otherwise{
+    }.otherwise {
       // output is not ready, store input in temp
       temp_s_axi_rvalid_reg := s_axi_rvalid_int
       store_axi_r_int_to_temp := true.B
     }
-  }.elsewhen(current_s_axi_rready){
+  }.elsewhen(current_s_axi_rready) {
     // input is not ready, but output is ready
     s_axi_rvalid_reg(s_select) := temp_s_axi_rvalid_reg
     temp_s_axi_rvalid_reg := false.B
@@ -526,39 +527,39 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   s_axi_rready_int_reg := s_axi_rready_int_early
 
   // datapath
-  when(store_axi_r_int_to_output){
+  when(store_axi_r_int_to_output) {
     s_axi_rid_reg := s_axi_rid_int
     s_axi_rdata_reg := s_axi_rdata_int
     s_axi_rresp_reg := s_axi_rresp_int
     s_axi_rlast_reg := s_axi_rlast_int
-//    s_axi_ruser_reg := s_axi_ruser_int
-  }.elsewhen(store_axi_r_temp_to_output){
+    //    s_axi_ruser_reg := s_axi_ruser_int
+  }.elsewhen(store_axi_r_temp_to_output) {
     s_axi_rid_reg := temp_s_axi_rid_reg
     s_axi_rdata_reg := temp_s_axi_rdata_reg
     s_axi_rresp_reg := temp_s_axi_rresp_reg
     s_axi_rlast_reg := temp_s_axi_rlast_reg
-//    s_axi_ruser_reg := temp_s_axi_ruser_reg
+    //    s_axi_ruser_reg := temp_s_axi_ruser_reg
   }
 
-  when(store_axi_r_int_to_temp){
+  when(store_axi_r_int_to_temp) {
     temp_s_axi_rid_reg := s_axi_rid_int
     temp_s_axi_rdata_reg := s_axi_rdata_int
     temp_s_axi_rresp_reg := s_axi_rresp_int
     temp_s_axi_rlast_reg := s_axi_rlast_int
-//    temp_s_axi_ruser_reg := s_axi_ruser_int
+    //    temp_s_axi_ruser_reg := s_axi_ruser_int
   }
 
   // output datapath logic (W channel)
-  val m_axi_wdata_reg  = RegInit(0.U(cfg.dataWidth.W))
-  val m_axi_wstrb_reg  = RegInit(0.U(cfg.strbWidth.W))
-  val m_axi_wlast_reg  = RegInit(false.B)
-//  val m_axi_wuser_reg  = RegInit(0.U(cfg.wUserWidth.W))
+  val m_axi_wdata_reg = RegInit(0.U(cfg.dataWidth.W))
+  val m_axi_wstrb_reg = RegInit(0.U(cfg.strbWidth.W))
+  val m_axi_wlast_reg = RegInit(false.B)
+  //  val m_axi_wuser_reg  = RegInit(0.U(cfg.wUserWidth.W))
   val m_axi_wvalid_reg = RegInit(VecInit(Seq.fill(cfg.mCount)(false.B)))
 
-  val temp_m_axi_wdata_reg  = RegInit(0.U(cfg.dataWidth.W))
-  val temp_m_axi_wstrb_reg  = RegInit(0.U(cfg.strbWidth.W))
-  val temp_m_axi_wlast_reg  = RegInit(false.B)
-//  val temp_m_axi_wuser_reg  = RegInit(0.U(cfg.wUserWidth.W))
+  val temp_m_axi_wdata_reg = RegInit(0.U(cfg.dataWidth.W))
+  val temp_m_axi_wstrb_reg = RegInit(0.U(cfg.strbWidth.W))
+  val temp_m_axi_wlast_reg = RegInit(false.B)
+  //  val temp_m_axi_wuser_reg  = RegInit(0.U(cfg.wUserWidth.W))
   val temp_m_axi_wvalid_reg = RegInit(false.B)
 
   // datapath control
@@ -583,18 +584,18 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   store_axi_w_int_to_output := false.B
   store_axi_w_int_to_temp := false.B
   store_axi_w_temp_to_output := false.B
-  when(m_axi_wready_int_reg){
+  when(m_axi_wready_int_reg) {
     // input is ready
-    when(current_m_axi_wready | !current_m_axi_wvalid){
+    when(current_m_axi_wready | !current_m_axi_wvalid) {
       // output is ready or currently not valid, transfer data to output
       m_axi_wvalid_reg(m_select_reg) := m_axi_wvalid_int
       store_axi_w_int_to_output := true.B
-    }.otherwise{
+    }.otherwise {
       // output is not ready, store input in temp
       temp_m_axi_wvalid_reg := m_axi_wvalid_int
       store_axi_w_int_to_temp := true.B
     }
-  }.elsewhen(current_m_axi_wready){
+  }.elsewhen(current_m_axi_wready) {
     // input is not ready, but output is ready
     m_axi_wvalid_reg(m_select_reg) := temp_m_axi_wvalid_reg
     temp_m_axi_wvalid_reg := false.B
@@ -608,18 +609,18 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
     m_axi_wdata_reg := m_axi_wdata_int
     m_axi_wstrb_reg := m_axi_wstrb_int
     m_axi_wlast_reg := m_axi_wlast_int
-//    m_axi_wuser_reg := m_axi_wuser_int
-  }.elsewhen(store_axi_w_temp_to_output){
+    //    m_axi_wuser_reg := m_axi_wuser_int
+  }.elsewhen(store_axi_w_temp_to_output) {
     m_axi_wdata_reg := temp_m_axi_wdata_reg
     m_axi_wstrb_reg := temp_m_axi_wstrb_reg
     m_axi_wlast_reg := temp_m_axi_wlast_reg
-//    m_axi_wuser_reg := temp_m_axi_wuser_reg
+    //    m_axi_wuser_reg := temp_m_axi_wuser_reg
   }
   when(store_axi_w_int_to_temp) {
     temp_m_axi_wdata_reg := m_axi_wdata_int
     temp_m_axi_wstrb_reg := m_axi_wstrb_int
     temp_m_axi_wlast_reg := m_axi_wlast_int
-//    temp_m_axi_wuser_reg := m_axi_wuser_int
+    //    temp_m_axi_wuser_reg := m_axi_wuser_int
   }
 
 }

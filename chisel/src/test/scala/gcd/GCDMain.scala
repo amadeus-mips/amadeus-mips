@@ -24,9 +24,7 @@ import chisel3._
   * }}}
   */
 object GCDMain extends App {
-  iotesters.Driver.execute(args, () => new GCD) {
-    c => new GCDUnitTester(c)
-  }
+  iotesters.Driver.execute(args, () => new GCD) { c => new GCDUnitTester(c) }
 }
 
 /**

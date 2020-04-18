@@ -29,22 +29,23 @@ class Fetch extends Module {
   })
 
   val pc = RegInit(startPC)
-  val instFetchExcept = pc(1, 0) =/= 0.U
+  val instFetchExcept = pc(1, 0).orR
 
   io.out.instFetchExcept := instFetchExcept
   io.out.pc := pc
   io.out.instValid := io.instValid
   io.outPCValid := !instFetchExcept
 //  io.outPCValid := !instFetchExcept && (!(io.instValid && io.stall(0)))
-  io.outStallReq := !io.instValid
+  io.outStallReq := !io.instValid & !instFetchExcept
 
   when(io.flush) {
     // flush pipeLine
     pc := io.flushPC
   }.elsewhen(!io.stall(0)) {
-    // not stalled, select branch or pc plus 4
-    pc := Mux(io.branch.valid, io.branch.bits, pc + 4.U)
-  }.otherwise {
-    // stalled
-  }
+      // not stalled, select branch or pc plus 4
+      pc := Mux(io.branch.valid, io.branch.bits, pc + 4.U)
+    }
+    .otherwise {
+      // stalled
+    }
 }

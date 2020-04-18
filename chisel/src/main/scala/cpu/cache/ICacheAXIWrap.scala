@@ -3,7 +3,9 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.util.{log2Ceil, Cat}
+import shared.CircularShifter
+//import chisel3.util.{log2Ceil, Cat}
+import chisel3.util._
 import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
 import cpu.performance.CachePerformanceMonitorIO
@@ -190,7 +192,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         // write to each bank consequently
         we(lruLine) := writeMask.io.vector.asBools()
 
-        when(io.axi.r.valid) {
+        when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B
           state := sIdle

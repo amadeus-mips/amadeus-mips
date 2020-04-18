@@ -23,7 +23,7 @@ class TestTop(memFile: String) extends Module {
 
   memAXISlave.io.dram <> dmem.io.axi
   memAXISlave.io.iram <> imem.io.axi
-  memAXISlave.io.bus <> cpu.io.axi
+//  memAXISlave.io.bus <> cpu.io.axi
 
   cpu.io.intr := 0.U(6.W)
   cpu.io.debug := DontCare

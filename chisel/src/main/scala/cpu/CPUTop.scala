@@ -19,7 +19,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
     /** hardware interrupt */
     val intr = Input(UInt(6.W))
 
-    val axi = AXIIO.master()
+    val instAXI = AXIIO.master()
+    val dataAXI = AXIIO.master()
 
     val debug = Output(new DebugBundle)
 
@@ -28,7 +29,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
   val axiInterface = Module(new AXIInterface)
 
-  val iCache = Module(new ICacheAXIWrap(performanceMonitor = performanceMonitorEnable))
+  val iCache = Module(new ICacheAXIWrap(performanceMonitorEnable = performanceMonitorEnable))
   val dCache = Module(new DCacheAXIWrap)
 
   val core = Module(new Core_ls)
@@ -45,9 +46,11 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
   dCache.io.exeAddr := core.io_ls.ex_addr
 
-  axiInterface.io.inst <> iCache.io.axi
   axiInterface.io.data <> dCache.io.axi
 
-  io.axi <> axiInterface.io.bus
+  iCache.io.axi := DontCare
+  io.dataAXI <> axiInterface.io.bus
+  io.instAXI <> iCache.io.axi
+
   io.debug <> core.io_ls.debug
 }
