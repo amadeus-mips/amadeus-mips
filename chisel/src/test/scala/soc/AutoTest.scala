@@ -9,6 +9,8 @@ class AutoTest extends ChiselFlatSpec {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
       () => new SocLiteTop(simulation = true, memFile = instFile)
-    ) { c => new SocLiteTopUnitTester(c, trace = true, needAssert = true, banLog = true) } should be(true)
+    ) { c =>
+      new SocLiteTopUnitTester(c, trace = true, needAssert = true, banLog = true)
+    } should be(true)
   }
 }

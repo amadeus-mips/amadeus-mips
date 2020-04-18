@@ -9,10 +9,10 @@ import scala.language.implicitConversions
 import scala.util.Random
 
 /**
- * Decode 改动过大，暂时注释测试
- */
+  * Decode 改动过大，暂时注释测试
+  */
 class DecodeTester extends ChiselFlatSpec {
-  behavior of "Decode"
+  behavior.of("Decode")
 
 //  it should "test Decode" in {
 //    Driver.execute(Array(), () => new Decode()) {
@@ -484,14 +484,13 @@ class DecodeTester extends ChiselFlatSpec {
 //  }
 //}
 
-
 /** int to binary with leading 0.
- *
- * Thanks to  `user unknown`'s answer in
- * <a href="https://stackoverflow.com/questions/9442381/formatting-binary-values-in-scala">stackOverflow</a>
- *
- * @param s source
- */
+  *
+  * Thanks to  `user unknown`'s answer in
+  * <a href="https://stackoverflow.com/questions/9442381/formatting-binary-values-in-scala">stackOverflow</a>
+  *
+  * @param s source
+  */
 class IntToBinaryHelper(s: Int) {
   def tb(w: Int): String = {
     val l: java.lang.Long = s.toBinaryString.toLong
@@ -500,11 +499,11 @@ class IntToBinaryHelper(s: Int) {
 }
 
 /** BigInt to binary with leading 0.
- *
- * @see
- * [[cpu.core.decode.IntToBinaryHelper]]
- * @param s source
- */
+  *
+  * @see
+  * [[cpu.core.decode.IntToBinaryHelper]]
+  * @param s source
+  */
 class BigIntToBinaryHelper(s: BigInt) {
   private def toBinDigits(bi: BigInt): String = {
     if (bi == 0) "0" else toBinDigits(bi / 2) + (bi % 2)
@@ -518,4 +517,3 @@ class BigIntToBinaryHelper(s: BigInt) {
     else List.fill(w - re.length)("0").mkString("") + re
   }
 }
-
