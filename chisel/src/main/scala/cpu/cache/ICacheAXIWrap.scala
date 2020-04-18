@@ -39,7 +39,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //-------------------------------------------------------------------------------
   //--------------------set up the states and register of FSM----------------------
   //-------------------------------------------------------------------------------
-  val sIdle :: sWaitForAR :: sWaitForR :: sReFill :: Nil = Enum(4)
+  val sIdle :: sWaitForAR :: sReFill :: Nil = Enum(3)
   val state = RegInit(sIdle)
   // cnt is a write mask to mark which to write to
   //  val cnt = RegInit(0.U(bankAmount.W))
@@ -91,7 +91,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // check what state we are in
   val isIdle = state === sIdle
   val isWaitForAR = state === sWaitForAR
-  val isWaitForR = state === sWaitForR
   val isReFill = state === sReFill
 
   // check if there is a hit and the line that got the hit if there is a hit
@@ -113,56 +112,47 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     }
   }
 
-  val instruction = Wire(UInt(dataLen.W))
-  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
-
-  val axiARValid = WireDefault(isWaitForAR)
-
+  //-----------------------------------------------------------------------------
+  //------------------initialize default IO--------------------------------
+  //-----------------------------------------------------------------------------
+  we := 0.U.asTypeOf(Vec(wayAmount, Vec(bankAmount, Bool())))
+  tagWe := 0.U.asTypeOf(Vec(wayAmount, Bool()))
+  // default io for write mask
   writeMask.io.initPosition.bits := 0.U
   writeMask.io.initPosition.valid := false.B
-  //-----------------------------------------------------------------------------
-  //------------------initialize IO for unused IO--------------------------------
-  //-----------------------------------------------------------------------------
+  writeMask.io.shiftEnable := false.B
+
+  io.axi := DontCare
+
+  io.axi.ar.bits.id := INST_ID
+  io.axi.ar.bits.addr := Mux(
+    cachedTrans,
+    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
+    virToPhy(addr)
+  )
+  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
+  io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
+  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
+
+  /**
+    * there was a design where if there is a miss, assert valid immediately
+    * maybe it is not a good idea, need to know how this translate to verilog
+    */
+  io.axi.ar.valid := isWaitForAR
+
+  io.axi.r.ready := true.B
+
+  // these are hard wired as required by Loongson
+  io.axi.ar.bits.lock := 0.U
+  //TODO: can we utilize this?
+  io.axi.ar.bits.cache := 0.U
+  io.axi.ar.bits.prot := 0.U
+  // hardcode r to always be ready
+  //TODO: check in case of problem
 
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
-  // the FSM transformation
-  //  switch(state) {
-  //    is(sIdle) {
-  //      when(io.rInst.enable) {
-  //        miss := !isHit
-  //        state := Mux(isHit, sIdle, sMiss)
-  //        when(isHit) {
-  //          // when there is a hit, update the LRU
-  //          // if the way of the hit is the line lru
-  //          // then update lru to point at the other line
-  //          when(lruLine === hitWay) {
-  //            LRU(index) := (~(hitWay.asBool)).asUInt()
-  //          }
-  //        }.otherwise {
-  //          // during a miss, set the lowest bit of cnt to be true
-  //          // this means we'll start writing from here
-  //          // also, set io.miss to true. This will save a cycle
-  //          missWire := true.B
-  //          cnt := 1.U
-  //        }
-  //      }
-  //    }
-  //    is(sMiss) {
-  //      //TODO: reformat this
-  //      when(!cnt(bankAmount - 1) && io.axi.r.bits.id === INST_ID && io.axi.r.valid) {
-  //        cnt := cnt << 1
-  //        // on the first transfer of data, de-assert ar valid which
-  //        // is io.miss here
-  //        missWire := false.B
-  //      }.elsewhen(cnt(bankAmount - 1)) {
-  //        valid(lruLine)(index) := true.B
-  //        cnt := 0.U
-  //        state := sIdle
-  //      }
-  //    }
-  //  }
   switch(state) {
     is(sIdle) {
       //TODO: a way to simplify nested when
@@ -171,11 +161,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         when(isHit) {
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
-
-          //            cnt := 1.U
           state := sWaitForAR
-          // override the ar valid signal, this will advance one cycle
-          axiARValid := true.B
         }
       }
     }
@@ -185,34 +171,28 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
       tagWe(lruLine) := true.B
       tagWe((~lruLine.asBool()).asUInt) := false.B
       when(io.axi.ar.fire) {
-        state := sWaitForR
-      }
-    }
-    is(sWaitForR) {
-      when(io.axi.r.bits.id === INST_ID && io.axi.r.fire) {
+        state := sReFill
         writeMask.io.initPosition.valid := true.B
         writeMask.io.initPosition.bits := 0.U
-        state := sReFill
       }
     }
     is(sReFill) {
       assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from i-cache id")
-      assert(writeMask.io.vector.valid, "write mask should always be valid during the refill")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
-      // write to each bank consequently
-      we(lruLine) := writeMask.io.vector.bits.asBools()
-      we((~lruLine.asBool()).asUInt) := 0.U.asTypeOf(Vec(16, Bool()))
+      when(io.axi.r.fire) {
+        writeMask.io.shiftEnable := true.B
+        // write to each bank consequently
+        we(lruLine) := writeMask.io.vector.asBools()
+      }
 
       when(io.axi.r.bits.last) {
+        //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
         valid(lruLine)(index) := true.B
         state := sIdle
       }
     }
   }
-
-  we := 0.U.asTypeOf(Vec(wayAmount, Vec(bankAmount, Bool())))
-  tagWe := 0.U.asTypeOf(Vec(wayAmount, Bool()))
 
   val instBanks = for {
     i <- 0 until wayAmount
@@ -250,38 +230,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     performanceMonitorWire.missCycles := missCycleCounter
     io.performanceMonitorIO.get := performanceMonitorWire
   }
-
-  //-----------------------------------------------------------------------------
-  //------------------set up io between cpu and axi------------------------------
-  //-----------------------------------------------------------------------------
-  io.axi := DontCare
-
-  io.axi.ar.bits.id := INST_ID
-  io.axi.ar.bits.addr := Mux(
-    cachedTrans,
-    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
-    virToPhy(addr)
-  )
-  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
-  io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
-  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
-
-  /**
-    * there was a design where if there is a miss, assert valid immediately
-    * maybe it is not a good idea, need to know how this translate to verilog
-    */
-  io.axi.ar.valid := isWaitForAR
-
-  io.axi.r.ready := !isReFill
-
-  // these are hard wired as required by Loongson
-  io.axi.ar.bits.lock := 0.U
-  //TODO: can we utilize this?
-  io.axi.ar.bits.cache := 0.U
-  io.axi.ar.bits.prot := 0.U
-  // hardcode r to always be ready
-  //TODO: check in case of problem
-
+  val instruction = Wire(UInt(dataLen.W))
+  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
   io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
 
@@ -289,6 +239,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //  iCache.io.busData.valid := io.axi.r.bits.id === INST_ID && io.axi.r.valid
   //  iCache.io.addr.bits := io.rInst.addr
   //  iCache.io.addr.valid := io.rInst.enable
+  assert(io.axi.r.ready === true.B, "r ready signal should always be high")
 
   /** just erase high 3 bits */
   def virToPhy(addr: UInt): UInt = {

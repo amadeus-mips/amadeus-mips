@@ -24,19 +24,17 @@ class CircularShifterUnitTester(dut: CircularShifter, vecLeng: Int) extends Peek
   reset(3)
   for (temp <- 0 until vecLeng) {
     poke(dut.io.initPosition.valid, true)
+    poke(dut.io.shiftEnable, false)
     poke(dut.io.initPosition.bits, temp)
-    expect(dut.io.vector.valid, false)
     for (i <- 0 until vecLeng) {
       step(1)
+      poke(dut.io.shiftEnable, true)
       poke(dut.io.initPosition.valid, false)
-      expect(dut.io.vector.valid, true)
       if (i + temp < vecLeng) {
-        expect(dut.io.vector.bits, 1 << (i + temp))
+        expect(dut.io.vector, 1 << (i + temp))
       } else {
-        expect(dut.io.vector.bits, (1 << (i + temp - vecLeng)))
+        expect(dut.io.vector, (1 << (i + temp - vecLeng)))
       }
     }
-    step(1)
-    expect(dut.io.vector.valid, false)
   }
 }
