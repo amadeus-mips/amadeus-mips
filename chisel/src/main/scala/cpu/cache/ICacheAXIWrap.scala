@@ -45,6 +45,9 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //  val cnt = RegInit(0.U(bankAmount.W))
   val writeMask = Module(new CircularShifter(bankAmount))
 
+  val lruReg = Reg(UInt(1.W))
+  val indexReg = Reg(UInt(indexLen.W))
+
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -162,14 +165,16 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           state := sWaitForAR
+          tagWe(lruLine) := true.B
+          tagWe((~lruLine.asBool()).asUInt) := false.B
+          indexReg := index
+          lruReg := lruLine
         }
       }
     }
     is(sWaitForAR) {
       //TODO: make lru line fixed, in case the address changes half way
       // write the tags when waiting for the ar handshake
-      tagWe(lruLine) := true.B
-      tagWe((~lruLine.asBool()).asUInt) := false.B
       when(io.axi.ar.fire) {
         state := sReFill
         writeMask.io.initPosition.valid := true.B
@@ -184,12 +189,12 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         writeMask.io.shiftEnable := true.B
         // write to each bank consequently
         we(lruLine) := writeMask.io.vector.asBools()
-      }
 
-      when(io.axi.r.bits.last) {
-        //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
-        valid(lruLine)(index) := true.B
-        state := sIdle
+        when(io.axi.r.valid) {
+          //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
+          valid(lruReg)(indexReg) := true.B
+          state := sIdle
+        }
       }
     }
   }
@@ -235,10 +240,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
 
-  //  iCache.io.busData.bits := io.axi.r.bits.data
-  //  iCache.io.busData.valid := io.axi.r.bits.id === INST_ID && io.axi.r.valid
-  //  iCache.io.addr.bits := io.rInst.addr
-  //  iCache.io.addr.valid := io.rInst.enable
   assert(io.axi.r.ready === true.B, "r ready signal should always be high")
 
   /** just erase high 3 bits */

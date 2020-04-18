@@ -46,7 +46,7 @@ class AXIMemBackend(
     val s_axi_bvalid = Output(Bool())
     val s_axi_bready = Input(Bool())
     val s_axi_arid = Input(UInt(idWidth.W))
-    val s_axi_araddr = Input(UInt(idWidth.W))
+    val s_axi_araddr = Input(UInt(addrWidth.W))
     val s_axi_arlen = Input(UInt(8.W))
     val s_axi_arsize = Input(UInt(3.W))
     val s_axi_arburst = Input(UInt(2.W))
@@ -210,7 +210,7 @@ class AXIMemBackend(
       |reg s_axi_rvalid_pipe_reg = 1'b0;
       |
       |// (* RAM_STYLE="BLOCK" *)
-      |reg [DATA_WIDTH-1:0] mem[((2<<22)/DATA_WIDTH):0];
+      |reg [DATA_WIDTH-1:0] mem[(2 << 17):0];
       |""".stripMargin
       .concat(s"""
                  |initial begin
