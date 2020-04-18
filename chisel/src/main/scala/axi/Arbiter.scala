@@ -80,7 +80,7 @@ class Arbiter(PORTS: Int = 4, TYPE: String = "PRIORITY", BLOCK: String = "NONE",
 
   grant_reg := 0.U.asTypeOf(new EncoderBundle(WIDTH = PORTS)) // if no match, set to 0
   if (BLOCK == "REQUEST") {
-    when((grant_reg.bits & io.request) =/= 0.U) {
+    when((grant_reg.bits & io.request).orR()) {
       // granted request still asserted; hold it
       grant_reg := grant_reg
     }.elsewhen(inst.io.out.valid) {

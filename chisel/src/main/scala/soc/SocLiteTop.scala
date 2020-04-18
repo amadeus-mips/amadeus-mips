@@ -64,6 +64,7 @@ import cpu.CPUTop
 import cpu.performance.SocPerformanceIO
 import memory.memoryAXIWrap
 import shared.{DebugBundle, GPIO}
+import ram.{AXIMemBackend, AXIMemory}
 
 /**
   *
@@ -84,10 +85,12 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
   /** 1x2 interconnect */
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func))
   val confreg = Module(new Confreg(simulation))
-  val ram = Module(new memoryAXIWrap(memFile))
+  //  val ram = Module(new memoryAXIWrap(memFile))
+  val ram = Module(new AXIMemory(fileName = memFile))
 
   // the optional performance IO
-  axiInterconnect.io.slaves(0) <> cpu.io.axi
+  axiInterconnect.io.slaves(0) <> cpu.io.dataAXI
+  axiInterconnect.io.slaves(1) <> cpu.io.instAXI
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 
