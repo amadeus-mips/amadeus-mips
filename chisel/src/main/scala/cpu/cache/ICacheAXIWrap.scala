@@ -15,7 +15,6 @@ import shared.Constants._
 //TODO: will removing the fill buffer hurt performance?
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
-//TODO: doesn't restart in time because of the 1 cycle latency
 class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEnable: Boolean = false) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
@@ -61,8 +60,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // keep track of the specific index of the bank
   val bankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
 
-  val earlyValidReg = RegInit(false.B)
-  val instrReg = RegInit(0.U(32.W))
+  // registers for early restart
+  val erBankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -103,7 +102,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
 
   val tagWire = Wire(UInt(tagLen.W))
-
   //-----------------------------------------------------------------------------
   //------------------set up variables for this cycle----------------------------
   //-----------------------------------------------------------------------------
@@ -147,7 +145,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   io.axi.ar.bits.id := INST_ID
   io.axi.ar.bits.addr := Mux(
     cachedTrans,
-//    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
+    //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
     Cat(0.U(3.W), addr(28, 0)),
     virToPhy(addr)
   )
@@ -173,8 +171,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // hardcode r to always be ready
   //TODO: check in case of problem
 
-  earlyValidReg := false.B
-
+  val instruction = Wire(UInt(dataLen.W))
+  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
+  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
+  io.rInst.data := instruction
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -187,6 +187,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           state := sWaitForAR
+
           indexReg := index
           lruReg := lruLine
           tagReg := tag
@@ -212,19 +213,18 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         we(lruLine) := writeMask.io.vector.asBools()
         // TODO: this only works when the bank offset reg does not overflow, so it "happens" to work when there are 16 banks
         bankOffsetReg := bankOffsetReg + 1.U
-        // determine when to transform the state back to idle
+
+        io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg)
+        io.rInst.data := RegNext(io.axi.r.bits.data)
+
+        // update the states of cache during last write
         when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B
           state := sIdle
-          tagWe(lruReg) := true.B
-          tagWe((~lruReg.asBool()).asUInt) := false.B
+          tagWe(lruLine) := true.B
+          tagWe((~lruLine.asBool()).asUInt) := false.B
           tagWire := tagReg
-        }
-        // critical word first code
-        when(tag === tagReg && index === indexReg && bankOffset === bankOffsetReg) {
-          earlyValidReg := true.B
-          instrReg := io.axi.r.bits.data
         }
       }
     }
@@ -248,18 +248,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     bank.io.inData := tagWire
     tagData(i) := bank.io.outData
   }
-  //-----------------------------------------------------------------------------
-  //------------------read data from memory--------------------------------------
-  //-----------------------------------------------------------------------------
 
-  val instruction = Wire(UInt(dataLen.W))
-  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
-  io.rInst.valid := Mux(
-    state === sIdle,
-    cachedTrans && isIdle && isHit && io.rInst.enable,
-    Mux(state === sReFill, earlyValidReg, false.B)
-  )
-  io.rInst.data := Mux(state === sIdle, instruction, Mux(state === sReFill, instrReg, DontCare))
   //-----------------------------------------------------------------------------
   //------------------optional io for performance metrics--------------------------------------
   //-----------------------------------------------------------------------------
