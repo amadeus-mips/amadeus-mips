@@ -102,6 +102,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
 
   val tagWire = Wire(UInt(tagLen.W))
+
+  val indexWire = Wire(UInt(indexLen.W))
   //-----------------------------------------------------------------------------
   //------------------set up variables for this cycle----------------------------
   //-----------------------------------------------------------------------------
@@ -187,7 +189,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           state := sWaitForAR
-
           indexReg := index
           lruReg := lruLine
           tagReg := tag
@@ -210,26 +211,30 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
       when(io.axi.r.fire) {
         writeMask.io.shiftEnable := true.B
         // write to each bank consequently
-        we(lruLine) := writeMask.io.vector.asBools()
+        we(lruReg) := writeMask.io.vector.asBools()
         // TODO: this only works when the bank offset reg does not overflow, so it "happens" to work when there are 16 banks
         bankOffsetReg := bankOffsetReg + 1.U
 
-        io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg)
-        io.rInst.data := RegNext(io.axi.r.bits.data)
+//        io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
+//        io.rInst.data := RegNext(io.axi.r.bits.data)
 
         // update the states of cache during last write
         when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B
           state := sIdle
-          tagWe(lruLine) := true.B
-          tagWe((~lruLine.asBool()).asUInt) := false.B
+          tagWe(lruReg) := true.B
+          tagWe((~lruReg.asBool()).asUInt) := false.B
           tagWire := tagReg
+        }.otherwise {
+          io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
+          io.rInst.data := RegNext(io.axi.r.bits.data)
         }
       }
     }
   }
 
+  indexWire := Mux(state === sIdle, index, indexReg)
   val instBanks = for {
     i <- 0 until wayAmount
     j <- 0 until bankAmount
@@ -237,15 +242,15 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     val bank = Module(new SinglePortBank(depth, dataLen, syncRead = true))
     bank.io.we := we(i)(j)
     bank.io.en.get := true.B
-    bank.io.addr := index
+    bank.io.addr := indexWire
     bank.io.inData := io.axi.r.bits.data
     bankData(i)(j) := bank.io.outData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(depth, tagLen, syncRead = false))
     bank.io.we := tagWe(i)
-    bank.io.addr := index
-    bank.io.inData := tagWire
+    bank.io.addr := indexWire
+    bank.io.inData := tagReg
     tagData(i) := bank.io.outData
   }
 
