@@ -60,6 +60,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // keep track of the specific index of the bank
   val bankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
 
+  val earlyValidReg = RegInit(false.B)
+  val instrReg = RegInit(0.U(32.W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -168,6 +170,15 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // hardcode r to always be ready
   //TODO: check in case of problem
 
+  earlyValidReg := false.B
+  //-----------------------------------------------------------------------------
+  //------------------read data from memory--------------------------------------
+  //-----------------------------------------------------------------------------
+
+  val instruction = Wire(UInt(dataLen.W))
+  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
+  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
+  io.rInst.data := instruction
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -207,15 +218,22 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         we(lruLine) := writeMask.io.vector.asBools()
         // TODO: this only works when the bank offset reg does not overflow, so it "happens" to work when there are 16 banks
         bankOffsetReg := bankOffsetReg + 1.U
+        // determine when to transform the state back to idle
         when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B
           state := sIdle
         }
+        // critical word first code
+        when(tag === tagReg && index === indexReg && bankOffset === bankOffsetReg) {
+          earlyValidReg := true.B
+          instrReg := io.axi.r.bits.data
+        }
+        io.rInst.valid := earlyValidReg
+        io.rInst.data := instrReg
       }
     }
   }
-
   val instBanks = for {
     i <- 0 until wayAmount
     j <- 0 until bankAmount
@@ -234,7 +252,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     bank.io.inData := tag
     tagData(i) := bank.io.outData
   }
-
   //-----------------------------------------------------------------------------
   //------------------optional io for performance metrics--------------------------------------
   //-----------------------------------------------------------------------------
@@ -252,10 +269,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     performanceMonitorWire.missCycles := missCycleCounter
     io.performanceMonitorIO.get := performanceMonitorWire
   }
-  val instruction = Wire(UInt(dataLen.W))
-  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
-  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
-  io.rInst.data := instruction
 
   assert(io.axi.r.ready === true.B, "r ready signal should always be high")
 
