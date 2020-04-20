@@ -101,10 +101,12 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   /** LRU(index) */
   val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
 
+  val tagWire = Wire(UInt(tagLen.W))
+
   //-----------------------------------------------------------------------------
   //------------------set up variables for this cycle----------------------------
   //-----------------------------------------------------------------------------
-
+  tagWire := tag
   // check what state we are in
   val isIdle = state === sIdle
   val isWaitForAR = state === sWaitForAR
@@ -191,8 +193,6 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           state := sWaitForAR
-          tagWe(lruLine) := true.B
-          tagWe((~lruLine.asBool()).asUInt) := false.B
           indexReg := index
           lruReg := lruLine
           tagReg := tag
@@ -223,6 +223,9 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B
           state := sIdle
+          tagWe(lruReg) := true.B
+          tagWe((~lruReg.asBool()).asUInt) := false.B
+          tagWire := tagReg
         }
         // critical word first code
         when(tag === tagReg && index === indexReg && bankOffset === bankOffsetReg) {
@@ -249,7 +252,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     val bank = Module(new SinglePortBank(depth, tagLen, syncRead = false))
     bank.io.we := tagWe(i)
     bank.io.addr := index
-    bank.io.inData := tag
+    bank.io.inData := tagWire
     tagData(i) := bank.io.outData
   }
   //-----------------------------------------------------------------------------
