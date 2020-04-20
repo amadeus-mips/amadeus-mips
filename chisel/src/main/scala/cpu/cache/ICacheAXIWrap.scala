@@ -15,6 +15,7 @@ import shared.Constants._
 //TODO: will removing the fill buffer hurt performance?
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
+//TODO: doesn't restart in time because of the 1 cycle latency
 class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEnable: Boolean = false) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
@@ -173,14 +174,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //TODO: check in case of problem
 
   earlyValidReg := false.B
-  //-----------------------------------------------------------------------------
-  //------------------read data from memory--------------------------------------
-  //-----------------------------------------------------------------------------
 
-  val instruction = Wire(UInt(dataLen.W))
-  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
-  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
-  io.rInst.data := instruction
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -232,11 +226,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           earlyValidReg := true.B
           instrReg := io.axi.r.bits.data
         }
-        io.rInst.valid := earlyValidReg
-        io.rInst.data := instrReg
       }
     }
   }
+
   val instBanks = for {
     i <- 0 until wayAmount
     j <- 0 until bankAmount
@@ -255,6 +248,18 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     bank.io.inData := tagWire
     tagData(i) := bank.io.outData
   }
+  //-----------------------------------------------------------------------------
+  //------------------read data from memory--------------------------------------
+  //-----------------------------------------------------------------------------
+
+  val instruction = Wire(UInt(dataLen.W))
+  instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
+  io.rInst.valid := Mux(
+    state === sIdle,
+    cachedTrans && isIdle && isHit && io.rInst.enable,
+    Mux(state === sReFill, earlyValidReg, false.B)
+  )
+  io.rInst.data := Mux(state === sIdle, instruction, Mux(state === sReFill, instrReg, DontCare))
   //-----------------------------------------------------------------------------
   //------------------optional io for performance metrics--------------------------------------
   //-----------------------------------------------------------------------------
