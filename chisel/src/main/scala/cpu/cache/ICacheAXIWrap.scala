@@ -261,7 +261,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     // performance counter to count how many misses and how many hits are there
     val missCycleCounter = RegInit(0.U(32.W))
     val hitCycleCounter = RegInit(0.U(32.W))
-    when(state === sIdle) {
+    when(io.rInst.valid) {
       hitCycleCounter := hitCycleCounter + 1.U
     }.otherwise {
       missCycleCounter := missCycleCounter + 1.U
