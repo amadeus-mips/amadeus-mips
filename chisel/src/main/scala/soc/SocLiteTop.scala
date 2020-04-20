@@ -85,8 +85,8 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
   /** 2x2 interconnect */
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.criticalWord))
   val confreg = Module(new Confreg(simulation))
-  //  val ram = Module(new memoryAXIWrap(memFile))
-  val ram = Module(new AXIMemory(fileName = memFile))
+  val ram = Module(new memoryAXIWrap(memFile))
+//  val ram = Module(new AXIMemory(fileName = memFile))
 
   // the optional performance IO
   axiInterconnect.io.slaves(0) <> cpu.io.dataAXI

@@ -22,6 +22,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     val performanceMonitorIO = if (performanceMonitorEnable) Some(new CachePerformanceMonitorIO) else None
   })
 
+  /**
+    * |   tag     |   index     |   bankOffset      | 0.U(2.W)  |
+    * | `tagLen`  | `indexLen`  | `log2(bankAmount)`|     2     |
+    */
   //----------------------------------------------------------------
   //------------------set up the cache parameters-------------------
   //----------------------------------------------------------------
@@ -47,8 +51,14 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //  val cnt = RegInit(0.U(bankAmount.W))
   val writeMask = Module(new CircularShifter(bankAmount))
 
+  // keep track of which way to write to
   val lruReg = Reg(UInt(1.W))
+  // keep track of the index
   val indexReg = Reg(UInt(indexLen.W))
+  // keep track of the tag
+  val tagReg = Reg(UInt(tagLen.W))
+  // keep track of the specific index of the bank
+  val bankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
 
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
@@ -132,12 +142,13 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   io.axi.ar.bits.id := INST_ID
   io.axi.ar.bits.addr := Mux(
     cachedTrans,
-    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
+//    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
+    Cat(0.U(3.W), addr(28, 0)),
     virToPhy(addr)
   )
   io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
   io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
-  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
+  io.axi.ar.bits.burst := "b10".U(2.W) // wrap burst
 
   /**
     * there was a design where if there is a miss, assert valid immediately
@@ -145,6 +156,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     */
   io.axi.ar.valid := isWaitForAR
 
+  //TODO: change the r ready signal
+  //  io.axi.r.ready := state === sReFill
   io.axi.r.ready := true.B
 
   // these are hard wired as required by Loongson
@@ -171,27 +184,29 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           tagWe((~lruLine.asBool()).asUInt) := false.B
           indexReg := index
           lruReg := lruLine
+          tagReg := tag
+          bankOffsetReg := bankOffset
         }
       }
     }
     is(sWaitForAR) {
-      //TODO: make lru line fixed, in case the address changes half way
-      // write the tags when waiting for the ar handshake
       when(io.axi.ar.fire) {
         state := sReFill
         writeMask.io.initPosition.valid := true.B
-        writeMask.io.initPosition.bits := 0.U
+        writeMask.io.initPosition.bits := bankOffsetReg
       }
     }
     is(sReFill) {
       assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from i-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
+      // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         writeMask.io.shiftEnable := true.B
         // write to each bank consequently
         we(lruLine) := writeMask.io.vector.asBools()
-
+        // TODO: this only works when the bank offset reg does not overflow, so it "happens" to work when there are 16 banks
+        bankOffsetReg := bankOffsetReg + 1.U
         when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
           valid(lruReg)(indexReg) := true.B

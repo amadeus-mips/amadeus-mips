@@ -11,7 +11,7 @@ class AXI1x2SramInterface extends Module {
     val dram = new SimpleSramIO
   })
 
-  val iCon = Module(new AXIToSram(Constants.INST_ID, 10))
+  val iCon = Module(new AXIWrapToSRAM(Constants.INST_ID))
   val dCon = Module(new AXIToSram(Constants.DATA_ID, 10))
 
   // ar
@@ -24,7 +24,7 @@ class AXI1x2SramInterface extends Module {
 
   // r
   val dIid = dCon.io.bus.r.valid
-  when(!dIid){
+  when(!dIid) {
     io.bus.r <> iCon.io.bus.r
   }.otherwise {
     io.bus.r <> dCon.io.bus.r
