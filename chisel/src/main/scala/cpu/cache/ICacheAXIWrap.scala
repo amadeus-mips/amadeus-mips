@@ -228,8 +228,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           tagWire := tagReg
         }.otherwise {
           io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
-          io.rInst.data := RegNext(io.axi.r.bits.data)
         }
+        io.rInst.data := RegNext(io.axi.r.bits.data)
       }
     }
   }
