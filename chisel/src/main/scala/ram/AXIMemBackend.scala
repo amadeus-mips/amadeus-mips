@@ -309,6 +309,8 @@ class AXIMemBackend(
           |                write_state_next = WRITE_STATE_RESP;
           |            end
           |        end
+          |        2'd3: begin
+          |        end
           |    endcase
           |end
           |
