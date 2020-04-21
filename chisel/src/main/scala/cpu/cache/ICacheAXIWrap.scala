@@ -178,6 +178,19 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
   //-----------------------------------------------------------------------------
+  //------------------transaction as functions-----------------------------------
+  //-----------------------------------------------------------------------------
+  def arTransaction: Unit = {
+    state := sReFill
+    writeMask.io.initPosition.valid := true.B
+    writeMask.io.initPosition.bits := bankOffsetReg
+    // the precise timing of this should happen at the first cycle of the r transaction
+    // however, as it is put into the refill state ( because if you wait for R, then
+    // you can't handle the first receive unless you put it into a reg, but that's kind
+    // of ugly
+    valid(lruReg)(indexReg) := false.B
+  }
+  //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
   switch(state) {
@@ -193,14 +206,17 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           lruReg := lruLine
           tagReg := tag
           bankOffsetReg := bankOffset
+          // what if there is a transaction this cycle?
+          io.axi.ar.valid := true.B
+          when(io.axi.ar.fire) {
+            arTransaction
+          }
         }
       }
     }
     is(sWaitForAR) {
       when(io.axi.ar.fire) {
-        state := sReFill
-        writeMask.io.initPosition.valid := true.B
-        writeMask.io.initPosition.bits := bankOffsetReg
+        arTransaction
       }
     }
     is(sReFill) {
