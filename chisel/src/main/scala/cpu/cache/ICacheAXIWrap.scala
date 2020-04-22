@@ -62,6 +62,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
 
   // registers for early restart
   val erBankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
+
+  // register for preserving the r data across rlast
+  val rDataReg = RegNext(io.axi.r.bits.data)
+  val rValidReg = RegInit(false.B)
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -180,7 +184,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
-  def arTransaction: Unit = {
+  def beginRTransaction: Unit = {
     state := sReFill
     writeMask.io.initPosition.valid := true.B
     writeMask.io.initPosition.bits := bankOffsetReg
@@ -190,33 +194,41 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     // of ugly
     valid(lruReg)(indexReg) := false.B
   }
+
+  def beginARTransaction: Unit = {
+    indexReg := index
+    lruReg := lruLine
+    tagReg := tag
+    bankOffsetReg := bankOffset
+  }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
   switch(state) {
     is(sIdle) {
       //TODO: a way to simplify nested when
+      when(rValidReg) {
+        rValidReg := false.B
+        io.rInst.data := rDataReg
+      }
       when(io.rInst.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
           LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
         }.otherwise {
           state := sWaitForAR
-          indexReg := index
-          lruReg := lruLine
-          tagReg := tag
-          bankOffsetReg := bankOffset
-          // what if there is a transaction this cycle?
+          beginARTransaction
           io.axi.ar.valid := true.B
+          // if ar ready is asserted in the same cycle
           when(io.axi.ar.fire) {
-            arTransaction
+            beginRTransaction
           }
         }
       }
     }
     is(sWaitForAR) {
       when(io.axi.ar.fire) {
-        arTransaction
+        beginRTransaction
       }
     }
     is(sReFill) {
@@ -242,10 +254,11 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
           tagWe(lruReg) := true.B
           tagWe((~lruReg.asBool()).asUInt) := false.B
           tagWire := tagReg
-        }.otherwise {
-          io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
-        }
-        io.rInst.data := RegNext(io.axi.r.bits.data)
+        }.otherwise {}
+        val reFillHit = (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
+        io.rInst.valid := reFillHit
+        io.rInst.data := rDataReg
+        rValidReg := reFillHit
       }
     }
   }
