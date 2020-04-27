@@ -189,7 +189,6 @@ Session.vim
 ## Directory-based project format:
 .idea/*
 # curtesy of sequencer
-!.idea/fileTemplates/
 !.idea/dictionaries/
 !.idea/inspectionProfiles/
 # if you remove the above rule, at least ignore the following:
