@@ -24,8 +24,8 @@ import shared.Constants._
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class ICacheAXIWrap(
-  setAmount:                Int = 128,
-  wayAmount:                Int = 2,
+  setAmount:                Int = 64,
+  wayAmount:                Int = 4,
   bankAmount:               Int = 16,
   performanceMonitorEnable: Boolean = false
 ) extends Module {
@@ -81,8 +81,8 @@ class ICacheAXIWrap(
   val rValidReg = RegInit(false.B)
 
   // records if the current set is full
-//  val isSetNotFull = WireDefault(false.B)
-//  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
+  val isSetNotFull = WireDefault(false.B)
+  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class ICacheAXIWrap(
   /** LRU(index) */
 //  val LRU = RegInit(VecInit(Seq.fill(setAmount)(0.U(2.W))))
 //TODO: is setAmount the number of sets
-  val LRU = Module(new TrueLRU(numOfWay = wayAmount, numOfSets = setAmount))
+  val LRU = Module(new PseudoLRUTree(numOfWay = wayAmount, numOfSets = setAmount))
   val tagWire = Wire(UInt(tagLen.W))
 
   val indexWire = Wire(UInt(indexLen.W))
@@ -151,10 +151,10 @@ class ICacheAXIWrap(
 
   // check across all ways in the desired set
   for (i <- 0 until wayAmount) {
-//    when(!valid(i)(index)) {
-//      isSetNotFull := true.B
-//      emptyPtr := i.U
-//    }
+    when(!valid(i)(index)) {
+      isSetNotFull := true.B
+      emptyPtr := i.U
+    }
     when(valid(i)(index) && tagData(i) === tag) {
       hitWay := i.U
       isHit := true.B
@@ -227,8 +227,8 @@ class ICacheAXIWrap(
 
   def beginARTransaction: Unit = {
     indexReg := index
-//    replacedLineReg := Mux(isSetNotFull, emptyPtr, lruLine)
-    replacedLineReg := lruLine
+    replacedLineReg := Mux(isSetNotFull, emptyPtr, lruLine)
+//    replacedLineReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -322,16 +322,21 @@ class ICacheAXIWrap(
   //-----------------------------------------------------------------------------
   if (performanceMonitorEnable) {
     // performance counter to count how many misses and how many hits are there
-    val missCycleCounter = RegInit(0.U(32.W))
-    val hitCycleCounter = RegInit(0.U(32.W))
+    val missCycleCounter = RegInit(0.U(64.W))
+    val hitCycleCounter = RegInit(0.U(64.W))
+    val idleCycleCounter = RegInit(0.U(64.W))
     when(io.rInst.valid) {
       hitCycleCounter := hitCycleCounter + 1.U
-    }.otherwise {
-      missCycleCounter := missCycleCounter + 1.U
-    }
+    }.elsewhen(io.rInst.enable && !io.rInst.valid) {
+        missCycleCounter := missCycleCounter + 1.U
+      }
+      .otherwise {
+        idleCycleCounter := idleCycleCounter + 1.U
+      }
     val performanceMonitorWire = Wire(new CachePerformanceMonitorIO)
     performanceMonitorWire.hitCycles := hitCycleCounter
     performanceMonitorWire.missCycles := missCycleCounter
+    performanceMonitorWire.idleCycles := idleCycleCounter
     io.performanceMonitorIO.get := performanceMonitorWire
   }
 

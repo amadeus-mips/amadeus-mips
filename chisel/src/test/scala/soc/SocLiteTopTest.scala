@@ -44,7 +44,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 4)
+      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 3)
     } should be(true)
   }
   it should "use verilator to generate vcd file" in {
@@ -110,7 +110,9 @@ class SocLiteTopUnitTester(
   info(s"IPC is ${iCount.toFloat / cCount}")
   if (performanceMonitorEnable) {
     info(
-      s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses"
+      s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
+        s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
+        s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
     )
   }
 
