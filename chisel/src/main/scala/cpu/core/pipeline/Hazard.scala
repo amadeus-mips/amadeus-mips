@@ -7,7 +7,7 @@ import chisel3.util.MuxCase
 import cpu.core.Constants._
 import shared.ValidBundle
 
-class CTRL extends Module {
+class Hazard extends Module {
   val io = IO(new Bundle {
     val except = Input(Vec(exceptAmount, Bool()))
     val EPC = Input(UInt(dataLen.W))

@@ -31,7 +31,7 @@ class Core extends MultiIOModule {
   val regFile = Module(new RegFile)
   val cp0 = Module(new CP0)
   val hilo = Module(new HILO)
-  val ctrl = Module(new CTRL)
+  val hazard = Module(new Hazard)
 
   // stages
   val if_id = Module(new Stage(1, new IfIdBundle))
@@ -39,18 +39,18 @@ class Core extends MultiIOModule {
   val exe_mem = Module(new Stage(3, new ExeMemBundle))
   val mem_wb = Module(new Stage(4, new MemWbBundle))
 
-  fetch.io.stall := ctrl.io.stall
-  fetch.io.flush := ctrl.io.flush
-  fetch.io.flushPC := ctrl.io.flushPC
+  fetch.io.stall := hazard.io.stall
+  fetch.io.flush := hazard.io.flush
+  fetch.io.flushPC := hazard.io.flushPC
 
   fetch.io.branch <> decodeTop.io.branch
   fetch.io.instValid := io.rInst.valid
 
   if_id.io.in <> fetch.io.out
-  if_id.io.stall := ctrl.io.stall
-  if_id.io.flush := ctrl.io.flush
+  if_id.io.stall := hazard.io.stall
+  if_id.io.flush := hazard.io.flush
 
-  val stalled = !ctrl.io.flush && ctrl.io.stall(0)
+  val stalled = !hazard.io.flush && hazard.io.stall(0)
   val instBuffer = Module(new Buffer(dataLen))
   instBuffer.io.in := io.rInst.data
   instBuffer.io.en := stalled
@@ -69,12 +69,12 @@ class Core extends MultiIOModule {
   regFile.io.rt := inst(20, 16)
 
   id_exe.io.in <> decodeTop.io.out
-  id_exe.io.stall := ctrl.io.stall
-  id_exe.io.flush := ctrl.io.flush
+  id_exe.io.stall := hazard.io.stall
+  id_exe.io.flush := hazard.io.flush
   id_exe.ioExt.nextInstInDelaySlot := decodeTop.io.nextInstInDelaySlot
 
   executeTop.io.in <> id_exe.io.out
-  executeTop.io.flush := ctrl.io.flush
+  executeTop.io.flush := hazard.io.flush
   executeTop.io.rawHILO <> hilo.io.out
   executeTop.io.memHILO <> exe_mem.io.out.hilo
   executeTop.io.wbHILO <> mem_wb.io.out.hilo
@@ -83,8 +83,8 @@ class Core extends MultiIOModule {
   executeTop.io.wbCP0 <> mem_wb.io.out.cp0
 
   exe_mem.io.in <> executeTop.io.out
-  exe_mem.io.stall := ctrl.io.stall
-  exe_mem.io.flush := ctrl.io.flush
+  exe_mem.io.stall := hazard.io.stall
+  exe_mem.io.flush := hazard.io.flush
 
   memoryTop.io.in <> exe_mem.io.out
   memoryTop.io.inCP0Handle.status := cp0.io.status_o
@@ -105,16 +105,16 @@ class Core extends MultiIOModule {
 
   hilo.io.in := mem_wb.io.out.hilo
 
-  ctrl.io.except <> memoryTop.io.except
-  ctrl.io.EPC := memoryTop.io.EPC
-  ctrl.io.stallReqFromFetch := fetch.io.outStallReq
-  ctrl.io.stallReqFromDecode := decodeTop.io.stallReq
-  ctrl.io.stallReqFromExecute := executeTop.io.stallReq
-  ctrl.io.stallReqFromMemory := memoryTop.io.stallReq
+  hazard.io.except <> memoryTop.io.except
+  hazard.io.EPC := memoryTop.io.EPC
+  hazard.io.stallReqFromFetch := fetch.io.outStallReq
+  hazard.io.stallReqFromDecode := decodeTop.io.stallReq
+  hazard.io.stallReqFromExecute := executeTop.io.stallReq
+  hazard.io.stallReqFromMemory := memoryTop.io.stallReq
 
   mem_wb.io.in <> memoryTop.io.out
-  mem_wb.io.stall := ctrl.io.stall
-  mem_wb.io.flush := ctrl.io.flush
+  mem_wb.io.stall := hazard.io.stall
+  mem_wb.io.flush := hazard.io.flush
 
   io.rInst.addr := fetch.io.out.pc
   io.rInst.enable := fetch.io.outPCValid
