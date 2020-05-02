@@ -3,7 +3,7 @@
 package cpu.cache
 
 import chisel3._
-import shared.CircularShifter
+import shared.{CircularShifter, PseudoLRUMRU, PseudoLRUTree}
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
 import cpu.common.NiseSramReadIO
@@ -15,7 +15,20 @@ import shared.Constants._
 //TODO: will removing the fill buffer hurt performance?
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
-class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEnable: Boolean = false) extends Module {
+//TODO: clear the naming of parameters
+/**
+  * icache with an AXI interface
+  * @param setAmount how many sets there are in the i-cache
+  * @param wayAmount how many ways there are in each set of i-cache
+  * @param bankAmount how many banks there are in the i-cache
+  * @param performanceMonitorEnable whether to enable the performance metrics
+  */
+class ICacheAXIWrap(
+  setAmount:                Int = 64,
+  wayAmount:                Int = 4,
+  bankAmount:               Int = 16,
+  performanceMonitorEnable: Boolean = false
+) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
@@ -29,8 +42,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //----------------------------------------------------------------
   //------------------set up the cache parameters-------------------
   //----------------------------------------------------------------
-  val wayAmount = 2 // 每组路数
-  val indexLen = log2Ceil(depth) // index宽度
+  val indexLen = log2Ceil(setAmount) // index宽度
   val bankSize = 32 / 8 // 每bank字节数
   val blockSize = bankAmount * bankSize // 每块字节数
   val tagLen = 32 - indexLen - log2Ceil(blockSize) // tag宽度
@@ -39,7 +51,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //------------------check if the generator parameters meeet requirements--------------
   //------------------------------------------------------------------------------------
   require(bankAmount <= 16 && bankAmount >= 1, s"bank amount is $bankAmount! Need between 1 and 16")
-  require(depth % 2 == 0, "depth of the cache must be a power of 2")
+  require(setAmount % 2 == 0, "setAmount of the cache must be a power of 2")
   require(blockSize % 4 == 0, "the block size of the cache ( in number of bytes ) must be 4 aligned")
 
   //-------------------------------------------------------------------------------
@@ -52,7 +64,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   val writeMask = Module(new CircularShifter(bankAmount))
 
   // keep track of which way to write to
-  val lruReg = Reg(UInt(1.W))
+//  val replacedLineReg = Reg(UInt(1.W))
+  val replacedLineReg = Reg(UInt(log2Ceil(wayAmount).W))
   // keep track of the index
   val indexReg = Reg(UInt(indexLen.W))
   // keep track of the tag
@@ -66,6 +79,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // register for preserving the r data across rlast
   val rDataReg = RegNext(io.axi.r.bits.data)
   val rValidReg = RegInit(false.B)
+
+  // records if the current set is full
+  val isSetNotFull = WireDefault(false.B)
+  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -86,7 +103,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //--------------------set up the memory banks and wire them to their states------
   //-------------------------------------------------------------------------------
   /** valid(way)(index) */
-  val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(depth)(false.B)))))
+  //TODO: change the order if it is not banked
+  val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -103,8 +121,9 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   // LRU points to the least recently used item in each set
   // we can do this because it is only 2 way set associative now
   /** LRU(index) */
-  val LRU = RegInit(VecInit(Seq.fill(depth)(0.U(1.W))))
-
+//  val LRU = RegInit(VecInit(Seq.fill(setAmount)(0.U(2.W))))
+//TODO: is setAmount the number of sets
+  val LRU = Module(new PseudoLRUTree(numOfWay = wayAmount, numOfSets = setAmount))
   val tagWire = Wire(UInt(tagLen.W))
 
   val indexWire = Wire(UInt(indexLen.W))
@@ -113,6 +132,8 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   //-----------------------------------------------------------------------------
   tagWire := tag
   // check what state we are in
+  //TODO: notice this does not precisely imply the time, as it state update happens
+  // within the cycle
   val isIdle = state === sIdle
   val isWaitForAR = state === sWaitForAR
   val isReFill = state === sReFill
@@ -122,7 +143,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   val isHit = WireDefault(false.B)
 
   // check which is the lru line
-  val lruLine = LRU(index)
+  val lruLine = LRU.io.lruLine
 
   // check if there is a hit and determine the way of the hit
   val hitWay = Wire(UInt(log2Ceil(wayAmount).W))
@@ -130,6 +151,10 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
 
   // check across all ways in the desired set
   for (i <- 0 until wayAmount) {
+    when(!valid(i)(index)) {
+      isSetNotFull := true.B
+      emptyPtr := i.U
+    }
     when(valid(i)(index) && tagData(i) === tag) {
       hitWay := i.U
       isHit := true.B
@@ -181,6 +206,11 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
   instruction := bankData(RegNext(hitWay))(RegNext(bankOffset))
   io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
+
+  LRU.io.accessEnable := false.B
+  LRU.io.accessWay := DontCare
+  LRU.io.accessSet := index
+
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
@@ -192,12 +222,12 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     // however, as it is put into the refill state ( because if you wait for R, then
     // you can't handle the first receive unless you put it into a reg, but that's kind
     // of ugly
-    valid(lruReg)(indexReg) := false.B
+    valid(replacedLineReg)(indexReg) := false.B
   }
 
   def beginARTransaction: Unit = {
     indexReg := index
-    lruReg := lruLine
+    replacedLineReg := Mux(isSetNotFull, emptyPtr, lruLine)
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -214,7 +244,9 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
       when(io.rInst.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
-          LRU(index) := Mux(lruLine === hitWay, (~hitWay.asBool).asUInt(), lruLine)
+          LRU.io.accessSet := index
+          LRU.io.accessEnable := true.B
+          LRU.io.accessWay := hitWay
         }.otherwise {
           state := sWaitForAR
           beginARTransaction
@@ -239,8 +271,9 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
       when(io.axi.r.fire) {
         writeMask.io.shiftEnable := true.B
         // write to each bank consequently
-        we(lruReg) := writeMask.io.vector.asBools()
+        we(replacedLineReg) := writeMask.io.vector.asBools()
         // TODO: this only works when the bank offset reg does not overflow, so it "happens" to work when there are 16 banks
+        // TODO: implement a proper bank offset register
         bankOffsetReg := bankOffsetReg + 1.U
 
 //        io.rInst.valid := (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
@@ -249,12 +282,13 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
         // update the states of cache during last write
         when(io.axi.r.bits.last) {
           //        assert(writeMask.io.vector(15) === true.B, "the write mask's MSB should be 1 when the fill finishes")
-          valid(lruReg)(indexReg) := true.B
+          valid(replacedLineReg)(indexReg) := true.B
           state := sIdle
-          tagWe(lruReg) := true.B
-          tagWe((~lruReg.asBool()).asUInt) := false.B
+          for (i <- 0 until wayAmount) {
+            tagWe(i.U) := (i.U === replacedLineReg)
+          }
           tagWire := tagReg
-        }.otherwise {}
+        }
         val reFillHit = (bankOffset === bankOffsetReg) && (tag === tagReg) && (index === indexReg) && io.rInst.enable
         io.rInst.valid := reFillHit
         io.rInst.data := rDataReg
@@ -268,7 +302,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     i <- 0 until wayAmount
     j <- 0 until bankAmount
   } yield {
-    val bank = Module(new SinglePortBank(depth, dataLen, syncRead = true))
+    val bank = Module(new SinglePortBank(setAmount, dataLen, syncRead = true))
     bank.io.we := we(i)(j)
     bank.io.en.get := true.B
     bank.io.addr := indexWire
@@ -276,7 +310,7 @@ class ICacheAXIWrap(depth: Int = 128, bankAmount: Int = 16, performanceMonitorEn
     bankData(i)(j) := bank.io.outData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
-    val bank = Module(new SinglePortBank(depth, tagLen, syncRead = false))
+    val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
     bank.io.we := tagWe(i)
     bank.io.addr := indexWire
     bank.io.inData := tagReg
