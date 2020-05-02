@@ -3,7 +3,7 @@
 package cpu.cache
 
 import chisel3._
-import shared.{CircularShifter, PseudoLRUMRU, PseudoLRUTree}
+import shared.{CircularShifter, PseudoLRUMRU, PseudoLRUTree, TrueLRU}
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
 import cpu.common.NiseSramReadIO
@@ -24,8 +24,8 @@ import shared.Constants._
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class ICacheAXIWrap(
-  setAmount:                Int = 64,
-  wayAmount:                Int = 4,
+  setAmount:                Int = 128,
+  wayAmount:                Int = 2,
   bankAmount:               Int = 16,
   performanceMonitorEnable: Boolean = false
 ) extends Module {
@@ -81,8 +81,8 @@ class ICacheAXIWrap(
   val rValidReg = RegInit(false.B)
 
   // records if the current set is full
-  val isSetNotFull = WireDefault(false.B)
-  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
+//  val isSetNotFull = WireDefault(false.B)
+//  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class ICacheAXIWrap(
   /** LRU(index) */
 //  val LRU = RegInit(VecInit(Seq.fill(setAmount)(0.U(2.W))))
 //TODO: is setAmount the number of sets
-  val LRU = Module(new PseudoLRUTree(numOfWay = wayAmount, numOfSets = setAmount))
+  val LRU = Module(new TrueLRU(numOfWay = wayAmount, numOfSets = setAmount))
   val tagWire = Wire(UInt(tagLen.W))
 
   val indexWire = Wire(UInt(indexLen.W))
@@ -151,10 +151,10 @@ class ICacheAXIWrap(
 
   // check across all ways in the desired set
   for (i <- 0 until wayAmount) {
-    when(!valid(i)(index)) {
-      isSetNotFull := true.B
-      emptyPtr := i.U
-    }
+//    when(!valid(i)(index)) {
+//      isSetNotFull := true.B
+//      emptyPtr := i.U
+//    }
     when(valid(i)(index) && tagData(i) === tag) {
       hitWay := i.U
       isHit := true.B
@@ -227,7 +227,8 @@ class ICacheAXIWrap(
 
   def beginARTransaction: Unit = {
     indexReg := index
-    replacedLineReg := Mux(isSetNotFull, emptyPtr, lruLine)
+//    replacedLineReg := Mux(isSetNotFull, emptyPtr, lruLine)
+    replacedLineReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -244,7 +245,6 @@ class ICacheAXIWrap(
       when(io.rInst.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
-          LRU.io.accessSet := index
           LRU.io.accessEnable := true.B
           LRU.io.accessWay := hitWay
         }.otherwise {
