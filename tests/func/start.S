@@ -2,7 +2,7 @@
 #include <regdef.h>
 #include <cpu_cde.h>
 
-#define TEST_NUM 64
+#define TEST_NUM 89
 
 
 ##s0, number
@@ -551,121 +551,121 @@ kseg0_kseg1:
     nop
     jal wait_1s
     nop
-    # jal n65_syscall_ex_test       #syscall
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n66_break_ex_test       #break ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n67_add_ov_ex_test      #add ov ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n68_addi_ov_ex_test     #addi ov ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n69_sub_ov_ex_test      #sub ov ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n70_lw_adel_ex_test     #lw adel ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n71_lh_adel_ex_test     #lh adel ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n72_lhu_adel_ex_test    #lhu adel ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n73_sw_ades_ex_test     #sw ades ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n74_sh_ades_ex_test     #sh ades ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n75_ft_adel_ex_test     #ft adel ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n76_ri_ex_test          #ri ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n77_soft_int_ex_test    #soft int ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n78_beq_ds_ex_test      #beq ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n79_bne_ds_ex_test      #bne ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n80_bgez_ds_ex_test     #bgez ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n81_bgtz_ds_ex_test     #bgtz ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n82_blez_ds_ex_test     #blez ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n83_bltz_ds_ex_test     #bltz ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n84_bltzal_ds_ex_test   #bltzal ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n85_bgezal_ds_ex_test   #bgezal ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n86_j_ds_ex_test        #j ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n87_jal_ds_ex_test      #jal ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n88_jr_ds_ex_test       #jr ds ex
-    # nop
-    # jal wait_1s
-    # nop
-    # jal n89_jalr_ds_ex_test     #jalr ds ex
-    # nop
-    # jal wait_1s
-    # nop
+    jal n65_syscall_ex_test       #syscall
+    nop
+    jal wait_1s
+    nop
+    jal n66_break_ex_test       #break ex
+    nop
+    jal wait_1s
+    nop
+    jal n67_add_ov_ex_test      #add ov ex
+    nop
+    jal wait_1s
+    nop
+    jal n68_addi_ov_ex_test     #addi ov ex
+    nop
+    jal wait_1s
+    nop
+    jal n69_sub_ov_ex_test      #sub ov ex
+    nop
+    jal wait_1s
+    nop
+    jal n70_lw_adel_ex_test     #lw adel ex
+    nop
+    jal wait_1s
+    nop
+    jal n71_lh_adel_ex_test     #lh adel ex
+    nop
+    jal wait_1s
+    nop
+    jal n72_lhu_adel_ex_test    #lhu adel ex
+    nop
+    jal wait_1s
+    nop
+    jal n73_sw_ades_ex_test     #sw ades ex
+    nop
+    jal wait_1s
+    nop
+    jal n74_sh_ades_ex_test     #sh ades ex
+    nop
+    jal wait_1s
+    nop
+    jal n75_ft_adel_ex_test     #ft adel ex
+    nop
+    jal wait_1s
+    nop
+    jal n76_ri_ex_test          #ri ex
+    nop
+    jal wait_1s
+    nop
+    jal n77_soft_int_ex_test    #soft int ex
+    nop
+    jal wait_1s
+    nop
+    jal n78_beq_ds_ex_test      #beq ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n79_bne_ds_ex_test      #bne ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n80_bgez_ds_ex_test     #bgez ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n81_bgtz_ds_ex_test     #bgtz ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n82_blez_ds_ex_test     #blez ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n83_bltz_ds_ex_test     #bltz ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n84_bltzal_ds_ex_test   #bltzal ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n85_bgezal_ds_ex_test   #bgezal ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n86_j_ds_ex_test        #j ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n87_jal_ds_ex_test      #jal ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n88_jr_ds_ex_test       #jr ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n89_jalr_ds_ex_test     #jalr ds ex
+    nop
+    jal wait_1s
+    nop
 ###check io access
-    # LI  (a0, IO_SIMU_ADDR)
-    # LI  (t0, 0x1234)
-    # sw   t0, 0(a0)
-    # lw   t1, 0(a0)   //t1=0x12340000
-    # sll  t0, t0, 16
-    # bne  t0, t1, io_err
-    # nop
+    LI  (a0, IO_SIMU_ADDR)
+    LI  (t0, 0x1234)
+    sw   t0, 0(a0)
+    lw   t1, 0(a0)   //t1=0x12340000
+    sll  t0, t0, 16
+    bne  t0, t1, io_err
+    nop
 
-    # LI  (t0, 0x56780000)
-    # sw   t0, 0(a0)
-    # srl  t0, t0, 16
-    # lw   t1, 0(a0)   //t1=0x5678
-    # bne  t0, t1, io_err
-    # nop
+    LI  (t0, 0x56780000)
+    sw   t0, 0(a0)
+    srl  t0, t0, 16
+    lw   t1, 0(a0)   //t1=0x5678
+    bne  t0, t1, io_err
+    nop
     b    test_end
     nop
 io_err:
@@ -700,28 +700,28 @@ test_end:
     nop
 
 wait_1s:
-#     LI (t0,SW_INTER_ADDR)
-#     LI (t1, 0xaaaa)
+    LI (t0,SW_INTER_ADDR)
+    LI (t1, 0xaaaa)
 
-#     #initial t3
-#     lw    t2, 0x0(t0)   #switch_interleave: {switch[7],1'b0, switch[6],1'b0...switch[0],1'b0}
-#     xor   t2, t2, t1
-#     sll   t3, t2, 9     #t3 = switch interleave << 9
-#     addiu t3, t3, 1
+    #initial t3
+    lw    t2, 0x0(t0)   #switch_interleave: {switch[7],1'b0, switch[6],1'b0...switch[0],1'b0}
+    xor   t2, t2, t1
+    sll   t3, t2, 9     #t3 = switch interleave << 9
+    addiu t3, t3, 1
 
-# sub1:
-#     addiu t3, t3, -1
+sub1:
+    addiu t3, t3, -1
 
-#     #select min{t3, switch_interleave}
-#     lw    t2, 0x0(t0)   #switch_interleave: {switch[7],1'b0, switch[6],1'b0...switch[0],1'b0}
-#     xor   t2, t2, t1
-#     sll   t2, t2, 9     #switch interleave << 9
-#     sltu  t4, t3, t2
-#     bnez  t4, 1f
-#     nop
-#     addu  t3, t2, 0
-# 1:
-#     bne   t3,zero, sub1
-#     nop
+    #select min{t3, switch_interleave}
+    lw    t2, 0x0(t0)   #switch_interleave: {switch[7],1'b0, switch[6],1'b0...switch[0],1'b0}
+    xor   t2, t2, t1
+    sll   t2, t2, 9     #switch interleave << 9
+    sltu  t4, t3, t2
+    bnez  t4, 1f
+    nop
+    addu  t3, t2, 0
+1:
+    bne   t3,zero, sub1
+    nop
     jr ra
     nop
