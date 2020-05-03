@@ -12,7 +12,6 @@ import cpu.performance.CachePerformanceMonitorIO
 import shared.AXIIO
 import shared.Constants._
 
-//TODO: will removing the fill buffer hurt performance?
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
 /**
@@ -82,7 +81,6 @@ class ICacheAXIWrap(
   val bankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
 
   // register for preserving the r data across rlast
-  //TODO: check boundary crossing
   val rDataReg = RegNext(io.axi.r.bits.data)
   val rValidReg = RegInit(false.B)
 
@@ -127,12 +125,9 @@ class ICacheAXIWrap(
   /** Data from every way tag, tagData(way) */
   val tagData = Wire(Vec(wayAmount, UInt(tagLen.W)))
 
-  // LRU points to the least recently used item in each set
-  // we can do this because it is only 2 way set associative now
-  /** LRU(index) */
-//  val LRU = RegInit(VecInit(Seq.fill(setAmount)(0.U(2.W))))
-//TODO: is setAmount the number of sets
-  val LRU = Module(new PseudoLRUTree(numOfWay = wayAmount, numOfSets = setAmount))
+  // there are several backends for LRU, mru performs better than tree
+  val LRU = Module(new PseudoLRUMRU(numOfWay = wayAmount, numOfSets = setAmount))
+
   val tagWire = Wire(UInt(tagLen.W))
 
   val indexWire = Wire(UInt(indexLen.W))
@@ -205,7 +200,6 @@ class ICacheAXIWrap(
     */
   io.axi.ar.valid := isWaitForAR
 
-  //TODO: change the r ready signal
   //  io.axi.r.ready := state === sReFill
   io.axi.r.ready := true.B
 
@@ -231,7 +225,7 @@ class ICacheAXIWrap(
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
-  def beginRTransaction: Unit = {
+  def beginRTransaction(): Unit = {
     state := sReFill
     writeMask.io.initPosition.valid := true.B
     writeMask.io.initPosition.bits := bankOffsetReg
@@ -244,12 +238,45 @@ class ICacheAXIWrap(
     // don't invalidate this line
   }
 
-  def beginARTransaction: Unit = {
+  def beginARTransaction(): Unit = {
     indexReg := index
-    lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
 //    lruWayReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
+  }
+
+  /**
+    * this is to check whether there is a hit in the
+    * I-cache when the i-cache is under a miss
+    * if there is a hit, send the instruction ( this cycle )
+    * to the rInst, valid has been asserted last cycle
+    */
+  def checkICacheHit(): Unit = {
+    when(rICacheHitReg) {
+      rICacheHitReg := false.B
+      io.rInst.data := instruction
+    }
+  }
+
+  /**
+    * check if there is a hit in the refill buffer
+    * this is to preserve the result across the fsm
+    * state boundary
+    */
+  def checkRefillBufferHit(): Unit = {
+    when(rValidReg) {
+      rValidReg := false.B
+      io.rInst.data := rDataReg
+    }
+  }
+
+  /**
+    * update lru to point at the access way
+    * @param accessWay the way that I'm going to access
+    */
+  def updateLRU(accessWay: UInt): Unit = {
+    LRU.io.accessEnable := true.B
+    LRU.io.accessWay := accessWay
   }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
@@ -261,23 +288,21 @@ class ICacheAXIWrap(
       when(io.rInst.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
-          LRU.io.accessEnable := true.B
-          LRU.io.accessWay := hitWay
+          updateLRU(hitWay)
         }.otherwise {
           state := sWaitForAR
-          beginARTransaction
+          beginARTransaction()
 
-          //TODO: disable boundary crossing
           io.axi.ar.valid := true.B
           when(io.axi.ar.fire) {
-            beginRTransaction
+            beginRTransaction()
           }
         }
       }
     }
     is(sWaitForAR) {
       when(io.axi.ar.fire) {
-        beginRTransaction
+        beginRTransaction()
       }
     }
     is(sReFill) {
@@ -295,22 +320,26 @@ class ICacheAXIWrap(
         writeVec(writeMask.io.vector) := true.B
 
         // write to each bank consequently
-
         bankOffsetReg := bankOffsetReg + 1.U
 
-        //TODO: implement searching in data banks
-
         io.rInst.valid := false.B
+        // by default, this is connected to the rData register that preserves the hit
+        // in refill buffer or axi from the previous cycle, this could also be connected
+        // to i-cache ( instruction variable )
         io.rInst.data := rDataReg
-        when(rICacheHitReg) {
-          rICacheHitReg := false.B
-          io.rInst.data := instruction
-        }
+        // this defaults to false, as this value is only used in the write back state
         rValidReg := false.B
+        checkICacheHit()
+
+        /**
+          * check if there is a hit in the I-cache
+          */
         when(isHit && io.rInst.enable) {
           io.rInst.valid := true.B
           rICacheHitReg := true.B
+          updateLRU(hitWay)
         }
+
         // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
         // when index and tag are hit
         when((tag === tagReg) && (index === indexReg) && io.rInst.enable) {
@@ -320,6 +349,7 @@ class ICacheAXIWrap(
             rValidReg := true.B
             // r data reg = axi r bits by default
           }.elsewhen(writeVec(bankOffset)) {
+            // if the hit occurs in the refill buffer
             io.rInst.valid := true.B
             rDataReg := reFillBuffer(bankOffset)
             rValidReg := true.B
@@ -327,33 +357,35 @@ class ICacheAXIWrap(
         }
 
         when(io.axi.r.bits.last) {
+          // update the lru way register on the last cycle of refill
+          // this will best reflect the LRU state
+          lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
           state := sWriteBack
         }
       }
     }
     is(sWriteBack) {
-      tagWire := tagReg
       // write the tag to the corresponding position
+      tagWire := tagReg
       for (i <- 0 until wayAmount) {
         tagWe(i.U) := (i.U === lruWayReg)
       }
+      // write the data to the corresbonding bank
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
       valid(lruWayReg)(indexReg) := true.B
+      // update LRU to point at the refilled line
+      updateLRU(lruWayReg)
+      // preserve across the boundary in the state change
+      checkRefillBufferHit()
+      checkICacheHit()
 
-      when(rValidReg) {
-        rValidReg := false.B
-        io.rInst.data := rDataReg
-      }
-      when(rICacheHitReg) {
-        rICacheHitReg := false.B
-        io.rInst.data := instruction
-      }
       state := sIdle
     }
   }
-
+  // which index I'm visiting
   indexWire := Mux(state === sWriteBack, indexReg, index)
+
   val instBanks = for {
     i <- 0 until wayAmount
     j <- 0 until bankAmount
