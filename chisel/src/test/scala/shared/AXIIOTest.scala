@@ -1,5 +1,0 @@
-package shared
-
-object AXIIOTest {
-
-}
