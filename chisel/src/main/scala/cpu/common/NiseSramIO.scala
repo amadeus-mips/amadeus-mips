@@ -4,12 +4,11 @@ package cpu.common
 
 import chisel3._
 
-//TODO: make this into a ready-valid interface
 /**
- * master IO. <br/>
- * out: .addr, .enable <br/>
- * in: .data, .valid
- */
+  * master IO. <br/>
+  * out: .addr, .enable <br/>
+  * in: .data, .valid
+  */
 class NiseSramReadIO extends Bundle {
   val addr = Output(UInt(32.W))
   val enable = Output(Bool())
@@ -19,10 +18,10 @@ class NiseSramReadIO extends Bundle {
 }
 
 /**
- * master IO <br/>
- * out: .addr, .enable, .sel, .data <br/>
- * in: .valid
- */
+  * master IO <br/>
+  * out: .addr, .enable, .sel, .data <br/>
+  * in: .valid
+  */
 class NiseSramWriteIO extends Bundle {
   val addr = Output(UInt(32.W))
   val enable = Output(Bool())

@@ -14,6 +14,8 @@ import shared.Constants._
 
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
+//TODO: be able to invalidate the refill buffer
+//TODO: optimize axi port
 /**
   * icache with an AXI interface
   * @param setAmount how many sets there are in the i-cache
