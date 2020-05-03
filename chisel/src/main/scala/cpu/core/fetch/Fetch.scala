@@ -16,6 +16,7 @@ class Fetch extends Module {
 
     // from id module
     val branch = Input(new ValidBundle)
+    val inDelaySlot = Input(Bool())
 
     // from ram
     val instValid = Input(Bool())
@@ -31,9 +32,18 @@ class Fetch extends Module {
   val pc = RegInit(startPC)
   val instFetchExcept = pc(1, 0).orR
 
+  val inDelaySlotBuffer = RegInit(false.B)
+  when(io.inDelaySlot && io.outStallReq) {
+    inDelaySlotBuffer := io.inDelaySlot
+  }.elsewhen(!io.outStallReq) {
+    inDelaySlotBuffer := false.B
+  }
+
   io.out.instFetchExcept := instFetchExcept
   io.out.pc := pc
   io.out.instValid := io.instValid
+  io.out.inDelaySlot := io.inDelaySlot || inDelaySlotBuffer
+
   io.outPCValid := !instFetchExcept
 //  io.outPCValid := !instFetchExcept && (!(io.instValid && io.stall(0)))
   io.outStallReq := !io.instValid & !instFetchExcept

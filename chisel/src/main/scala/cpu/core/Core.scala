@@ -5,7 +5,7 @@ package cpu.core
 import chisel3._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.stage5.{ExeMemBundle, IfIdBundle, MemWbBundle}
+import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
@@ -22,8 +22,8 @@ class Core extends MultiIOModule {
   })
 
   /**
-   * fetch | decodeTop | executeTop | memoryTop | wb
-   */
+    * fetch | decodeTop | executeTop | memoryTop | wb
+    */
   val fetch = Module(new Fetch)
   val decodeTop = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
@@ -35,7 +35,7 @@ class Core extends MultiIOModule {
 
   // stages
   val if_id = Module(new Stage(1, new IfIdBundle))
-  val id_exe = Module(new IdExe)
+  val id_exe = Module(new Stage(2, new IdExeBundle))
   val exe_mem = Module(new Stage(3, new ExeMemBundle))
   val mem_wb = Module(new Stage(4, new MemWbBundle))
 
@@ -44,6 +44,8 @@ class Core extends MultiIOModule {
   fetch.io.flushPC := hazard.io.flushPC
 
   fetch.io.branch <> decodeTop.io.branch
+  fetch.io.inDelaySlot := decodeTop.io.nextInstInDelaySlot
+
   fetch.io.instValid := io.rInst.valid
 
   if_id.io.in <> fetch.io.out
@@ -62,7 +64,6 @@ class Core extends MultiIOModule {
   decodeTop.io.memWR := memoryTop.io.out.write
   decodeTop.io.rsData := regFile.io.rsData
   decodeTop.io.rtData := regFile.io.rtData
-  decodeTop.io.inDelaySlot := id_exe.ioExt.inDelaySlot
 
   regFile.io.write <> mem_wb.io.out.write
   regFile.io.rs := inst(25, 21)
@@ -71,7 +72,6 @@ class Core extends MultiIOModule {
   id_exe.io.in <> decodeTop.io.out
   id_exe.io.stall := hazard.io.stall
   id_exe.io.flush := hazard.io.flush
-  id_exe.ioExt.nextInstInDelaySlot := decodeTop.io.nextInstInDelaySlot
 
   executeTop.io.in <> id_exe.io.out
   executeTop.io.flush := hazard.io.flush
@@ -97,7 +97,7 @@ class Core extends MultiIOModule {
   cp0.io.intr := io.intr
   cp0.io.cp0Write <> mem_wb.io.out.cp0
   cp0.io.addr := id_exe.io.out.imm26(15, 11)
-  cp0.io.sel := id_exe.io.out.imm26(2,0)
+  cp0.io.sel := id_exe.io.out.imm26(2, 0)
   cp0.io.except <> memoryTop.io.except
   cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
   cp0.io.pc := Mux(memoryTop.io.except(EXCEPT_INTR), mem_wb.io.out.pc + 4.U, exe_mem.io.out.pc)

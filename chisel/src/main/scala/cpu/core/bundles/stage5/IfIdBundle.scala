@@ -9,4 +9,5 @@ class IfIdBundle extends Bundle {
   val pc = UInt(addrLen.W)
   val instValid = Bool()
   val instFetchExcept = Bool()
+  val inDelaySlot = Bool()
 }

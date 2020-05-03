@@ -17,7 +17,6 @@ class DecodeTop extends Module {
     val memWR = Input(new WriteBundle)
     val rsData = Input(UInt(dataLen.W)) // from register-file
     val rtData = Input(UInt(dataLen.W)) // ^
-    val inDelaySlot = Input(Bool()) // get from `IDEX`
 
     val out = Output(new IdExeBundle)
     val nextInstInDelaySlot = Output(Bool())
@@ -74,7 +73,7 @@ class DecodeTop extends Module {
 
   io.out.pc := io.in.pc
   io.out.imm26 := imm26
-  io.out.inDelaySlot := io.inDelaySlot
+  io.out.inDelaySlot := io.in.inDelaySlot
   io.nextInstInDelaySlot := decode.io.nextInstInDelaySlot
 
   io.branch <> branch.io.branch
