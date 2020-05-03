@@ -36,12 +36,4 @@ class PseudoLRUMRU(numOfWay: Int, numOfSets: Int) extends Module {
       io.lruLine := i.U
     }
   }
-//  def update()
 }
-
-//object PseudoLRUMRU {
-//  def apply(pNumOfWay: Int, pNumOfSets: Int): PseudoLRUMRU = {
-//    Module(new PseudoLRUMRU(numOfWay = pNumOfWay, numOfSets = pNumOfSets))
-//  }
-//
-//}

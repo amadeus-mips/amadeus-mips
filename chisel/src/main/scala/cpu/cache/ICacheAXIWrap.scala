@@ -95,7 +95,7 @@ class ICacheAXIWrap(
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
   assert(!(io.rInst.valid && io.rInst.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
-
+  assert(!(io.rInst.valid && !io.rInst.enable), "the returned data should not be valid when the address is not enabled")
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
