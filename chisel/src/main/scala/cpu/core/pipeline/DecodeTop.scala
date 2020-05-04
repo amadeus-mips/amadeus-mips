@@ -6,8 +6,6 @@ import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stage5.{IdExeBundle, IfIdBundle}
-import cpu.core.execute.components.Branch
-import shared.ValidBundle
 
 class DecodeTop extends Module {
   val io = IO(new Bundle {
@@ -15,6 +13,7 @@ class DecodeTop extends Module {
     val inst   = Input(UInt(dataLen.W))
     val exeWR  = Input(new WriteBundle)
     val memWR  = Input(new WriteBundle)
+    val wbWR   = Input(new WriteBundle)
     val rsData = Input(UInt(dataLen.W)) // from register-file
     val rtData = Input(UInt(dataLen.W)) // ^
 
@@ -36,14 +35,17 @@ class DecodeTop extends Module {
   val imm16 = inst(15, 0)
   val imm26 = inst(25, 0)
 
-  hazard.io.exeWR   <> io.exeWR
-  hazard.io.memWR   <> io.memWR
-  hazard.io.rs      := rs
-  hazard.io.rt      := rt
-  hazard.io.rsData  := io.rsData
-  hazard.io.rtData  := io.rtData
-  hazard.io.op1Type := control.io.out.op1Type
-  hazard.io.op2Type := control.io.out.op2Type
+  hazard.io.wrs(0) <> io.exeWR
+  hazard.io.wrs(1) <> io.memWR
+  hazard.io.wrs(2) <> io.wbWR
+
+  hazard.io.ops(0).addr := rs
+  hazard.io.ops(0).inData := io.rsData
+  hazard.io.ops(0).typ := control.io.out.op1Type
+
+  hazard.io.ops(1).addr := rt
+  hazard.io.ops(1).inData := io.rtData
+  hazard.io.ops(1).typ := control.io.out.op2Type
 
   /** 根据指令解码获取控制信号 */
   control.io.inst := inst
@@ -51,8 +53,8 @@ class DecodeTop extends Module {
   decode.io.signal       <> control.io.out
   decode.io.inst         := inst
   decode.io.instFetchExc := io.in.instFetchExcept
-  decode.io.rsData       := hazard.io.outRsData
-  decode.io.rtData       := hazard.io.outRtData
+  decode.io.rsData       := hazard.io.ops(0).outData
+  decode.io.rtData       := hazard.io.ops(1).outData
 
   io.out.instType  := control.io.out.instType
   io.out.operation := control.io.out.operation
