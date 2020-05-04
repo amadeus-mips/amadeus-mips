@@ -4,7 +4,7 @@ SECTIONS
 {
   /* Read-only sections, merged into text segment: */
   . = 0xbfc00000;
-  .text      :
+  .text      : 
   {
     _ftext = . ;
     *(.text)
@@ -25,7 +25,7 @@ SECTIONS
     _fdata = . ;
     _stack = _fdata + MEMSIZE -32;
     *(.data)
-    *(.data*)
+    *(.data*) 
                 __CTOR_LIST__ = .;
                 LONG((__CTOR_END__ - __CTOR_LIST__) / 4 - 2)
                *(.ctors)
@@ -41,9 +41,9 @@ SECTIONS
   /* We want the small data sections together, so single-instruction offsets
      can access them all, and initialized data all before uninitialized, so
      we can shorten the on-disk segment size.  */
-  *(.sdata)
-   *(.lit8)
-   *(.lit4)
+  *(.sdata) 
+   *(.lit8) 
+   *(.lit4) 
 }
   _edata  =  .;
   PROVIDE (edata = .);

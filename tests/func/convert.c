@@ -38,6 +38,8 @@ int main(void)
     in = fopen("main.bin", "rb");
     out = fopen("inst_ram.coe","w");
 
+	fprintf(out, "memory_initialization_radix = 16;\n");
+	fprintf(out, "memory_initialization_vector =\n");
 	while(!feof(in)) {
 	    if(fread(mem,1,4,in)!=4) {
 	        fprintf(out, "%02x%02x%02x%02x\n", mem[3], mem[2],	mem[1], mem[0]);
@@ -51,6 +53,8 @@ int main(void)
     in = fopen("main.data", "rb");
     out = fopen("data_ram.coe","w");
 
+	fprintf(out, "memory_initialization_radix = 16;\n");
+	fprintf(out, "memory_initialization_vector =\n");
 	while(!feof(in)) {
 	    if(fread(mem,1,4,in)!=4) {
 	        fprintf(out, "%02x%02x%02x%02x\n", mem[3], mem[2],	mem[1], mem[0]);
