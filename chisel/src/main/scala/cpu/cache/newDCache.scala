@@ -3,7 +3,7 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.util.Cat
+import cpu.common.NiseSramWriteIO
 import shared.{CircularShifter, CircularShifterInt, PseudoLRUMRU, PseudoLRUTree, TrueLRU}
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
@@ -17,6 +17,8 @@ import shared.Constants._
 //TODO: change into a read only interface
 //TODO: be able to invalidate the refill buffer
 //TODO: optimize axi port
+
+//TODO: better software engineering with I-cache
 /**
   * icache with an AXI interface
   * @param setAmount how many sets there are in the i-cache
@@ -24,7 +26,7 @@ import shared.Constants._
   * @param bankAmount how many banks there are in the i-cache
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
-class ICacheAXIWrap(
+class newDCache(
   setAmount:                Int = 64,
   wayAmount:                Int = 4,
   bankAmount:               Int = 16,
@@ -32,7 +34,9 @@ class ICacheAXIWrap(
 ) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
-    val rInst = Flipped(new NiseSramReadIO)
+    val rData = Flipped(new NiseSramReadIO)
+    val wData = Flipped(new NiseSramWriteIO)
+    //TODO: customize performance IO for D-cache
     val performanceMonitorIO = if (performanceMonitorEnable) Some(new CachePerformanceMonitorIO) else None
   })
 
@@ -97,13 +101,13 @@ class ICacheAXIWrap(
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
-  assert(!(io.rInst.valid && io.rInst.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
-  assert(!(io.rInst.valid && !io.rInst.enable), "the returned data should not be valid when the address is not enabled")
+  assert(!(io.rData.valid && io.rData.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
+  assert(!(io.rData.valid && !io.rData.enable), "the returned data should not be valid when the address is not enabled")
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
-  val addr = io.rInst.addr
-  val cachedTrans = true.B
+  val addr = io.rData.addr
+  val cachedTrans = addr(31, 29) =/= "b101".U
 
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
@@ -113,8 +117,12 @@ class ICacheAXIWrap(
   //--------------------set up the memory banks and wire them to their states------
   //-------------------------------------------------------------------------------
   /** valid(way)(index) */
-  //TODO: change the order if it is not banked
   val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
+
+  /**
+    * dirty(way)(index)
+    */
+  val dirty = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -185,7 +193,7 @@ class ICacheAXIWrap(
 
   io.axi := DontCare
 
-  io.axi.ar.bits.id := INST_ID
+  io.axi.ar.bits.id := DATA_ID
   io.axi.ar.bits.addr := Mux(
     cachedTrans,
     //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
@@ -218,8 +226,8 @@ class ICacheAXIWrap(
   val hitWayReg = RegNext(hitWay)
   val bankOffSetNextReg = RegNext(bankOffset)
   instruction := bankData(hitWayReg)(bankOffSetNextReg)
-  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
-  io.rInst.data := instruction
+  io.rData.valid := cachedTrans && isIdle && isHit && io.rData.enable
+  io.rData.data := instruction
 
   LRU.io.accessEnable := false.B
   LRU.io.accessWay := DontCare
@@ -243,7 +251,7 @@ class ICacheAXIWrap(
 
   def beginARTransaction(): Unit = {
     indexReg := index
-//    lruWayReg := lruLine
+    //    lruWayReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -252,12 +260,12 @@ class ICacheAXIWrap(
     * this is to check whether there is a hit in the
     * I-cache when the i-cache is under a miss
     * if there is a hit, send the instruction ( this cycle )
-    * to the rInst, valid has been asserted last cycle
+    * to the rData, valid has been asserted last cycle
     */
   def checkICacheHit(): Unit = {
     when(rICacheHitReg) {
       rICacheHitReg := false.B
-      io.rInst.data := instruction
+      io.rData.data := instruction
     }
   }
 
@@ -269,7 +277,7 @@ class ICacheAXIWrap(
   def checkRefillBufferHit(): Unit = {
     when(rValidReg) {
       rValidReg := false.B
-      io.rInst.data := rDataReg
+      io.rData.data := rDataReg
     }
   }
 
@@ -288,7 +296,7 @@ class ICacheAXIWrap(
     is(sIdle) {
       // TODO: check last boundary crossing
 
-      when(io.rInst.enable) {
+      when(io.rData.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
           updateLRU(hitWay)
@@ -325,11 +333,11 @@ class ICacheAXIWrap(
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
 
-        io.rInst.valid := false.B
+        io.rData.valid := false.B
         // by default, this is connected to the rData register that preserves the hit
         // in refill buffer or axi from the previous cycle, this could also be connected
         // to i-cache ( instruction variable )
-        io.rInst.data := rDataReg
+        io.rData.data := rDataReg
         // this defaults to false, as this value is only used in the write back state
         rValidReg := false.B
         checkICacheHit()
@@ -337,23 +345,23 @@ class ICacheAXIWrap(
         /**
           * check if there is a hit in the I-cache
           */
-        when(isHit && io.rInst.enable) {
-          io.rInst.valid := true.B
+        when(isHit && io.rData.enable) {
+          io.rData.valid := true.B
           rICacheHitReg := true.B
           updateLRU(hitWay)
         }
 
         // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
         // when index and tag are hit
-        when((tag === tagReg) && (index === indexReg) && io.rInst.enable) {
+        when((tag === tagReg) && (index === indexReg) && io.rData.enable) {
           // when there is a direct hit from the bank
           when((bankOffset === bankOffsetReg)) {
-            io.rInst.valid := true.B
+            io.rData.valid := true.B
             rValidReg := true.B
             // r data reg = axi r bits by default
           }.elsewhen(writeVec(bankOffset)) {
             // if the hit occurs in the refill buffer
-            io.rInst.valid := true.B
+            io.rData.valid := true.B
             rDataReg := reFillBuffer(bankOffset)
             rValidReg := true.B
           }
@@ -416,9 +424,9 @@ class ICacheAXIWrap(
     val missCycleCounter = RegInit(0.U(64.W))
     val hitCycleCounter = RegInit(0.U(64.W))
     val idleCycleCounter = RegInit(0.U(64.W))
-    when(io.rInst.valid) {
+    when(io.rData.valid) {
       hitCycleCounter := hitCycleCounter + 1.U
-    }.elsewhen(io.rInst.enable && !io.rInst.valid) {
+    }.elsewhen(io.rData.enable && !io.rData.valid) {
         missCycleCounter := missCycleCounter + 1.U
       }
       .otherwise {
