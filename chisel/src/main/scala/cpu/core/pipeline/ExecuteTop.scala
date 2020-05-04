@@ -44,30 +44,28 @@ class ExecuteTop extends Module {
   val forward = Module(new cpu.core.execute.Forward)
   val control = Module(new cpu.core.execute.Control)
 
-  forward.io.rawHILO <> io.rawHILO
-  forward.io.memHILO <> io.memHILO
-  forward.io.wbHILO  <> io.wbHILO
+  forward.io.rawHILO   := io.rawHILO
+  forward.io.fwHILO(0) := io.memHILO
+  forward.io.fwHILO(1) := io.wbHILO
 
-  /** cp0 come from decode */
-  forward.io.rawCP0 <> io.in.cp0
-
-  /** cp0 data come from CP0 regfile */
+  // cp0 come from decode, data come from CP0 regfile
+  forward.io.rawCP0      := io.in.cp0
   forward.io.rawCP0.data := io.cp0Data
-  forward.io.memCP0      <> io.memCP0
-  forward.io.wbCP0       <> io.wbCP0
+  forward.io.fwCP0(0)    := io.memCP0
+  forward.io.fwCP0(1)    := io.wbCP0
 
   alu.io.op1       := io.in.op1
   alu.io.op2       := io.in.op2
   alu.io.operation := io.in.operation
 
   move.io.operation := io.in.operation
-  move.io.hilo      <> forward.io.outHILO
-  move.io.cp0Data   <> forward.io.outCP0
+  move.io.hilo      := forward.io.outHILO
+  move.io.cp0Data   := forward.io.outCP0
 
   writeOther.io.op1       := io.in.op1
   writeOther.io.op2       := io.in.op2
   writeOther.io.operation := io.in.operation
-  writeOther.io.inCP0     <> io.in.cp0
+  writeOther.io.inCP0     := io.in.cp0
   writeOther.io.mult      <> mult.io
   writeOther.io.div       <> div.io
 
@@ -83,7 +81,7 @@ class ExecuteTop extends Module {
   branch.io.pc        := io.in.pc
 
   control.io.instType := io.in.instType
-  control.io.inWrite  <> io.in.write
+  control.io.inWrite  := io.in.write
   control.io.pc       := io.in.pc
   control.io.inExcept := io.in.except
 
@@ -93,15 +91,15 @@ class ExecuteTop extends Module {
   control.io.exceptSave  := memory.io.exceptSave
   control.io.moveResult  := move.io.result
 
-  io.out.write       <> control.io.outWrite
+  io.out.write       := control.io.outWrite
   io.out.operation   := io.in.operation
-  io.out.cp0         <> writeOther.io.outCP0
-  io.out.hilo        <> writeOther.io.outHILO
+  io.out.cp0         := writeOther.io.outCP0
+  io.out.hilo        := writeOther.io.outHILO
   io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.except      <> control.io.outExcept
+  io.out.except      := control.io.outExcept
   io.out.pc          := io.in.pc
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
-  io.branch          <> branch.io.branch
+  io.branch          := branch.io.branch
   io.stallReq        := writeOther.io.stallReq
 }
