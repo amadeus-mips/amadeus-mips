@@ -9,7 +9,6 @@ import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBund
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
-import cpu.core.pipeline.stage5._
 import shared.Buffer
 
 class Core extends MultiIOModule {
@@ -24,98 +23,98 @@ class Core extends MultiIOModule {
   /**
     * fetch | decodeTop | executeTop | memoryTop | wb
     */
-  val fetch = Module(new Fetch)
-  val decodeTop = Module(new DecodeTop)
+  val fetch      = Module(new Fetch)
+  val decodeTop  = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
-  val memoryTop = Module(new MemoryTop)
-  val regFile = Module(new RegFile)
-  val cp0 = Module(new CP0)
-  val hilo = Module(new HILO)
-  val hazard = Module(new Hazard)
+  val memoryTop  = Module(new MemoryTop)
+  val regFile    = Module(new RegFile)
+  val cp0        = Module(new CP0)
+  val hilo       = Module(new HILO)
+  val hazard     = Module(new Hazard)
 
   // stages
-  val if_id = Module(new Stage(1, new IfIdBundle))
-  val id_exe = Module(new Stage(2, new IdExeBundle))
+  val if_id   = Module(new Stage(1, new IfIdBundle))
+  val id_exe  = Module(new Stage(2, new IdExeBundle))
   val exe_mem = Module(new Stage(3, new ExeMemBundle))
-  val mem_wb = Module(new Stage(4, new MemWbBundle))
+  val mem_wb  = Module(new Stage(4, new MemWbBundle))
 
-  fetch.io.stall := hazard.io.stall
-  fetch.io.flush := hazard.io.flush
+  fetch.io.stall   := hazard.io.stall
+  fetch.io.flush   := hazard.io.flush
   fetch.io.flushPC := hazard.io.flushPC
 
-  fetch.io.branch <> decodeTop.io.branch
+  fetch.io.branch      <> executeTop.io.branch
   fetch.io.inDelaySlot := decodeTop.io.nextInstInDelaySlot
 
   fetch.io.instValid := io.rInst.valid
 
-  if_id.io.in <> fetch.io.out
+  if_id.io.in    <> fetch.io.out
   if_id.io.stall := hazard.io.stall
-  if_id.io.flush := hazard.io.flush
+  if_id.io.flush := hazard.io.flush || (!fetch.io.out.inDelaySlot && executeTop.io.branch.valid)
 
-  val stalled = !hazard.io.flush && hazard.io.stall(0)
+  val stalled    = !hazard.io.flush && hazard.io.stall(0)
   val instBuffer = Module(new Buffer(dataLen))
   instBuffer.io.in := io.rInst.data
   instBuffer.io.en := stalled
   val inst = instBuffer.io.out
 
-  decodeTop.io.in <> if_id.io.out
-  decodeTop.io.inst := inst
-  decodeTop.io.exeWR := executeTop.io.out.write
-  decodeTop.io.memWR := memoryTop.io.out.write
+  decodeTop.io.in     <> if_id.io.out
+  decodeTop.io.inst   := inst
+  decodeTop.io.exeWR  := executeTop.io.out.write
+  decodeTop.io.memWR  := memoryTop.io.out.write
   decodeTop.io.rsData := regFile.io.rsData
   decodeTop.io.rtData := regFile.io.rtData
 
   regFile.io.write <> mem_wb.io.out.write
-  regFile.io.rs := inst(25, 21)
-  regFile.io.rt := inst(20, 16)
+  regFile.io.rs    := inst(25, 21)
+  regFile.io.rt    := inst(20, 16)
 
-  id_exe.io.in <> decodeTop.io.out
+  id_exe.io.in    <> decodeTop.io.out
   id_exe.io.stall := hazard.io.stall
   id_exe.io.flush := hazard.io.flush
 
-  executeTop.io.in <> id_exe.io.out
-  executeTop.io.flush := hazard.io.flush
+  executeTop.io.in      <> id_exe.io.out
+  executeTop.io.flush   := hazard.io.flush
   executeTop.io.rawHILO <> hilo.io.out
   executeTop.io.memHILO <> exe_mem.io.out.hilo
-  executeTop.io.wbHILO <> mem_wb.io.out.hilo
+  executeTop.io.wbHILO  <> mem_wb.io.out.hilo
   executeTop.io.cp0Data := cp0.io.data
-  executeTop.io.memCP0 <> exe_mem.io.out.cp0
-  executeTop.io.wbCP0 <> mem_wb.io.out.cp0
+  executeTop.io.memCP0  <> exe_mem.io.out.cp0
+  executeTop.io.wbCP0   <> mem_wb.io.out.cp0
 
-  exe_mem.io.in <> executeTop.io.out
+  exe_mem.io.in    <> executeTop.io.out
   exe_mem.io.stall := hazard.io.stall
   exe_mem.io.flush := hazard.io.flush
 
-  memoryTop.io.in <> exe_mem.io.out
+  memoryTop.io.in                 <> exe_mem.io.out
   memoryTop.io.inCP0Handle.status := cp0.io.status_o
-  memoryTop.io.inCP0Handle.cause := cp0.io.cause_o
-  memoryTop.io.inCP0Handle.EPC := cp0.io.EPC_o
-  memoryTop.io.wbCP0 <> mem_wb.io.out.cp0
-  memoryTop.io.rData <> io.rData
-  memoryTop.io.wData <> io.wData
+  memoryTop.io.inCP0Handle.cause  := cp0.io.cause_o
+  memoryTop.io.inCP0Handle.EPC    := cp0.io.EPC_o
+  memoryTop.io.wbCP0              <> mem_wb.io.out.cp0
+  memoryTop.io.rData              <> io.rData
+  memoryTop.io.wData              <> io.wData
 
-  cp0.io.intr := io.intr
-  cp0.io.cp0Write <> mem_wb.io.out.cp0
-  cp0.io.addr := id_exe.io.out.imm26(15, 11)
-  cp0.io.sel := id_exe.io.out.imm26(2, 0)
-  cp0.io.except <> memoryTop.io.except
+  cp0.io.intr        := io.intr
+  cp0.io.cp0Write    <> mem_wb.io.out.cp0
+  cp0.io.addr        := id_exe.io.out.imm26(15, 11)
+  cp0.io.sel         := id_exe.io.out.imm26(2, 0)
+  cp0.io.except      <> memoryTop.io.except
   cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
-  cp0.io.pc := Mux(memoryTop.io.except(EXCEPT_INTR), mem_wb.io.out.pc + 4.U, exe_mem.io.out.pc)
-  cp0.io.badAddr := memoryTop.io.badAddr
+  cp0.io.pc          := Mux(memoryTop.io.except(EXCEPT_INTR), mem_wb.io.out.pc + 4.U, exe_mem.io.out.pc)
+  cp0.io.badAddr     := memoryTop.io.badAddr
 
   hilo.io.in := mem_wb.io.out.hilo
 
-  hazard.io.except <> memoryTop.io.except
-  hazard.io.EPC := memoryTop.io.EPC
-  hazard.io.stallReqFromFetch := fetch.io.outStallReq
-  hazard.io.stallReqFromDecode := decodeTop.io.stallReq
+  hazard.io.except              <> memoryTop.io.except
+  hazard.io.EPC                 := memoryTop.io.EPC
+  hazard.io.stallReqFromFetch   := fetch.io.outStallReq
+  hazard.io.stallReqFromDecode  := decodeTop.io.stallReq
   hazard.io.stallReqFromExecute := executeTop.io.stallReq
-  hazard.io.stallReqFromMemory := memoryTop.io.stallReq
+  hazard.io.stallReqFromMemory  := memoryTop.io.stallReq
 
-  mem_wb.io.in <> memoryTop.io.out
+  mem_wb.io.in    <> memoryTop.io.out
   mem_wb.io.stall := hazard.io.stall
   mem_wb.io.flush := hazard.io.flush
 
-  io.rInst.addr := fetch.io.out.pc
+  io.rInst.addr   := fetch.io.out.pc
   io.rInst.enable := fetch.io.outPCValid
 }

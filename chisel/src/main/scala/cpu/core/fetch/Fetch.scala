@@ -11,12 +11,12 @@ import shared.ValidBundle
 class Fetch extends Module {
   val io = IO(new Bundle {
     // from ctrl module
-    val stall = Input(UInt(cpuStallLen.W))
-    val flush = Input(Bool())
+    val stall   = Input(UInt(cpuStallLen.W))
+    val flush   = Input(Bool())
     val flushPC = Input(UInt(addrLen.W))
 
     // from id module
-    val branch = Input(new ValidBundle)
+    val branch      = Input(new ValidBundle)
     val inDelaySlot = Input(Bool())
 
     // from ram
@@ -30,7 +30,7 @@ class Fetch extends Module {
     val outStallReq = Output(Bool())
   })
 
-  val pc = RegInit(startPC)
+  val pc              = RegInit(startPC)
   val instFetchExcept = pc(1, 0).orR
 
   val inDelaySlotBuffer = RegInit(false.B)
@@ -64,10 +64,11 @@ class Fetch extends Module {
   pc := MuxCase(
     pc + 4.U,
     Array(
-      io.flush           -> io.flushPC,
-      io.stall(0)        -> pc,
-      io.branch.valid    -> io.branch.bits,
-      branchBuffer.valid -> branchBuffer.bits
+      io.flush                          -> io.flushPC,
+      (!inDelaySlot && io.branch.valid) -> io.branch.bits,
+      io.stall(0)                       -> pc,
+      io.branch.valid                   -> io.branch.bits,
+      branchBuffer.valid                -> branchBuffer.bits
     )
   )
 }
