@@ -48,7 +48,7 @@ class Core extends MultiIOModule {
 
   if_id.io.in    := fetchTop.io.out
   if_id.io.stall := hazard.io.stall
-  if_id.io.flush := hazard.io.flush || (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid)
+  if_id.io.flush := hazard.io.flush || (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid && !hazard.io.stall(3))
 
   val inst = Buffer(in = io.rInst.data, en = !hazard.io.flush && hazard.io.stall(0)).io.out
 
