@@ -46,12 +46,12 @@ class Hazard extends Module {
     }.elsewhen(io.except(EXCEPT_INTR)) {
         // If is hardware interrupt
         flushBuffer.valid := true.B
-        flushBuffer.bits := flushPC_tmp
+        flushBuffer.bits  := flushPC_tmp
       }
       .elsewhen(!flushBuffer.valid) {
         // Only handle the first exception signal. So if the buffer valid is high, ignore the exception signal
         flushBuffer.valid := true.B
-        flushBuffer.bits := flushPC_tmp
+        flushBuffer.bits  := flushPC_tmp
       }
       .otherwise {
         // There is already an except signal. Ignore the later exception
@@ -62,18 +62,18 @@ class Hazard extends Module {
     * If stalled by external, shouldn't flush. When the stalled finished, the buffer will keep a cycle.
     * So can use it.
     */
-  io.flush := !stalledByExternal && (flushBuffer.valid || hasExcept)
+  io.flush   := !stalledByExternal && (flushBuffer.valid || hasExcept)
   io.flushPC := Mux(flushBuffer.valid, flushBuffer.bits, flushPC_tmp)
 
   io.stall := MuxCase(
     0.U,
     Array(
-      io.flush -> 0.U,
+      io.flush                                                -> 0.U,
       (stalledByExternal && (flushBuffer.valid || hasExcept)) -> "b011111".U, // TODO
-      io.stallReqFromMemory -> "b011111".U,
-      io.stallReqFromExecute -> "b001111".U,
-      io.stallReqFromDecode -> "b000111".U,
-      io.stallReqFromFetch -> "b000111".U
+      io.stallReqFromMemory                                   -> "b011111".U,
+      io.stallReqFromExecute                                  -> "b001111".U,
+      io.stallReqFromDecode                                   -> "b000111".U,
+      io.stallReqFromFetch                                    -> "b000011".U
     )
   )
 
