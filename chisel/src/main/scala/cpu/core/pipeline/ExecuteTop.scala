@@ -7,7 +7,6 @@ import cpu.core.Constants._
 import cpu.core.bundles._
 import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle}
 import cpu.core.components.{Div, Mult}
-import cpu.core.execute._
 import cpu.core.execute.components._
 import shared.ValidBundle
 

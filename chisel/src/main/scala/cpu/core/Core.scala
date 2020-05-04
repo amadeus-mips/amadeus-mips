@@ -7,7 +7,6 @@ import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
-import cpu.core.fetch.Fetch
 import cpu.core.pipeline._
 import shared.Buffer
 
@@ -23,7 +22,7 @@ class Core extends MultiIOModule {
   /**
     * fetch | decodeTop | executeTop | memoryTop | wb
     */
-  val fetch      = Module(new Fetch)
+  val fetchTop   = Module(new FetchTop)
   val decodeTop  = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
   val memoryTop  = Module(new MemoryTop)
@@ -38,24 +37,20 @@ class Core extends MultiIOModule {
   val exe_mem = Module(new Stage(3, new ExeMemBundle))
   val mem_wb  = Module(new Stage(4, new MemWbBundle))
 
-  fetch.io.stall   := hazard.io.stall
-  fetch.io.flush   := hazard.io.flush
-  fetch.io.flushPC := hazard.io.flushPC
+  fetchTop.io.stall   := hazard.io.stall(0)
+  fetchTop.io.flush   := hazard.io.flush
+  fetchTop.io.flushPC := hazard.io.flushPC
 
-  fetch.io.branch      <> executeTop.io.branch
-  fetch.io.inDelaySlot := decodeTop.io.nextInstInDelaySlot
+  fetchTop.io.branch      <> executeTop.io.branch
+  fetchTop.io.inDelaySlot := decodeTop.io.nextInstInDelaySlot
 
-  fetch.io.instValid := io.rInst.valid
+  fetchTop.io.instValid := io.rInst.valid
 
-  if_id.io.in    <> fetch.io.out
+  if_id.io.in    <> fetchTop.io.out
   if_id.io.stall := hazard.io.stall
-  if_id.io.flush := hazard.io.flush || (!fetch.io.out.inDelaySlot && executeTop.io.branch.valid)
+  if_id.io.flush := hazard.io.flush || (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid)
 
-  val stalled    = !hazard.io.flush && hazard.io.stall(0)
-  val instBuffer = Module(new Buffer(dataLen))
-  instBuffer.io.in := io.rInst.data
-  instBuffer.io.en := stalled
-  val inst = instBuffer.io.out
+  val inst = Buffer(in = io.rInst.data, en = !hazard.io.flush && hazard.io.stall(0)).io.out
 
   decodeTop.io.in     <> if_id.io.out
   decodeTop.io.inst   := inst
@@ -106,7 +101,7 @@ class Core extends MultiIOModule {
 
   hazard.io.except              <> memoryTop.io.except
   hazard.io.EPC                 := memoryTop.io.EPC
-  hazard.io.stallReqFromFetch   := fetch.io.outStallReq
+  hazard.io.stallReqFromFetch   := fetchTop.io.stallReq
   hazard.io.stallReqFromDecode  := decodeTop.io.stallReq
   hazard.io.stallReqFromExecute := executeTop.io.stallReq
   hazard.io.stallReqFromMemory  := memoryTop.io.stallReq
@@ -115,6 +110,6 @@ class Core extends MultiIOModule {
   mem_wb.io.stall := hazard.io.stall
   mem_wb.io.flush := hazard.io.flush
 
-  io.rInst.addr   := fetch.io.out.pc
-  io.rInst.enable := fetch.io.outPCValid
+  io.rInst.addr   := fetchTop.io.out.pc
+  io.rInst.enable := fetchTop.io.pcValid
 }
