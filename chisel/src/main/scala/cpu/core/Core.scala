@@ -3,6 +3,7 @@
 package cpu.core
 
 import chisel3._
+import cpu.CPUConfig
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
@@ -18,6 +19,8 @@ class Core extends MultiIOModule {
     val rData = new NiseSramReadIO()
     val wData = new NiseSramWriteIO()
   })
+
+  implicit val conf: CPUConfig = new CPUConfig()
 
   /**
     * fetch | decodeTop | executeTop | memoryTop | wb
@@ -41,6 +44,7 @@ class Core extends MultiIOModule {
   fetchTop.io.flush   := hazard.io.flush
   fetchTop.io.flushPC := hazard.io.flushPC
 
+  fetchTop.io.predict     := decodeTop.io.predict
   fetchTop.io.branch      := executeTop.io.branch
   fetchTop.io.inDelaySlot := decodeTop.io.nextInstInDelaySlot
 
@@ -48,7 +52,8 @@ class Core extends MultiIOModule {
 
   if_id.io.in    := fetchTop.io.out
   if_id.io.stall := hazard.io.stall
-  if_id.io.flush := hazard.io.flush || (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid && !hazard.io.stall(3))
+  if_id.io.flush := hazard.io.flush ||
+    (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid && !hazard.io.stall(3))
 
   val inst = Buffer(in = io.rInst.data, en = !hazard.io.flush && hazard.io.stall(0)).io.out
 
@@ -59,6 +64,9 @@ class Core extends MultiIOModule {
   decodeTop.io.wbWR   := mem_wb.io.out.write
   decodeTop.io.rsData := regFile.io.rsData
   decodeTop.io.rtData := regFile.io.rtData
+
+  decodeTop.io.predictorUpdate := DontCare
+  decodeTop.io.predictorTaken  := DontCare
 
   regFile.io.write := mem_wb.io.out.write
   regFile.io.rs    := inst(25, 21)

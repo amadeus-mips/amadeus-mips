@@ -1,0 +1,5 @@
+package cpu
+
+class CPUConfig {
+
+}

@@ -100,6 +100,9 @@ class ExecuteTop extends Module {
   io.out.pc          := io.in.pc
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
-  io.branch          := branch.io.branch
-  io.stallReq        := writeOther.io.stallReq
+
+  io.branch.bits := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
+  io.branch.valid := branch.io.branch.valid ^ io.in.brPredicted
+
+  io.stallReq := writeOther.io.stallReq
 }

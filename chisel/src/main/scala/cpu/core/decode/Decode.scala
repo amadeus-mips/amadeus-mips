@@ -10,8 +10,14 @@ import shared.Util
 
 class Decode extends Module {
   val io = IO(new Bundle {
+    val inst = Input(new Bundle() {
+      val rt = UInt(5.W)
+      val rd = UInt(5.W)
+      val sa = UInt(5.W)
+      val imm16 = UInt(16.W)
+      val sel = UInt(3.W)
+    })
     val signal       = Input(new SignalBundle)
-    val inst         = Input(UInt(dataLen.W))
     val instFetchExc = Input(Bool())
     val rsData       = Input(UInt(dataLen.W)) // from Forward
     val rtData       = Input(UInt(dataLen.W)) // ^
@@ -25,11 +31,11 @@ class Decode extends Module {
     val except              = Output(Vec(exceptAmount, Bool()))
   })
 
-  val rt    = io.inst(20, 16)
-  val rd    = io.inst(15, 11)
-  val sa    = io.inst(10, 6)
-  val imm16 = io.inst(15, 0)
-  val sel   = io.inst(2, 0)
+  val rt    = io.inst.rt
+  val rd    = io.inst.rd
+  val sa    = io.inst.sa
+  val imm16 = io.inst.imm16
+  val sel   = io.inst.sel
 
   // 根据IMMType选择imm
   val imm32 = MuxLookup(

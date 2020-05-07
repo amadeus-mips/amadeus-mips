@@ -14,6 +14,7 @@ class FetchTop extends Module {
 
     // from decode stage
     val inDelaySlot = Input(Bool())
+    val predict     = Input(new ValidBundle)
     // from execute stage
     val branch = Input(new ValidBundle)
 
@@ -29,16 +30,18 @@ class FetchTop extends Module {
   })
 
   val hazard = Module(new cpu.core.fetch.Hazard)
-  val pcMux  = Module(new cpu.core.fetch.PCMux(n = 3))
+  val pcMux  = Module(new cpu.core.fetch.PCMux(n = 4))
 
   hazard.io.flush          := io.flush
   hazard.io.stall          := io.stall
   hazard.io.in.inDelaySlot := io.inDelaySlot
-  hazard.io.in.branch      <> io.branch
+  hazard.io.in.branch      := io.branch
+  hazard.io.in.predict     := io.predict
 
-  pcMux.io.ins(0) <> ValidBundle(io.flush, io.flushPC)
-  pcMux.io.ins(1) <> hazard.io.out.branch
-  pcMux.io.ins(2) <> ValidBundle(io.stall, pcMux.io.pc)
+  pcMux.io.ins(0) := ValidBundle(io.flush, io.flushPC)
+  pcMux.io.ins(1) := hazard.io.out.branch
+  pcMux.io.ins(2) := ValidBundle(io.stall, pcMux.io.pc)
+  pcMux.io.ins(3) := hazard.io.out.predict
 
   io.out.pc              := pcMux.io.pc
   io.out.instFetchExcept := pcMux.io.pcNotAligned
