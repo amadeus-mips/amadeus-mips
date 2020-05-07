@@ -5,7 +5,7 @@ package cpu.core.pipeline
 import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
-import cpu.core.bundles.stage5.{IdExeBundle, IfIdBundle}
+import cpu.core.bundles.stages.{IdExeBundle, IfIdBundle}
 
 class DecodeTop extends Module {
   val io = IO(new Bundle {
@@ -17,16 +17,17 @@ class DecodeTop extends Module {
     val rsData = Input(UInt(dataLen.W)) // from register-file
     val rtData = Input(UInt(dataLen.W)) // ^
 
-    val out                 = Output(new IdExeBundle)
-    val nextInstInDelaySlot = Output(Bool())
-    val stallReq            = Output(Bool()) // to pipeLine control
+    val out      = Output(new IdExeBundle)
+    val stallReq = Output(Bool()) // to pipeLine control
+
+    val nextInstInDelaySlot = Output(Bool())  // to Fetch
   })
 
   val inst = Mux(io.in.instFetchExcept || !io.in.instValid, 0.U, io.inst)
 
-  val hazard  = Module(new cpu.core.decode.Hazard)
-  val control = Module(new cpu.core.decode.Control)
-  val decode  = Module(new cpu.core.decode.Decode)
+  val hazard    = Module(new cpu.core.decode.Hazard)
+  val control   = Module(new cpu.core.decode.Control)
+  val decode    = Module(new cpu.core.decode.Decode)
 
   val rs    = inst(25, 21)
   val rt    = inst(20, 16)
@@ -39,13 +40,13 @@ class DecodeTop extends Module {
   hazard.io.wrs(1) <> io.memWR
   hazard.io.wrs(2) <> io.wbWR
 
-  hazard.io.ops(0).addr := rs
+  hazard.io.ops(0).addr   := rs
   hazard.io.ops(0).inData := io.rsData
-  hazard.io.ops(0).typ := control.io.out.op1Type
+  hazard.io.ops(0).typ    := control.io.out.op1Type
 
-  hazard.io.ops(1).addr := rt
+  hazard.io.ops(1).addr   := rt
   hazard.io.ops(1).inData := io.rtData
-  hazard.io.ops(1).typ := control.io.out.op2Type
+  hazard.io.ops(1).typ    := control.io.out.op2Type
 
   /** 根据指令解码获取控制信号 */
   control.io.inst := inst

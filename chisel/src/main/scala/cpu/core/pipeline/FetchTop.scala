@@ -2,7 +2,7 @@ package cpu.core.pipeline
 
 import chisel3._
 import cpu.core.Constants._
-import cpu.core.bundles.stage5.IfIdBundle
+import cpu.core.bundles.stages.IfIdBundle
 import shared.ValidBundle
 
 class FetchTop extends Module {

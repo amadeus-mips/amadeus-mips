@@ -6,7 +6,7 @@ import chisel3._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
-import cpu.core.bundles.stage5.{ExeMemBundle, MemWbBundle}
+import cpu.core.bundles.stages.{ExeMemBundle, MemWbBundle}
 import cpu.core.memory.CP0HandleBundle
 
 class MemoryTop extends Module {

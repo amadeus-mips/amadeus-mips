@@ -5,7 +5,7 @@ package cpu.core
 import chisel3._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.stage5.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
+import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
 import shared.Buffer
