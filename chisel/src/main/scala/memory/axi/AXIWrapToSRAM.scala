@@ -147,7 +147,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
   //-----------------------------------------------------------------------------
   require(isPow2(burstLength), " burst length should be a power of 2")
   // assume the write has burst type of Incr, because wrap does not make much sense
-  assert(io.bus.aw.bits.burst === 2.U && io.bus.aw.valid, "burst type should be incr")
+//  assert(io.bus.aw.bits.burst === 1.U && io.bus.aw.valid && portState === portWrite, "burst type should be incr")
 
   // the idle readState is xIdle, and ready is asserted
   // when the it is no longer idle, it enters the wait/transfer stage

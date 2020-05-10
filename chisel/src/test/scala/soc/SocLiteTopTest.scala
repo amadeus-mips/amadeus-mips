@@ -44,7 +44,7 @@ class SocLiteTopTest extends ChiselFlatSpec {
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 3)
+      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 4)
     } should be(true)
   }
   it should "use verilator to generate vcd file" in {
