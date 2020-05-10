@@ -6,6 +6,7 @@ import shared.{AXIIO, CircularShifter}
 
 /**
   * a ram axi slave end with fixed burst length and fixed burst type of wrap
+  * the write port has a fixed burst type of incr
   * @param id the id in the axi graph
   * @param burstLength in beats, the length of the burst
   */
@@ -14,16 +15,71 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
     val bus = AXIIO.slave()
     val ram = new SimpleSramIO
   })
-//  assert(
-//    io.bus.ar.valid && (io.bus.ar.bits.burst(1) || io.bus.ar.bits.burst(0)),
-//    "when ar is valid, the burst type must be wrap or incr"
-//  )
   require(burstLength == 16, "the burst length should be 16")
+
+  //-----------------------------------------------------------------------------
+  //------------------set up the fsm--------------------------------------
+  //-----------------------------------------------------------------------------
+  // determines read or write takes control
+  val portIdle :: portRead :: portWrite :: Nil = Enum(3)
+  val portState = RegInit(portIdle)
+  // the state of read
+  val rIdle :: rWaitForR :: rTransfer :: rFinish :: Nil = Enum(4)
+  val readState = RegInit(rIdle)
+
+  val readCheckCounter = Reg(UInt(log2Ceil(burstLength).W))
+  val readAddrReg = Reg(UInt(32.W))
+  // the state of write
+  val wIdle :: wTransfer :: wResponse :: wFinish :: Nil = Enum(4)
+  val writeState = RegInit(wIdle)
+
+  val writeAddrReg = Reg(UInt(32.W))
+
+  //-----------------------------------------------------------------------------
+  //------------------set up the default IO--------------------------------------
+  //-----------------------------------------------------------------------------
+  io.bus := DontCare
+  io.ram := DontCare
+
+  // default signals for read
+  io.bus.ar.ready := readState === rIdle && portState === portRead
+  io.bus.r.bits.last := false.B
+
+  // response should always be ok
+  io.bus.r.bits.resp := 0.U
+
+  io.bus.r.valid := readState === rTransfer
+  io.ram.read.enable := false.B
+
+  assert(
+    (readState === rIdle && portState =/= portRead) || (portState === portRead),
+    "when port state is not port read, the read state should always be idle"
+  )
+
+  // default signals for write
+  // NO interleaving, assumes in order transfer
+  io.bus.aw.ready := writeState === wIdle && portState === portWrite
+
+  io.bus.w.ready := writeState === wTransfer && portState === portWrite
+
+  io.bus.b.valid := writeState === wResponse
+  io.bus.b.bits.resp := 0.U // fixed OK
+  io.bus.b.bits.id := id
+
+  io.ram.write.enable := false.B
+  io.ram.write.sel := io.bus.w.bits.strb
+  io.ram.write.data := io.bus.w.bits.data
+  assert(
+    (writeState === wIdle && portState =/= portWrite) || (portState === portWrite),
+    "when the port state is not port write, the write state should always be idle"
+  )
+  //-----------------------------------------------------------------------------
+  //------------------the FSM determines who gets which port---------------------
+  //-----------------------------------------------------------------------------
 
   // this is a single port, cannot read and write at the same cycle
   // a global FSM to determine read/write
-  val portIdle :: portRead :: portWrite :: Nil = Enum(3)
-  val portState = RegInit(portIdle)
+
   switch(portState) {
     is(portIdle) {
       // when read valid is asserted, serve read first
@@ -31,42 +87,23 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
         portState := portRead
         // when write valid is asserted, serve write if read valid is not asserted
       }.elsewhen(io.bus.aw.valid) {
-        //TODO: WARNING: write could starve!
+        // write could starve, but in reality, if icache keep sending read, and dcache
+        // keep sending read, the write channel will be available in the end
         portState := portWrite
       }
     }
     is(portRead) {
-      when(readState === rIdle) {
+      when(readState === rFinish) {
         portState := portIdle
       }
     }
     is(portWrite) {
       // at the response stage, write does not use the write port anymore
-      when(writeState === wResponse) {
+      when(writeState === wFinish) {
         portState := portIdle
       }
     }
   }
-  //-----------------------------------------------------------------------------
-  //------------------set up the fsm--------------------------------------
-  //-----------------------------------------------------------------------------
-  val rIdle :: rWaitForR :: rTransfer :: Nil = Enum(3)
-  val readState = RegInit(rIdle)
-  val readCheckCounter = Reg(UInt(log2Ceil(burstLength).W))
-  val readAddrReg = Reg(UInt(32.W))
-  //-----------------------------------------------------------------------------
-  //------------------set up the default IO--------------------------------------
-  //-----------------------------------------------------------------------------
-  io.bus := DontCare
-  io.ram := DontCare
-  // ar ready has a signal of low by default
-  io.bus.ar.ready := readState === rIdle && (portState === portIdle || portState === portRead)
-  // is always valid during the transfer
-  io.bus.r.bits.last := false.B
-  // response should always be ok
-  io.bus.r.bits.resp := 0.U
-  io.bus.r.valid := readState === rTransfer
-  io.ram.read.enable := false.B
   //-----------------------------------------------------------------------------
   //------------------switch the readStates--------------------------------------
   //-----------------------------------------------------------------------------
@@ -78,6 +115,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
         readCheckCounter := 0.U
       }
     }
+    //TODO: this is a redundant stage
     is(rWaitForR) {
       when(io.bus.r.ready) {
         readState := rTransfer
@@ -96,8 +134,11 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
       }
       when(readCheckCounter === 15.U) {
         io.bus.r.bits.last := true.B
-        readState := rIdle
+        readState := rFinish
       }
+    }
+    is(rFinish) {
+      readState := rIdle
     }
   }
 
@@ -107,53 +148,42 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
   require(isPow2(burstLength), " burst length should be a power of 2")
   // assume the write has burst type of Incr, because wrap does not make much sense
   assert(io.bus.aw.bits.burst === 2.U && io.bus.aw.valid, "burst type should be incr")
+
   // the idle readState is xIdle, and ready is asserted
   // when the it is no longer idle, it enters the wait/transfer stage
   // after the transfer/handshake, it stays at the commit stage
   // after aw and w idle is at the commit stage, b idle is asserted
-  val wIdle :: wTransfer :: wResponse :: Nil = Enum(4)
-  val writeState = RegInit(wIdle)
 
-  val writeAddrReg = Reg(UInt(32.W))
-  val writeOffsetReg = Reg(UInt(log2Ceil(burstLength).W))
-  //-----------------------------------------------------------------------------
-  //------------------default signals--------------------------------------
-  //-----------------------------------------------------------------------------
-  //TODO: can't both be high by default
-  io.bus.aw.ready := portState === portWrite
-
-  io.bus.w.ready := writeState === wTransfer && portState === portWrite
-
-  io.bus.b.valid := writeState === wResponse
-  io.bus.b.bits.resp := 0.U // fixed OK
-  io.bus.b.bits.id := id
-
-  io.ram.write.enable := false.B
-  io.ram.write.sel := io.bus.w.bits.strb
-  io.ram.write.data := io.bus.w.bits.data
   //-----------------------------------------------------------------------------
   //------------------the fsm --------------------------------------
   //-----------------------------------------------------------------------------
 
   switch(writeState) {
     is(wIdle) {
-      when (io.bus.aw.fire()) {
+      when(io.bus.aw.fire()) {
         writeState := wTransfer
+        writeAddrReg := io.bus.aw.bits.addr
+        assert(io.bus.aw.bits.addr(5,2) === 0.U, "the burst type should be INCR")
       }
     }
     is(wTransfer) {
-      when (io.bus.w.fire()) {
+      // this assumes that the underlying memory is always available
+      when(io.bus.w.fire()) {
         io.ram.write.addr := writeAddrReg
+        writeAddrReg := writeState + 4.U
         io.ram.write.enable := true.B
       }
-      when (io.bus.w.bits.last) {
+      when(io.bus.w.bits.last) {
         writeState := wResponse
       }
     }
     is(wResponse) {
       when(io.bus.b.fire()) {
-        writeState := wIdle
+        writeState := wFinish
       }
+    }
+    is(wFinish) {
+      writeState := wIdle
     }
   }
 }
