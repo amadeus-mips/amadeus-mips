@@ -163,15 +163,16 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
       when(io.bus.aw.fire()) {
         writeState := wTransfer
         writeAddrReg := io.bus.aw.bits.addr
-//        assert(io.bus.aw.bits.addr(5,2) === 0.U, "the burst type should be INCR")
+        assert(io.bus.aw.bits.addr(4,2) === 0.U, "the burst type should be INCR")
       }
     }
     is(wTransfer) {
       // this assumes that the underlying memory is always available
       when(io.bus.w.fire()) {
         io.ram.write.addr := writeAddrReg
-        writeAddrReg := writeState + 4.U
+        writeAddrReg := writeAddrReg + 4.U
         io.ram.write.enable := true.B
+//        io.ram.write.data := io.bus.w.bits.data
       }
       when(io.bus.w.bits.last) {
         writeState := wResponse
