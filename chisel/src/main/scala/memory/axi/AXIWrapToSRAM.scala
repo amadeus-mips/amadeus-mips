@@ -15,7 +15,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
     val bus = AXIIO.slave()
     val ram = new SimpleSramIO
   })
-  require(burstLength == 16, "the burst length should be 16")
+//  require(burstLength == 16, "the burst length should be 16")
 
   //-----------------------------------------------------------------------------
   //------------------set up the fsm--------------------------------------
@@ -116,12 +116,6 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
         readCheckCounter := 0.U
       }
     }
-//    TODO: this is a redundant stage
-//    is(rWaitForR) {
-//      when(io.bus.r.ready) {
-//        readState := rTransfer
-//      }
-//    }
     is(rTransfer) {
       when(io.bus.r.fire) {
         io.ram.read.enable := true.B
@@ -130,10 +124,10 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
         readCheckCounter := readCheckCounter + 1.U;
         assert(readAddrReg(1, 0) === 0.U, "address should be aligned")
 //        assert(readAddrReg.getWidth == 20, "address width should be 20")
-        readAddrReg := Cat(readAddrReg(31, 6), (readAddrReg(5, 2) + 1.U), 0.U(2.W))
+        readAddrReg := Cat(readAddrReg(31, 2+log2Ceil(burstLength)), (readAddrReg(1+log2Ceil(burstLength), 2) + 1.U), 0.U(2.W))
         io.bus.r.bits.data := io.ram.read.data
       }
-      when(readCheckCounter === 15.U) {
+      when(readCheckCounter === (burstLength-1).U) {
         io.bus.r.bits.last := true.B
         readState := rFinish
       }
