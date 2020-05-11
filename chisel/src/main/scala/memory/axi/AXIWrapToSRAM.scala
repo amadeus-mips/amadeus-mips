@@ -110,17 +110,17 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
   switch(readState) {
     is(rIdle) {
       when(io.bus.ar.fire) {
-        readState := rWaitForR
+        readState := rTransfer
         readAddrReg := io.bus.ar.bits.addr
         readCheckCounter := 0.U
       }
     }
-    //TODO: this is a redundant stage
-    is(rWaitForR) {
-      when(io.bus.r.ready) {
-        readState := rTransfer
-      }
-    }
+//    TODO: this is a redundant stage
+//    is(rWaitForR) {
+//      when(io.bus.r.ready) {
+//        readState := rTransfer
+//      }
+//    }
     is(rTransfer) {
       when(io.bus.r.fire) {
         io.ram.read.enable := true.B
@@ -163,7 +163,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
       when(io.bus.aw.fire()) {
         writeState := wTransfer
         writeAddrReg := io.bus.aw.bits.addr
-        assert(io.bus.aw.bits.addr(5,2) === 0.U, "the burst type should be INCR")
+//        assert(io.bus.aw.bits.addr(5,2) === 0.U, "the burst type should be INCR")
       }
     }
     is(wTransfer) {
