@@ -33,7 +33,7 @@ class DCacheAXIWrap extends Module {
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U
   io.axi.ar.valid := Mux(cachedTrans, dCache.io.miss, io.rData.enable)
-  io.axi.r.ready := true.B
+//  io.axi.r.ready := true.B
   io.rData.data := Mux(cachedTrans, dCache.io.cpu_data, io.axi.r.bits.data)
   io.rData.valid :=
     Mux(cachedTrans,dCache.io.hit,

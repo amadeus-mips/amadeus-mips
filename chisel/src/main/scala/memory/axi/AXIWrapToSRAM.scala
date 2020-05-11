@@ -66,6 +66,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
   io.bus.b.bits.resp := 0.U // fixed OK
   io.bus.b.bits.id := id
 
+  io.ram.write.addr := writeAddrReg
   io.ram.write.enable := false.B
   io.ram.write.sel := io.bus.w.bits.strb
   io.ram.write.data := io.bus.w.bits.data
@@ -169,7 +170,6 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
     is(wTransfer) {
       // this assumes that the underlying memory is always available
       when(io.bus.w.fire()) {
-        io.ram.write.addr := writeAddrReg
         writeAddrReg := writeAddrReg + 4.U
         io.ram.write.enable := true.B
 //        io.ram.write.data := io.bus.w.bits.data
