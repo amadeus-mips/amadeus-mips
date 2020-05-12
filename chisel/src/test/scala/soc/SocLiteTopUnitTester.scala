@@ -1,5 +1,7 @@
 package soc
 
+import java.io.PrintWriter
+
 import chisel3.iotesters.PeekPokeTester
 
 import scala.io.Source
@@ -15,15 +17,17 @@ import scala.io.Source
 class SocLiteTopUnitTester(
   c:                        SocLiteTop,
   banLog:                   Boolean = false,
-  trace:                    Boolean = false,
   needAssert:               Boolean = false,
   perfNumber:               Int = 0,
   runAllPerf:               Boolean = false,
-  performanceMonitorEnable: Boolean = false
-)(implicit trace_file:      String = "./src/test/resources/loongson/func/golden_trace.txt", vcdOn: Boolean = false)
+  performanceMonitorEnable: Boolean = false,
+  trace:                    Boolean = false,
+  writeTrace:               Boolean = false
+)(implicit traceFile:       String = "./src/test/resources/loongson/func/golden_trace.txt", vcdOn: Boolean = false)
     extends PeekPokeTester(c) {
   require(perfNumber >= 0 && perfNumber <= 10)
   require(!(runAllPerf && vcdOn))
+  require(!(writeTrace && trace))
 
   val perfMap = Map(
     (1, "bit count"),
@@ -46,11 +50,14 @@ class SocLiteTopUnitTester(
   def switchData(n: Int = perfNumber) = if (n == 0) BigInt("ff", 16).toInt else 15 - n
 
   /** get trace from trace file */
-  val source = Source.fromFile(trace_file)
-  val lines = source.getLines()
+  val source = if (trace) Some(Source.fromFile(traceFile)) else None
+  val lines = if (trace) Some(source.get.getLines()) else None
+
+  /** get trace target file */
+  val traceWriter = if (writeTrace) Some(new PrintWriter(traceFile)) else None
 
   // init
-  var trace_line: Array[BigInt] = lines.next().split(" ").map(BigInt(_, 16))
+  var trace_line = if (trace) Some(lines.get.next().split(" ").map(BigInt(_, 16))) else None
 
   var lastTime:      Long = System.currentTimeMillis()
   var lastDebugInfo: String = ""
@@ -129,24 +136,36 @@ class SocLiteTopUnitTester(
           lastTime = current
         }
         if (trace) {
-          if (wen != 0 && wnum != 0) {
-            if (trace_line(0) != 0) {
-              if (!(pc == trace_line(1) && wnum == trace_line(2) && wdata == trace_line(3))) {
-                err(lastDebugInfo)
-                err(s"Should be ${trace_line.foldLeft("")(_ + " " + _.toString(16))}")
-                return false
-              }
-            }
-            if (lines.hasNext) trace_line = lines.next().split(" ").map(BigInt(_, 16))
-            else return true
-          }
+          if (!traceCompare()) return false
         }
+        if (writeTrace) {}
       }
-      if (!(current - lastTime < 20000)) {
+      if (!(current - lastTime < 1000)) {
         err(lastDebugInfo)
         return false
       }
       update(1)
+    }
+    true
+  }
+
+  def writeTrace(): Unit = {
+    if (wen != 0 && wnum != 0) {
+      traceWriter.get.println(s"1 ${pc.toString(16)} ${wnum.toString(16)} ${wdata.toString(16)}")
+    }
+  }
+
+  def traceCompare(): Boolean = {
+    if (wen != 0 && wnum != 0) {
+      if (trace_line.get(0) != 0) {
+        if (!(pc == trace_line.get(1) && wnum == trace_line.get(2) && wdata == trace_line.get(3))) {
+          err(lastDebugInfo)
+          err(s"Should be ${trace_line.get.foldLeft("")(_ + " " + _.toString(16))}")
+          return false
+        }
+      }
+      if (lines.get.hasNext) trace_line = Some(lines.get.next().split(" ").map(BigInt(_, 16)))
+      else return true
     }
     true
   }
@@ -181,6 +200,6 @@ class SocLiteTopUnitTester(
     println(Console.CYAN + "Info: " + msg + Console.RESET)
   }
 
-  source.close()
-
+  if (trace) source.get.close()
+  if (writeTrace) traceWriter.get.close()
 }
