@@ -47,6 +47,8 @@ class UnCachedUnit extends Module {
   io.axi.ar.bits.prot := 0.U
   io.axi.ar.valid := readState === readWaitForAR
 
+  io.axi.r.ready := readState === readWaitForR
+
   io.axi.aw.bits.id := Constants.DATA_ID
   io.axi.aw.bits.addr := virToPhy(addr = writeAddressReg)
   io.axi.aw.bits.len := 0.U(4.W)
