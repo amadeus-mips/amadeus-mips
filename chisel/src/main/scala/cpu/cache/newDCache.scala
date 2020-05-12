@@ -18,12 +18,12 @@ import shared.Constants._
 //TODO: be able to invalidate the refill buffer
 //TODO: optimize axi port
 
-//TODO: better software engineering with I-cache
+//TODO: better software engineering with d-cache
 /**
-  * icache with an AXI interface
-  * @param setAmount how many sets there are in the i-cache
-  * @param wayAmount how many ways there are in each set of i-cache
-  * @param bankAmount how many banks there are in the i-cache
+  * DCache with an AXI interface
+  * @param setAmount how many sets there are in the d-cache
+  * @param wayAmount how many ways there are in each set of d-cache
+  * @param bankAmount how many banks there are in the d-cache
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class newDCache(
@@ -63,36 +63,48 @@ class newDCache(
   //-------------------------------------------------------------------------------
   //--------------------set up the states and register of FSM----------------------
   //-------------------------------------------------------------------------------
-  val sIdle :: sWaitForAR :: sReFill :: sWriteBack :: Nil = Enum(4)
+  // main finite state machine for handling misses
+  // idle is always the hit state, write could only happen during idle as of now
+  // when a miss comes and lru is dirty, enters invalidate, if lru not dirty, enter wait for AR
+  // after writing back, enters read miss state
+  // handle the write miss during sIdle ( after the whole cycle )
+  val sIdle :: sInvalidate :: sTransfer :: sWriteFinish :: sWaitForAR :: sReFill :: sWriteBack :: Nil = Enum(7)
   val state = RegInit(sIdle)
 
   // this is really just an int, tracking which index I'm writing to in
-  // the refill buffer
-  val writeMask = Module(new CircularShifterInt(bankAmount))
+  // the refill buffer, i.e. next target
+  val refillWriteMask = Module(new CircularShifterInt(bankAmount))
 
-  // write vec marks which words in the refill buffer has been written to
-  val writeVec = RegInit(VecInit(Seq.fill(bankAmount)(false.B)))
+  // write vec marks which words in the refill buffer has been written to i.e. per word valid
+  val refillWriteVec = RegInit(VecInit(Seq.fill(bankAmount)(false.B)))
+
   // refill buffer is a buffer for holding values from axi r channel
   // at the end of the refill states this buffer will be re-written to
-  // the i-cache line
+  // the d-cache line
   val reFillBuffer = RegInit(VecInit(Seq.fill(bankAmount)(0.U(32.W))))
 
+  // record the PC info on a miss
   // keep track of which way to write to
-  //TODO: which cycle should this be determined
   val lruWayReg = Reg(UInt(log2Ceil(wayAmount).W))
+
   // keep track of the index
   val indexReg = Reg(UInt(indexLen.W))
+
   // keep track of the tag
   val tagReg = Reg(UInt(tagLen.W))
+
   // keep track of the specific index of the bank
   val bankOffsetReg = Reg(UInt(log2Ceil(bankAmount).W))
 
-  // register for preserving the r data across rlast
+  // Notice: this won't be true across rWriteBack to rIdle, as there is
+  // no lookup during rWriteBack
+  // hit in the reFill buffer during refill stage
   val rDataReg = RegNext(io.axi.r.bits.data)
   val rValidReg = RegInit(false.B)
 
-  // hit under miss in i-cache, set this register
-  val rICacheHitReg = RegInit(false.B)
+  // hit under miss in d-cache, set this register
+  // hit in the D-cache during reFill stage
+  val rDCacheHitReg = RegInit(false.B)
 
   // records if the current set is full
   // this is to make sure empty lines are filled ahead of LRU
@@ -101,7 +113,7 @@ class newDCache(
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
-  assert(!(io.rData.valid && io.rData.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
+//  assert(!(io.rData.valid && io.rData.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
   assert(!(io.rData.valid && !io.rData.enable), "the returned data should not be valid when the address is not enabled")
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
@@ -123,6 +135,9 @@ class newDCache(
     * dirty(way)(index)
     */
   val dirty = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
+
+  // the dirty status of the set.
+  val dirtyWire = Wire(Vec(wayAmount, Bool()))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -175,6 +190,7 @@ class newDCache(
       hitWay := i.U
       isHit := true.B
     }
+    dirtyWire(i) := dirty(i)(index)
   }
 
   //-----------------------------------------------------------------------------
@@ -187,9 +203,9 @@ class newDCache(
   tagWe := 0.U.asTypeOf(Vec(wayAmount, Bool()))
 
   // default io for write mask
-  writeMask.io.initPosition.bits := 0.U
-  writeMask.io.initPosition.valid := false.B
-  writeMask.io.shiftEnable := false.B
+  refillWriteMask.io.initPosition.bits := 0.U
+  refillWriteMask.io.initPosition.valid := false.B
+  refillWriteMask.io.shiftEnable := false.B
 
   io.axi := DontCare
 
@@ -222,12 +238,14 @@ class newDCache(
   // hardcode r to always be ready
   //TODO: check in case of problem
 
-  val instruction = Wire(UInt(dataLen.W))
+  // the contents for a read
+  val cacheContents = Wire(UInt(dataLen.W))
   val hitWayReg = RegNext(hitWay)
   val bankOffSetNextReg = RegNext(bankOffset)
-  instruction := bankData(hitWayReg)(bankOffSetNextReg)
+  cacheContents := bankData(hitWayReg)(bankOffSetNextReg)
+  // read data is only valid when read enable is asserted
   io.rData.valid := cachedTrans && isIdle && isHit && io.rData.enable
-  io.rData.data := instruction
+  io.rData.data := cacheContents
 
   LRU.io.accessEnable := false.B
   LRU.io.accessWay := DontCare
@@ -238,13 +256,13 @@ class newDCache(
   //-----------------------------------------------------------------------------
   def beginRTransaction(): Unit = {
     state := sReFill
-    writeMask.io.initPosition.valid := true.B
-    writeMask.io.initPosition.bits := bankOffsetReg
+    refillWriteMask.io.initPosition.valid := true.B
+    refillWriteMask.io.initPosition.bits := bankOffsetReg
     // the precise timing of this should happen at the first cycle of the r transaction
     // however, as it is put into the refill state ( because if you wait for R, then
     // you can't handle the first receive unless you put it into a reg, but that's kind
     // of ugly
-    writeVec := 0.U.asTypeOf(writeVec)
+    refillWriteVec := 0.U.asTypeOf(refillWriteVec)
     reFillBuffer := 0.U.asTypeOf(reFillBuffer)
     // don't invalidate this line
   }
@@ -258,14 +276,14 @@ class newDCache(
 
   /**
     * this is to check whether there is a hit in the
-    * I-cache when the i-cache is under a miss
-    * if there is a hit, send the instruction ( this cycle )
+    * d-cache when the d-cache is under a miss
+    * if there is a hit, send the cacheContents ( this cycle )
     * to the rData, valid has been asserted last cycle
     */
-  def checkICacheHit(): Unit = {
-    when(rICacheHitReg) {
-      rICacheHitReg := false.B
-      io.rData.data := instruction
+  def checkDCacheHit(): Unit = {
+    when(rDCacheHitReg) {
+      rDCacheHitReg := false.B
+      io.rData.data := cacheContents
     }
   }
 
@@ -294,7 +312,6 @@ class newDCache(
   //-----------------------------------------------------------------------------
   switch(state) {
     is(sIdle) {
-      // TODO: check last boundary crossing
 
       when(io.rData.enable) {
         // enable already ensures that the address is aligned
@@ -317,18 +334,18 @@ class newDCache(
       }
     }
     is(sReFill) {
-      assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from i-cache id")
+      assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from d-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         // update the write mask
-        writeMask.io.shiftEnable := true.B
+        refillWriteMask.io.shiftEnable := true.B
 
         // write to the refill buffer instead of the data bank
-        reFillBuffer(writeMask.io.vector) := io.axi.r.bits.data
+        reFillBuffer(refillWriteMask.io.vector) := io.axi.r.bits.data
         // update the vec to record which positions has been written to
-        writeVec(writeMask.io.vector) := true.B
+        refillWriteVec(refillWriteMask.io.vector) := true.B
 
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
@@ -336,18 +353,18 @@ class newDCache(
         io.rData.valid := false.B
         // by default, this is connected to the rData register that preserves the hit
         // in refill buffer or axi from the previous cycle, this could also be connected
-        // to i-cache ( instruction variable )
+        // to d-cache ( instruction variable )
         io.rData.data := rDataReg
         // this defaults to false, as this value is only used in the write back state
         rValidReg := false.B
-        checkICacheHit()
+        checkDCacheHit()
 
         /**
-          * check if there is a hit in the I-cache
+          * check if there is a hit in the d-cache
           */
         when(isHit && io.rData.enable) {
           io.rData.valid := true.B
-          rICacheHitReg := true.B
+          rDCacheHitReg := true.B
           updateLRU(hitWay)
         }
 
@@ -359,7 +376,7 @@ class newDCache(
             io.rData.valid := true.B
             rValidReg := true.B
             // r data reg = axi r bits by default
-          }.elsewhen(writeVec(bankOffset)) {
+          }.elsewhen(refillWriteVec(bankOffset)) {
             // if the hit occurs in the refill buffer
             io.rData.valid := true.B
             rDataReg := reFillBuffer(bankOffset)
@@ -389,7 +406,7 @@ class newDCache(
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
       checkRefillBufferHit()
-      checkICacheHit()
+      checkDCacheHit()
 
       state := sIdle
     }
@@ -397,16 +414,17 @@ class newDCache(
   // which index I'm visiting
   indexWire := Mux(state === sWriteBack, indexReg, index)
 
-  val instBanks = for {
+  val dataBanks = for {
     i <- 0 until wayAmount
     j <- 0 until bankAmount
   } yield {
-    val bank = Module(new SinglePortBank(setAmount, dataLen, syncRead = true))
-    bank.io.we := we(i)(j)
-    bank.io.en.get := true.B
+    // word aligned banks
+    val bank = Module(new SinglePortMaskBank(numberOfSet = setAmount, minWidth = 8, maskWidth = bankAmount, syncRead = true))
+    // read and write share the address
     bank.io.addr := indexWire
-    bank.io.inData := reFillBuffer(j)
-    bankData(i)(j) := bank.io.outData
+    bank.io.we := we(i)(j)
+    bank.io.writeData := reFillBuffer(j)
+    bankData(i)(j) := bank.io.readData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
