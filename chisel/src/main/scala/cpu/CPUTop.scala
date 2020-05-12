@@ -3,7 +3,7 @@
 package cpu
 
 import chisel3._
-import cpu.cache.{DCacheAXIWrap, ICache}
+import cpu.cache.{DCacheAXIWrap, ICache, newDCache}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
 import shared.{AXIIO, DebugBundle}
@@ -30,7 +30,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   val axiInterface = Module(new AXIInterface)
 
   val iCache = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
-  val dCache = Module(new DCacheAXIWrap)
+  val dCache = Module(new newDCache)
 
   val core = Module(new Core_ls)
 
@@ -41,10 +41,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
   core.io.intr := io.intr
   core.io.rInst <> iCache.io.rInst
-  core.io.rData <> dCache.io.rData
-  core.io.wData <> dCache.io.wData
-
-  dCache.io.exeAddr := core.io_ls.ex_addr
+  core.io.rChannel <> dCache.io.rChannel
+  core.io.wChannel <> dCache.io.wChannel
 
   axiInterface.io.data <> dCache.io.axi
 

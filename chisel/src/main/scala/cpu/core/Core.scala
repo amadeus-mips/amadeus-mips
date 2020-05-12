@@ -16,8 +16,8 @@ class Core extends MultiIOModule {
     val intr = Input(UInt(intrLen.W))
 
     val rInst = new NiseSramReadIO()
-    val rData = new NiseSramReadIO()
-    val wData = new NiseSramWriteIO()
+    val rChannel = new NiseSramReadIO()
+    val wChannel = new NiseSramWriteIO()
   })
 
   implicit val conf: CPUConfig = new CPUConfig()
@@ -120,11 +120,11 @@ class Core extends MultiIOModule {
   mem_wb.io.flush := hazard.io.flush
 
   wbTop.io.in := mem_wb.io.out
-  wbTop.io.rData := RegNext(io.rData.data, 0.U)
+  wbTop.io.rData := io.rChannel.data
 
   io.rInst.addr   := fetchTop.io.out.pc
   io.rInst.enable := fetchTop.io.pcValid
 
-  io.rData <> memoryTop.io.rData
-  io.wData <> memoryTop.io.wData
+  io.rChannel <> memoryTop.io.rData
+  io.wChannel <> memoryTop.io.wData
 }
