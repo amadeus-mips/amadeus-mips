@@ -186,7 +186,7 @@ class ICache(
   io.axi.ar.bits.addr := Mux(
     cachedTrans,
     //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
-    Cat(0.U(3.W), addr(28, 0)),
+    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0))),
     virToPhy(addr)
   )
 

@@ -6,7 +6,7 @@
 
 
 ##s0, number
-##s1, number adress
+##s1, number adress 
 ##s2, exception use
 ##s3, score
 ##s4, exception pc
@@ -54,7 +54,7 @@ test_finish:
  *  exception handle
  */
 .org 0x380
-1:
+1:  
     mfhi k0
     mflo k1
     li  k0, 0x800d0000
@@ -218,14 +218,14 @@ reserved_inst_ex:
     nop
 
 int_ex:
-    addu s2, zero, zero
+    addu s2, zero, zero 
     mfc0 k0, c0_epc
     bne  k0, s4, ex_finish
     nop
     addiu k0, k0, 8
-    mtc0  k0, c0_epc # epc+8
+    mtc0  k0, c0_epc   //epc+8
     disable_trace_cmp_s
-    mfc0 k0, c0_cause # don't compare cause.bd
+    mfc0 k0, c0_cause  //don't compare cause.bd
     enable_trace_cmp_s
     andi k0, k0, 0x7c # 6..2 exc code
     li   k1, 0x00 # 000_0000
@@ -253,7 +253,7 @@ ex_finish:
     beq k0,zero, 1f
     nop
     addiu k1,k1,0x4
-1:
+1:  
     mtc0  k1,c0_epc
     nop
     bne s2, zero, ex_ret
@@ -415,7 +415,7 @@ kseg0_kseg1:
     nop
     jal wait_1s
     nop
-    jal n31_xori_test   #xori
+    jal n31_xori_test   #xori 
     nop
     jal wait_1s
     nop
@@ -680,9 +680,9 @@ test_end:
     LI (a0, LED_ADDR)
 	LI (a1, LED_RG1_ADDR)
     LI (a2, LED_RG0_ADDR)
-
+	
     LI (t1, 0x0002)
-
+    
 	sw zero, 0(a0)
     sw t1, 0(a1)
     sw t1, 0(a2)
@@ -709,7 +709,7 @@ wait_1s:
     sll   t3, t2, 9     #t3 = switch interleave << 9
     addiu t3, t3, 1
 
-sub1:
+sub1:  
     addiu t3, t3, -1
 
     #select min{t3, switch_interleave}
@@ -717,7 +717,7 @@ sub1:
     xor   t2, t2, t1
     sll   t2, t2, 9     #switch interleave << 9
     sltu  t4, t3, t2
-    bnez  t4, 1f
+    bnez  t4, 1f 
     nop
     addu  t3, t2, 0
 1:

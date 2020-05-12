@@ -24,19 +24,7 @@ class RegFile extends Module {
     regs(io.write.address) := io.write.data
   }
 
-  io.rsData := MuxCase(regs(io.rs),
-    Array(
-      (io.rs === 0.U) -> 0.U,
-      (io.write.enable && io.write.address === io.rs) ->
-        io.write.data,
-    )
-  )
-  io.rtData := MuxCase(regs(io.rt),
-    Array(
-      (io.rt === 0.U) -> 0.U,
-      (io.write.enable && io.write.address === io.rt) ->
-        io.write.data,
-    )
-  )
+  io.rsData := Mux(io.rs.orR(), regs(io.rs), 0.U)
+  io.rtData := Mux(io.rt.orR(), regs(io.rt), 0.U)
 
 }
