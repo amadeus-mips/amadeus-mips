@@ -6,8 +6,8 @@ import chisel3._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
-import cpu.core.bundles.stage5.{ExeMemBundle, MemWbBundle}
-import cpu.core.memory.{CP0HandleBundle, Control, Except, Forward}
+import cpu.core.bundles.stages.{ExeMemBundle, MemWbBundle}
+import cpu.core.memory.CP0HandleBundle
 
 class MemoryTop extends Module {
   val io = IO(new Bundle {
@@ -36,32 +36,35 @@ class MemoryTop extends Module {
   val forward = Module(new cpu.core.memory.Forward)
 
   control.io.inWriteData := io.in.write.data
-  control.io.inMemData := io.in.memData
-  control.io.operation := io.in.operation
-  control.io.addr := io.in.memAddr
-  control.io.except := except.io.outExcept.asUInt() =/= 0.U
+  control.io.inMemData   := io.in.memData
+  control.io.operation   := io.in.operation
+  control.io.addr        := io.in.memAddr
+  control.io.except      := except.io.outExcept.asUInt().orR()
+
   control.io.rData <> io.rData
   control.io.wData <> io.wData
 
-  except.io.pc := io.in.pc
-  except.io.addr := io.in.memAddr
+  except.io.pc        := io.in.pc
+  except.io.addr      := io.in.memAddr
   except.io.cp0Status := forward.io.outCP0.status
-  except.io.cp0Cause := forward.io.outCP0.cause
-  except.io.inExcept <> io.in.except
+  except.io.cp0Cause  := forward.io.outCP0.cause
+  except.io.inExcept  := io.in.except
 
-  forward.io.inCP0 <> io.inCP0Handle
-  forward.io.wbCP0 <> io.wbCP0
+  forward.io.inCP0 := io.inCP0Handle
+  forward.io.wbCP0 := io.wbCP0
 
-  io.out.write <> io.in.write
+  io.out.addrL2 := io.in.memAddr(1,0)
+  io.out.operation  := io.in.operation
+  io.out.write      := io.in.write
   io.out.write.data := control.io.outWriteData
-  io.out.write.valid := true.B
-  io.out.cp0 <> io.in.cp0
-  io.out.hilo <> io.in.hilo
-  io.out.pc := io.in.pc
+  //  io.out.write.valid := !control.io.stallReq
+  io.out.cp0  := io.in.cp0
+  io.out.hilo := io.in.hilo
+  io.out.pc   := io.in.pc
 
-  io.badAddr := except.io.badAddr
+  io.badAddr     := except.io.badAddr
   io.inDelaySlot := io.in.inDelaySlot
-  io.except <> except.io.outExcept
-  io.EPC := forward.io.outCP0.EPC
-  io.stallReq := control.io.stallReq
+  io.except      := except.io.outExcept
+  io.EPC         := forward.io.outCP0.EPC
+  io.stallReq    := control.io.stallReq
 }

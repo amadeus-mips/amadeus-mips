@@ -15,8 +15,8 @@ class Core_ls extends Core {
 
   io_ls.ex_addr := executeTop.io.out.memAddr
 
-  io_ls.debug.wbPC := mem_wb.io.out.pc
-  io_ls.debug.wbRegFileWEn := Fill(4, mem_wb.io.out.write.enable)
-  io_ls.debug.wbRegFileWNum := mem_wb.io.out.write.address
-  io_ls.debug.wbRegFileWData := mem_wb.io.out.write.data
+  io_ls.debug.wbPC := wbTop.io.out.pc
+  io_ls.debug.wbRegFileWEn := Fill(4, wbTop.io.out.write.enable)
+  io_ls.debug.wbRegFileWNum := wbTop.io.out.write.address
+  io_ls.debug.wbRegFileWData := wbTop.io.out.write.data
 }
