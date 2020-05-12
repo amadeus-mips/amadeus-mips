@@ -202,6 +202,11 @@ class AXIInterconnectConfig
 }
 
 object AXIInterconnectConfig {
+  val mBaseAddr = Seq(
+    Seq("h1fc00000".U(32.W), "h20000000".U(32.W), "h40000000".U(32.W), "h80000000".U(32.W), "h00000000".U(32.W)),
+    Seq("h1faf0000".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W))
+  )
+
   /** 1 * 2 axi crossbar */
   def loongson_func = new AXIInterconnectConfig(
     sCount = 1,
@@ -209,10 +214,7 @@ object AXIInterconnectConfig {
     idWidth = 4,
     forwardID = true,
     mRegions = 5,
-    mBaseAddr = Seq(
-      Seq("h1fc00000".U(32.W), "h20000000".U(32.W), "h40000000".U(32.W), "h80000000".U(32.W), "h00000000".U(32.W)),
-      Seq("h1faf0000".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W))
-    ),
+    mBaseAddr = mBaseAddr,
     mAddrWidth = Seq(
       Seq(22, 29, 30, 31, 28),
       Seq(16, 0, 0, 0, 0)
@@ -226,10 +228,20 @@ object AXIInterconnectConfig {
     idWidth = 4,
     forwardID = true,
     mRegions = 5,
-    mBaseAddr = Seq(
-      Seq("h1fc00000".U(32.W), "h20000000".U(32.W), "h40000000".U(32.W), "h80000000".U(32.W), "h00000000".U(32.W)),
-      Seq("h1faf0000".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W), "hffffffff".U(32.W))
-    ),
+    mBaseAddr = mBaseAddr,
+    mAddrWidth = Seq(
+      Seq(22, 29, 30, 31, 28),
+      Seq(16, 0, 0, 0, 0)
+    )
+  )
+
+  def unCachedSupport = new AXIInterconnectConfig(
+    sCount = 3,
+    mCount = 2,
+    idWidth = 4,
+    forwardID = true,
+    mRegions = 5,
+    mBaseAddr = mBaseAddr,
     mAddrWidth = Seq(
       Seq(22, 29, 30, 31, 28),
       Seq(16, 0, 0, 0, 0)

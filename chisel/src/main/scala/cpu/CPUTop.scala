@@ -21,6 +21,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
     val instAXI = AXIIO.master()
     val dataAXI = AXIIO.master()
+    val unCachedAXI = AXIIO.master()
 
     val debug = Output(new DebugBundle)
 
@@ -45,12 +46,14 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
   // when they are not uncached
   when (!isUnCached(core.io.rChannel.addr)) {
-    core.io <> dCache.io
+    core.io.rChannel <> dCache.io.rChannel
+    core.io.wChannel <> dCache.io.wChannel
     unCached.io <> DontCare
     unCached.io.rChannel.enable := false.B
     unCached.io.wChannel.enable := false.B
   }.otherwise {
-    core.io <> unCached.io
+    core.io.rChannel <> unCached.io.rChannel
+    core.io.wChannel <> unCached.io.wChannel
     dCache.io <> DontCare
     dCache.io.rChannel.enable := false.B
     dCache.io.wChannel.enable := false.B
@@ -61,6 +64,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   iCache.io.axi := DontCare
   io.dataAXI <> dCache.io.axi
   io.instAXI <> iCache.io.axi
+  io.unCachedAXI <> unCached.io.axi
 
   io.debug <> core.io_ls.debug
 
