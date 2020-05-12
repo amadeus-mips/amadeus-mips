@@ -118,7 +118,8 @@ class newDCache(
 
   // keep track of whether there has been an aw handshake yet
   // true means still waiting, false means that the handshake has finished
-  val waitForAWHandshake = RegInit(true.B)
+  // only assert before waiting for handshake
+  val waitForAWHandshake = RegInit(false.B)
 
   // the buffer that holds the data to be dispatched to axi write
   val writeDataBuffer = Reg(Vec(bankAmount, UInt(32.W)))
@@ -137,8 +138,7 @@ class newDCache(
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
   val addr = io.rChannel.addr
-  val cachedTrans = addr(31, 29) =/= "b101".U
-
+  assert( (addr(31, 29) =/= "b101".U && (io.rChannel.enable || io.wChannel.enable)) || (!io.rChannel.enable && !io.wChannel.enable), "this should be a cached transaction")
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
   val bankOffset = addr(log2Ceil(blockSize) - 1, log2Ceil(bankSize))
@@ -203,11 +203,11 @@ class newDCache(
   for (i <- 0 until wayAmount) {
     when(!valid(i)(index)) {
       isSetNotFull := true.B
-      emptyPtr := i.U
+      emptyPtr     := i.U
     }
     when(valid(i)(index) && tagData(i) === tag) {
       hitWay := i.U
-      isHit := true.B
+      isHit  := true.B
     }
     dirtyWire(i) := dirty(i)(index)
   }
@@ -222,22 +222,18 @@ class newDCache(
   tagWe := 0.U.asTypeOf(Vec(wayAmount, Bool()))
 
   // default io for write mask
-  refillWriteMask.io.initPosition.bits := 0.U
+  refillWriteMask.io.initPosition.bits  := 0.U
   refillWriteMask.io.initPosition.valid := false.B
-  refillWriteMask.io.shiftEnable := false.B
+  refillWriteMask.io.shiftEnable        := false.B
 
   io.axi := DontCare
 
   io.axi.ar.bits.id := DATA_ID
-  io.axi.ar.bits.addr := Mux(
-    cachedTrans,
-    //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
-    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0))),
-    virToPhy(addr)
-  )
+  io.axi.ar.bits.addr :=
+    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0)))
 
-  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
-  io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
+  io.axi.ar.bits.len   := (bankAmount - 1).U(4.W)
+  io.axi.ar.bits.size  := "b010".U(3.W) // 4 Bytes
   io.axi.ar.bits.burst := "b10".U(2.W) // wrap burst
 
   /**
@@ -254,36 +250,33 @@ class newDCache(
   io.axi.ar.bits.lock := 0.U
   //TODO: can we utilize this?
   io.axi.ar.bits.cache := 0.U
-  io.axi.ar.bits.prot := 0.U
+  io.axi.ar.bits.prot  := 0.U
 
   /**
     * default IO for aw
     */
-  io.axi.aw.bits.id := DATA_ID
-  io.axi.aw.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W))
-  io.axi.aw.bits.size := "b010".U(3.W)
+  io.axi.aw.bits.id    := DATA_ID
+  io.axi.aw.bits.len   := (bankAmount - 1).U(4.W)
+  io.axi.aw.bits.size  := "b010".U(3.W)
   io.axi.aw.bits.burst := "b10".U(2.W)
   io.axi.ar.bits.cache := 0.U
-  io.axi.ar.bits.prot := 0.U
-  io.axi.ar.bits.lock := 0.U
+  io.axi.ar.bits.prot  := 0.U
+  io.axi.ar.bits.lock  := 0.U
 
-  io.axi.aw.bits.addr := Mux(
-    cachedTrans,
-    // aw address should be aligned, as this is a INCR burst
-    Cat(0.U(3.W), Cat(tagReg,indexReg), 0.U((log2Ceil(bankAmount) + 2).W)),
-    virToPhy(addr)
-  )
+  io.axi.aw.bits.addr :=
+    Cat(0.U(3.W), Cat(tagReg, indexReg), 0.U((log2Ceil(bankAmount) + 2).W))
+
   // aw handshake has not taken place, and is in the transfer state
   io.axi.aw.valid := waitForAWHandshake
-  assert(
-    state =/= sTransfer && waitForAWHandshake,
-    "when state is not in transfer, wait for aw handshake signal should be low"
-  )
+//  assert(
+//    state =/= sTransfer && waitForAWHandshake,
+//    "when state is not in transfer, wait for aw handshake signal should be low"
+//  )
 
-  io.axi.w.bits.id := DATA_ID
-  io.axi.w.bits.strb := Mux(cachedTrans, "b1111".U(4.W), io.wChannel.sel)
+  io.axi.w.bits.id   := DATA_ID
+  io.axi.w.bits.strb := "b1111".U(4.W)
   io.axi.w.bits.last := false.B
-  io.axi.w.valid := state === sTransfer
+  io.axi.w.valid     := state === sTransfer
   io.axi.w.bits.data := DontCare // handled later
 
   io.axi.b.ready := state === sWriteFinish
@@ -294,36 +287,36 @@ class newDCache(
   val bankOffSetNextReg = RegNext(bankOffset)
   cacheContents := bankData(hitWayReg)(bankOffSetNextReg)
   // read data is only valid when read enable is asserted
-  io.rChannel.valid := cachedTrans && isIdle && isHit && io.rChannel.enable
-  io.rChannel.data := cacheContents
+  io.rChannel.valid := isIdle && isHit && io.rChannel.enable
+  io.rChannel.data  := cacheContents
 
   // a write is successful the state is idle and write enable is asserted
-  io.wChannel.valid := cachedTrans && isIdle && isHit && io.wChannel.enable
+  io.wChannel.valid := isIdle && isHit && io.wChannel.enable
 
   LRU.io.accessEnable := false.B
-  LRU.io.accessWay := DontCare
-  LRU.io.accessSet := index
+  LRU.io.accessWay    := DontCare
+  LRU.io.accessSet    := index
 
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
   def beginRTransaction(): Unit = {
-    state := sReFill
+    state                                 := sReFill
     refillWriteMask.io.initPosition.valid := true.B
-    refillWriteMask.io.initPosition.bits := bankOffsetReg
+    refillWriteMask.io.initPosition.bits  := bankOffsetReg
     // the precise timing of this should happen at the first cycle of the r transaction
     // however, as it is put into the refill state ( because if you wait for R, then
     // you can't handle the first receive unless you put it into a reg, but that's kind
     // of ugly
     refillWriteVec := 0.U.asTypeOf(refillWriteVec)
-    reFillBuffer := 0.U.asTypeOf(reFillBuffer)
+    reFillBuffer   := 0.U.asTypeOf(reFillBuffer)
     // don't invalidate this line
   }
 
   def recordMemAddress(): Unit = {
     indexReg := index
     //    lruWayReg := lruLine
-    tagReg := tag
+    tagReg        := tag
     bankOffsetReg := bankOffset
   }
 
@@ -335,7 +328,7 @@ class newDCache(
     */
   def checkDCacheHit(): Unit = {
     when(rDCacheHitReg) {
-      rDCacheHitReg := false.B
+      rDCacheHitReg    := false.B
       io.rChannel.data := cacheContents
     }
   }
@@ -347,7 +340,7 @@ class newDCache(
     */
   def checkRefillBufferHit(): Unit = {
     when(rValidReg) {
-      rValidReg := false.B
+      rValidReg        := false.B
       io.rChannel.data := rChannelReg
     }
   }
@@ -358,7 +351,7 @@ class newDCache(
     */
   def updateLRU(accessWay: UInt): Unit = {
     LRU.io.accessEnable := true.B
-    LRU.io.accessWay := accessWay
+    LRU.io.accessWay    := accessWay
   }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
@@ -395,10 +388,10 @@ class newDCache(
             // invalidate now and dispatch to buffer
             valid(lruLine)(index) := false.B
             dirty(lruLine)(index) := false.B
-            writeDataBuffer := bankData
-            writeBufferCounter := 0.U
-            state := sTransfer
-            writeMissWayReg := lruLine
+            writeDataBuffer       := bankData(lruLine)
+            writeBufferCounter    := 0.U
+            state                 := sTransfer
+            writeMissWayReg       := lruLine
             // aw and w doesn't need order
             waitForAWHandshake := true.B
           }.otherwise {
@@ -444,7 +437,7 @@ class newDCache(
           */
         when(isHit && io.rChannel.enable) {
           io.rChannel.valid := true.B
-          rDCacheHitReg := true.B
+          rDCacheHitReg     := true.B
           updateLRU(hitWay)
         }
 
@@ -454,13 +447,13 @@ class newDCache(
           // when there is a direct hit from the bank
           when((bankOffset === bankOffsetReg)) {
             io.rChannel.valid := true.B
-            rValidReg := true.B
+            rValidReg         := true.B
             // r data reg = axi r bits by default
           }.elsewhen(refillWriteVec(bankOffset)) {
             // if the hit occurs in the refill buffer
             io.rChannel.valid := true.B
-            rChannelReg := reFillBuffer(bankOffset)
-            rValidReg := true.B
+            rChannelReg       := reFillBuffer(bankOffset)
+            rValidReg         := true.B
           }
         }
 
@@ -468,7 +461,7 @@ class newDCache(
           // update the lru way register on the last cycle of refill
           // this will best reflect the LRU state
           lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
-          state := sWriteBack
+          state     := sWriteBack
         }
       }
     }
@@ -497,16 +490,16 @@ class newDCache(
         waitForAWHandshake := false.B
       }
 
-      when (io.axi.w.fire()) {
+      when(io.axi.w.fire()) {
         // increment the write counter
         writeBufferCounter := writeBufferCounter + 1.U
         io.axi.w.bits.data := writeDataBuffer(writeBufferCounter)
       }
 
       // when all line has been evicted
-      when (writeBufferCounter === (wayAmount-1).U) {
+      when(writeBufferCounter === (wayAmount - 1).U) {
         io.axi.w.bits.last := true.B
-        state := sWriteFinish
+        state              := sWriteFinish
         // let's handle the b channel there
       }
     }
@@ -532,18 +525,19 @@ class newDCache(
     )
     // read and write share the address
     bank.io.addr := indexWire
-    bank.io.we := we(i)(j)
+    bank.io.we   := we(i)(j)
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j), io.wChannel.data)
-    bankData(i)(j) := bank.io.readData
+    bank.io.writeMask := io.wChannel.sel
+    bankData(i)(j)    := bank.io.readData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
-    bank.io.we := tagWe(i)
-    bank.io.addr := indexWire
+    bank.io.we     := tagWe(i)
+    bank.io.addr   := indexWire
     bank.io.inData := tagReg
-    tagData(i) := bank.io.outData
+    tagData(i)     := bank.io.outData
   }
 
   //-----------------------------------------------------------------------------
@@ -563,10 +557,10 @@ class newDCache(
         idleCycleCounter := idleCycleCounter + 1.U
       }
     val performanceMonitorWire = Wire(new CachePerformanceMonitorIO)
-    performanceMonitorWire.hitCycles := hitCycleCounter
+    performanceMonitorWire.hitCycles  := hitCycleCounter
     performanceMonitorWire.missCycles := missCycleCounter
     performanceMonitorWire.idleCycles := idleCycleCounter
-    io.performanceMonitorIO.get := performanceMonitorWire
+    io.performanceMonitorIO.get       := performanceMonitorWire
   }
 
   assert(io.axi.r.ready === true.B, "r ready signal should always be high")

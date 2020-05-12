@@ -142,7 +142,7 @@ class SocLiteTopUnitTester(
           }
         }
       }
-      if (!(current - lastTime < 20000)) {
+      if (!(current - lastTime < 1000)) {
         err(lastDebugInfo)
         return false
       }

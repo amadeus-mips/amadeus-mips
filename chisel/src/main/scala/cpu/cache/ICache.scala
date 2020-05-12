@@ -102,7 +102,6 @@ class ICache(
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
   val addr = io.rInst.addr
-  val cachedTrans = true.B
 
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
@@ -185,14 +184,11 @@ class ICache(
   io.axi := DontCare
 
   io.axi.ar.bits.id := INST_ID
-  io.axi.ar.bits.addr := Mux(
-    cachedTrans,
-    //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
-    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0))),
-    virToPhy(addr)
-  )
+  io.axi.ar.bits.addr :=
+    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0)))
 
-  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
+
+  io.axi.ar.bits.len := (bankAmount - 1).U(4.W)
   io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
   io.axi.ar.bits.burst := "b10".U(2.W) // wrap burst
 
@@ -217,7 +213,7 @@ class ICache(
   val hitWayReg = RegNext(hitWay)
   val bankOffSetNextReg = RegNext(bankOffset)
   instruction := bankData(hitWayReg)(bankOffSetNextReg)
-  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
+  io.rInst.valid := isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
 
   LRU.io.accessEnable := false.B

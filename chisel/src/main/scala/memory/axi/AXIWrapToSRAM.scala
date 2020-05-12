@@ -24,7 +24,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
   val portIdle :: portRead :: portWrite :: Nil = Enum(3)
   val portState = RegInit(portIdle)
   // the state of read
-  val rIdle :: rWaitForR :: rTransfer :: rFinish :: Nil = Enum(4)
+  val rIdle :: rTransfer :: rFinish :: Nil = Enum(3)
   val readState = RegInit(rIdle)
 
   val readCheckCounter = Reg(UInt(log2Ceil(burstLength).W))
@@ -55,6 +55,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
     (readState === rIdle && portState =/= portRead) || (portState === portRead),
     "when port state is not port read, the read state should always be idle"
   )
+//  assert(!io.bus.ar.valid || (io.bus.ar.valid && io.bus.ar.bits.len === ))
 
   // default signals for write
   // NO interleaving, assumes in order transfer
