@@ -7,6 +7,8 @@ import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, HILOValidBundle, WriteBundle}
 
 class MemWbBundle extends Bundle {
+  val addrL2 = UInt(2.W)
+  val operation = UInt(opLen.W)
   val write = new WriteBundle
   val cp0   = new CPBundle
   val hilo  = new HILOValidBundle

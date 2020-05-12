@@ -29,6 +29,8 @@ class Core extends MultiIOModule {
   val decodeTop  = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
   val memoryTop  = Module(new MemoryTop)
+  val wbTop = Module(new WbTop)
+
   val regFile    = Module(new RegFile)
   val cp0        = Module(new CP0)
   val hilo       = Module(new HILO)
@@ -61,14 +63,14 @@ class Core extends MultiIOModule {
   decodeTop.io.inst   := inst
   decodeTop.io.exeWR  := executeTop.io.out.write
   decodeTop.io.memWR  := memoryTop.io.out.write
-  decodeTop.io.wbWR   := mem_wb.io.out.write
+  decodeTop.io.wbWR   := wbTop.io.out.write
   decodeTop.io.rsData := regFile.io.rsData
   decodeTop.io.rtData := regFile.io.rtData
 
   decodeTop.io.predictorUpdate := DontCare
   decodeTop.io.predictorTaken  := DontCare
 
-  regFile.io.write := mem_wb.io.out.write
+  regFile.io.write := wbTop.io.out.write
   regFile.io.rs    := inst(25, 21)
   regFile.io.rt    := inst(20, 16)
 
@@ -80,10 +82,10 @@ class Core extends MultiIOModule {
   executeTop.io.flush   := hazard.io.flush
   executeTop.io.rawHILO := hilo.io.out
   executeTop.io.memHILO := exe_mem.io.out.hilo
-  executeTop.io.wbHILO  := mem_wb.io.out.hilo
+  executeTop.io.wbHILO  := wbTop.io.out.hilo
   executeTop.io.cp0Data := cp0.io.data
   executeTop.io.memCP0  := exe_mem.io.out.cp0
-  executeTop.io.wbCP0   := mem_wb.io.out.cp0
+  executeTop.io.wbCP0   := wbTop.io.out.cp0
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.stall
@@ -93,18 +95,18 @@ class Core extends MultiIOModule {
   memoryTop.io.inCP0Handle.status := cp0.io.status_o
   memoryTop.io.inCP0Handle.cause  := cp0.io.cause_o
   memoryTop.io.inCP0Handle.EPC    := cp0.io.EPC_o
-  memoryTop.io.wbCP0              := mem_wb.io.out.cp0
+  memoryTop.io.wbCP0              := wbTop.io.out.cp0
 
   cp0.io.intr        := io.intr
-  cp0.io.cp0Write    := mem_wb.io.out.cp0
+  cp0.io.cp0Write    := wbTop.io.out.cp0
   cp0.io.addr        := id_exe.io.out.imm26(15, 11)
   cp0.io.sel         := id_exe.io.out.imm26(2, 0)
   cp0.io.except      := memoryTop.io.except
   cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
-  cp0.io.pc          := Mux(memoryTop.io.except(EXCEPT_INTR), mem_wb.io.out.pc + 4.U, exe_mem.io.out.pc)
+  cp0.io.pc          := Mux(memoryTop.io.except(EXCEPT_INTR), wbTop.io.out.pc + 4.U, exe_mem.io.out.pc)
   cp0.io.badAddr     := memoryTop.io.badAddr
 
-  hilo.io.in := mem_wb.io.out.hilo
+  hilo.io.in := wbTop.io.out.hilo
 
   hazard.io.except              := memoryTop.io.except
   hazard.io.EPC                 := memoryTop.io.EPC
@@ -116,6 +118,9 @@ class Core extends MultiIOModule {
   mem_wb.io.in    := memoryTop.io.out
   mem_wb.io.stall := hazard.io.stall
   mem_wb.io.flush := hazard.io.flush
+
+  wbTop.io.in := mem_wb.io.out
+  wbTop.io.rData := RegNext(io.rData.data, 0.U)
 
   io.rInst.addr   := fetchTop.io.out.pc
   io.rInst.enable := fetchTop.io.pcValid
