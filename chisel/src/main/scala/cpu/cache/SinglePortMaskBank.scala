@@ -28,15 +28,10 @@ class SinglePortMaskBank(numberOfSet: Int, minWidth: Int = 8, maskWidth: Int = 4
   // make sure this is inferred as a single port ram
   io.readData := DontCare
 
-  // convert the input write data into a Vec
-  val writeDataVec = Wire(Vec(maskWidth, UInt(8.W)))
-  for ( i <- 0 until maskWidth) {
-    writeDataVec := io.writeData(minWidth*(i+1) - 1, minWidth*i)
-  }
   // only use one port ( read/write ) at one time
   when (io.we) {
-    bank.write(io.addr, writeDataVec, io.writeMask.asBools)
+    bank.write(io.addr, (io.writeData).asTypeOf(Vec(maskWidth, UInt(8.W))), io.writeMask.asBools)
   }.otherwise {
-    io.readData := bank(io.addr).asUInt
+    io.readData := bank.read(io.addr).asUInt()
   }
 }
