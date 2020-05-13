@@ -2,7 +2,10 @@ package soc
 
 import chisel3.iotesters.PeekPokeTester
 
+import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
+
+import java.io._
 
 /**
   *
@@ -37,6 +40,8 @@ class SocLiteTopUnitTester(
     (9, "stream copy"),
     (10, "string search")
   )
+
+  val perfLog = ArrayBuffer('p','e','r','f','l','o','g','\n')
 
   import chisel3._
 
@@ -148,6 +153,9 @@ class SocLiteTopUnitTester(
       }
       update(1)
     }
+    if (isPerf) {
+      printPerfLog()
+    }
     true
   }
   def update(n: Int): Unit = {
@@ -162,23 +170,36 @@ class SocLiteTopUnitTester(
   def uartSimu(): Unit = {
     if (peek(c.io.uart.valid) != 0) {
       print(peek(c.io.uart.bits).toChar)
+      if (isPerf) {
+        perfLog += peek(c.io.uart.bits).toChar
+      }
     }
+  }
+
+  def printPerfLog(): Unit = {
+    require(isPerf)
+    val fileName = "perflog.txt"
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName)))
+    for (character <- perfLog) {
+      writer.write(character)
+    }
+    writer.close()
   }
 
   def debugInfo = f"pc--0x$pc%08x, wen--${(wen != 0).toString}%5s, wnum--$wnum%02x, wdata--0x$wdata%08x"
 
   def err(msg: String) = {
-    println(Console.RED + "Error: " + msg + Console.RESET)
+    println(scala.Console.RED + "Error: " + msg + scala.Console.RESET)
   }
 
   def log(msg: String) = {
     if (!banLog) {
-      println(Console.CYAN + "Log: " + msg + Console.RESET)
+      println(scala.Console.CYAN + "Log: " + msg + scala.Console.RESET)
     }
   }
 
   def info(msg: String) = {
-    println(Console.CYAN + "Info: " + msg + Console.RESET)
+    println(scala.Console.CYAN + "Info: " + msg + scala.Console.RESET)
   }
 
   source.close()
