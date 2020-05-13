@@ -3,7 +3,7 @@
 package cpu
 
 import chisel3._
-import cpu.cache.{DCacheAXIWrap, ICache, UnCachedUnit, newDCache}
+import cpu.cache.{newDCache, DCacheAXIWrap, ICache, UnCachedUnit}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
 import shared.{AXIIO, DebugBundle}
@@ -44,7 +44,6 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   // assume instructions are always cached
   core.io.rInst <> iCache.io.rInst
 
-
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
   // in the same cycle
@@ -52,58 +51,41 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   val readHoldUncachedReg = RegInit(false.B)
   val readHoldCachedReg = RegInit(false.B)
 
-  //TODO: this requires a lot of work
-  when (!isUnCached(core.io.rChannel.addr)) {
-    core.io.rChannel <> dCache.io.rChannel
-    core.io.wChannel <> dCache.io.wChannel
+  val useDCache = RegInit(true.B)
 
-
-    readDataBuffer := DontCare
-
-    unCached.io <> DontCare
+  when(!isUnCached(core.io.rChannel.addr)) {
+    when(dCache.io.rChannel.valid) {
+      useDCache := true.B
+    }
+  }.otherwise {
+    when(unCached.io.rChannel.valid) {
+      useDCache := false.B
+    }
+  }
+  when(!isUnCached(core.io.rChannel.addr)) {
+    core.io.rChannel            <> dCache.io.rChannel
+    core.io.wChannel            <> dCache.io.wChannel
+    unCached.io                 <> DontCare
     unCached.io.rChannel.enable := false.B
     unCached.io.wChannel.enable := false.B
-
-    when (readHoldUncachedReg) {
-      core.io.rChannel.data := unCached.io.rChannel.data
-      readHoldUncachedReg := false.B
-    }
-    when (readHoldCachedReg) {
-      readHoldCachedReg := false.B
-    }
-    readHoldCachedReg := dCache.io.rChannel.valid
   }.otherwise {
-    core.io.rChannel <> unCached.io.rChannel
-    // buffer the read data
-
-    core.io.wChannel <> unCached.io.wChannel
-    dCache.io <> DontCare
+    core.io.rChannel          <> unCached.io.rChannel
+    core.io.wChannel          <> unCached.io.wChannel
+    dCache.io                 <> DontCare
     dCache.io.rChannel.enable := false.B
     dCache.io.wChannel.enable := false.B
-
-    when (readHoldCachedReg) {
-      core.io.rChannel.data := dCache.io.rChannel.data
-      readHoldCachedReg := false.B
-    }
-    when (readHoldUncachedReg) {
-      readHoldUncachedReg := false.B
-    }
-
-    readHoldUncachedReg := unCached.io.rChannel.valid
   }
+  core.io.rChannel.data := Mux(useDCache, dCache.io.rChannel.data, unCached.io.rChannel.data)
 
-//  axiInterface.io.data <> dCache.io.axi
-
-  iCache.io.axi := DontCare
-  io.dataAXI <> dCache.io.axi
-  io.instAXI <> iCache.io.axi
+  iCache.io.axi  := DontCare
+  io.dataAXI     <> dCache.io.axi
+  io.instAXI     <> iCache.io.axi
   io.unCachedAXI <> unCached.io.axi
 
   io.debug <> core.io_ls.debug
 
-
   def isUnCached(addr: UInt): Bool = {
     require(addr.getWidth == 32)
-    addr(31,29) === "b101".U(3.W)
+    addr(31, 29) === "b101".U(3.W)
   }
 }
