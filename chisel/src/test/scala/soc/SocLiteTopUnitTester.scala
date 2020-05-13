@@ -1,6 +1,7 @@
 package soc
 
 import java.io.PrintWriter
+import java.nio.file.{Files, Paths}
 
 import chisel3.iotesters.PeekPokeTester
 
@@ -23,11 +24,14 @@ class SocLiteTopUnitTester(
   performanceMonitorEnable: Boolean = false,
   trace:                    Boolean = false,
   writeTrace:               Boolean = false
-)(implicit traceFile:       String = "./src/test/resources/loongson/func/golden_trace.txt", vcdOn: Boolean = false)
+)(implicit vcdOn: Boolean = false)
     extends PeekPokeTester(c) {
   require(perfNumber >= 0 && perfNumber <= 10)
   require(!(runAllPerf && vcdOn))
+  require(!(runAllPerf && writeTrace))
+  require(!(runAllPerf && trace))
   require(!(writeTrace && trace))
+  require(!(writeTrace && perfNumber == 0))
 
   val perfMap = Map(
     (1, "bit count"),
@@ -41,10 +45,16 @@ class SocLiteTopUnitTester(
     (9, "stream copy"),
     (10, "string search")
   )
+  val writeTraceFile =
+    if (writeTrace) Some(s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/cmp.txt") else None
 
   import chisel3._
 
   val isPerf = runAllPerf || perfNumber != 0
+
+  val traceFile =
+    if (isPerf) s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/golden_trace.txt"
+    else "./src/test/resources/loongson/func/golden_trace.txt"
 
   /** get switch data */
   def switchData(n: Int = perfNumber) = if (n == 0) BigInt("ff", 16).toInt else 15 - n
@@ -54,7 +64,13 @@ class SocLiteTopUnitTester(
   val lines = if (trace) Some(source.get.getLines()) else None
 
   /** get trace target file */
-  val traceWriter = if (writeTrace) Some(new PrintWriter(traceFile)) else None
+  val traceWriter = if (writeTrace) {
+    val path = Paths.get(writeTraceFile.get)
+    Files.createDirectories(path.getParent)
+    if (!path.toFile.exists())
+      Files.createFile(path)
+    Some(new PrintWriter(path.toFile))
+  } else None
 
   // init
   var trace_line = if (trace) Some(lines.get.next().split(" ").map(BigInt(_, 16))) else None
@@ -127,6 +143,7 @@ class SocLiteTopUnitTester(
       if (pc != 0) {
         if (pc < BigInt("9fc00000", 16) || (isPerf && pc == BigInt("bfc00384", 16))) {
           err(lastDebugInfo)
+          err("Exit-wrong pc")
           return false
         }
         iCount = iCount + 1
@@ -138,10 +155,13 @@ class SocLiteTopUnitTester(
         if (trace) {
           if (!traceCompare()) return false
         }
-        if (writeTrace) {}
+        if (writeTrace) {
+          writeTrace()
+        }
       }
-      if (!(current - lastTime < 1000)) {
+      if (!(current - lastTime < 10000)) {
         err(lastDebugInfo)
+        err("Exit-time exceed")
         return false
       }
       update(1)
@@ -149,14 +169,17 @@ class SocLiteTopUnitTester(
     true
   }
 
+  /**
+    * Only for perf test, make sure the pc is not in the segment of "print"
+    */
   def writeTrace(): Unit = {
-    if (wen != 0 && wnum != 0) {
-      traceWriter.get.println(s"1 ${pc.toString(16)} ${wnum.toString(16)} ${wdata.toString(16)}")
+    if (wen != 0 && wnum != 0 && pc < BigInt("9fc126e0", 16)) {
+      traceWriter.get.println(f"1 $pc%08x $wnum%02x $wdata%08x")
     }
   }
 
   def traceCompare(): Boolean = {
-    if (wen != 0 && wnum != 0) {
+    if (wen != 0 && wnum != 0 && !(pc >= BigInt("9fc126e0", 16) && isPerf)) {
       if (trace_line.get(0) != 0) {
         if (!(pc == trace_line.get(1) && wnum == trace_line.get(2) && wdata == trace_line.get(3))) {
           err(lastDebugInfo)

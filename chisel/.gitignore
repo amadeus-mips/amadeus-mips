@@ -347,3 +347,5 @@ project/
 !/TestTop.fir
 !/TestTop.lo.fir
 simulator_run_dir/
+
+/src/test/resources/loongson/perf/*/*.txt
