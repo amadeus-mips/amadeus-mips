@@ -10,28 +10,14 @@ import scala.io.Source
 /**
   *
   * @param c  The Soc
-  * @param banLog Will disable the log info, but the error message will still be output
-  * @param trace Will compare to trace, only valid for func test
-  * @param needAssert For auto test, if needAssert is true, the test will break when cpu goes wrong
   * @param perfNumber For perf test, it choose which test case to run. For func test, it should be 0
   */
 class SocLiteTopUnitTester(
-  c:                        SocLiteTop,
-  banLog:                   Boolean = false,
-  needAssert:               Boolean = false,
-  perfNumber:               Int = 0,
-  runAllPerf:               Boolean = false,
-  performanceMonitorEnable: Boolean = false,
-  trace:                    Boolean = false,
-  writeTrace:               Boolean = false
-)(implicit vcdOn: Boolean = false)
+  c:              SocLiteTop,
+  perfNumber:     Int = 0
+)(implicit tcfg: TestConfig)
     extends PeekPokeTester(c) {
-  require(perfNumber >= 0 && perfNumber <= 10)
-  require(!(runAllPerf && vcdOn))
-  require(!(runAllPerf && writeTrace))
-  require(!(runAllPerf && trace))
-  require(!(writeTrace && trace))
-  require(!(writeTrace && perfNumber == 0))
+  tcfg.check(perfNumber)
 
   val perfMap = Map(
     (1, "bit count"),
@@ -46,11 +32,11 @@ class SocLiteTopUnitTester(
     (10, "string search")
   )
   val writeTraceFile =
-    if (writeTrace) Some(s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/cmp.txt") else None
+    if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/cmp.txt") else None
 
   import chisel3._
 
-  val isPerf = runAllPerf || perfNumber != 0
+  val isPerf = tcfg.runAllPerf || perfNumber != 0
 
   val traceFile =
     if (isPerf) s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/golden_trace.txt"
@@ -60,11 +46,11 @@ class SocLiteTopUnitTester(
   def switchData(n: Int = perfNumber) = if (n == 0) BigInt("ff", 16).toInt else 15 - n
 
   /** get trace from trace file */
-  val source = if (trace) Some(Source.fromFile(traceFile)) else None
-  val lines = if (trace) Some(source.get.getLines()) else None
+  val source = if (tcfg.trace) Some(Source.fromFile(traceFile)) else None
+  val lines = if (tcfg.trace) Some(source.get.getLines()) else None
 
   /** get trace target file */
-  val traceWriter = if (writeTrace) {
+  val traceWriter = if (tcfg.writeTrace) {
     val path = Paths.get(writeTraceFile.get)
     Files.createDirectories(path.getParent)
     if (!path.toFile.exists())
@@ -73,7 +59,7 @@ class SocLiteTopUnitTester(
   } else None
 
   // init
-  var trace_line = if (trace) Some(lines.get.next().split(" ").map(BigInt(_, 16))) else None
+  var trace_line = if (tcfg.trace) Some(lines.get.next().split(" ").map(BigInt(_, 16))) else None
 
   var lastTime:      Long = System.currentTimeMillis()
   var lastDebugInfo: String = ""
@@ -89,7 +75,7 @@ class SocLiteTopUnitTester(
   var iCount = 0
   var cCount = 1 // avoid divide 0
   var result = true
-  if (runAllPerf) {
+  if (tcfg.runAllPerf) {
     for (i <- 1 to 10) {
       info(s"${perfMap(i)} started:")
       resetConfreg(i)
@@ -102,12 +88,12 @@ class SocLiteTopUnitTester(
     reInit()
     result &= run()
   }
-  if (needAssert) require(result)
+  if (tcfg.needAssert) require(result)
   step(5)
   log("Finished!")
   log(s"run $cCount cycles, $iCount instructions")
   log(s"IPC is ${iCount.toFloat / cCount}")
-  if (performanceMonitorEnable) {
+  if (tcfg.performanceMonitorEnable) {
     log(
       s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
         s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
@@ -152,10 +138,10 @@ class SocLiteTopUnitTester(
           log(s"running: $lastDebugInfo")
           lastTime = current
         }
-        if (trace) {
+        if (tcfg.trace) {
           if (!traceCompare()) return false
         }
-        if (writeTrace) {
+        if (tcfg.writeTrace) {
           writeTrace()
         }
       }
@@ -214,7 +200,7 @@ class SocLiteTopUnitTester(
   }
 
   def log(msg: String) = {
-    if (!banLog) {
+    if (!tcfg.banLog) {
       println(Console.CYAN + "Log: " + msg + Console.RESET)
     }
   }
@@ -223,6 +209,6 @@ class SocLiteTopUnitTester(
     println(Console.CYAN + "Info: " + msg + Console.RESET)
   }
 
-  if (trace) source.get.close()
-  if (writeTrace) traceWriter.get.close()
+  if (tcfg.trace) source.get.close()
+  if (tcfg.writeTrace) traceWriter.get.close()
 }

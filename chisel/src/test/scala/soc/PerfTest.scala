@@ -8,9 +8,9 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver}
 class AllTest extends ChiselFlatSpec {
   val perfFile = "./src/test/resources/loongson/perf/axi_ram.coe"
 
-  implicit val vcdOn = false
+  implicit val tcfg = new TestConfig(banLog = true, runAllPerf = true, vcdOn = false)
   val option =
-    if (vcdOn) Array("--backend-name", "verilator")
+    if (tcfg.vcdOn) Array("--backend-name", "verilator")
     else Array("--backend-name", "verilator", "--generate-vcd-output", "off")
 
   "All perf test" should "pass" in {
@@ -18,18 +18,17 @@ class AllTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, runAllPerf = true)
+      new SocLiteTopUnitTester(c)
     } should be(true)
   }
 }
 
-//TODO: implicit parameter passing
 class PerfTest extends ChiselFlatSpec {
   val perfFile = "./src/test/resources/loongson/perf/axi_ram.coe"
 
-  implicit val vcdOn = false
+  implicit val tcfg = new TestConfig(banLog = true, runAllPerf = true, vcdOn = false)
   val option =
-    if (vcdOn) Array("--backend-name", "verilator")
+    if (tcfg.vcdOn) Array("--backend-name", "verilator")
     else Array("--backend-name", "verilator", "--generate-vcd-output", "off")
 
   "bit count" should "pass" in {
@@ -37,7 +36,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 1)
+      new SocLiteTopUnitTester(c, perfNumber = 1)
     } should be(true)
   }
 
@@ -46,7 +45,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 2)
+      new SocLiteTopUnitTester(c, perfNumber = 2)
     } should be(true)
   }
 
@@ -55,7 +54,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 3)
+      new SocLiteTopUnitTester(c, perfNumber = 3)
     } should be(true)
   }
 
@@ -64,7 +63,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 4)
+      new SocLiteTopUnitTester(c, perfNumber = 4)
     } should be(true)
   }
 
@@ -73,7 +72,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 5)
+      new SocLiteTopUnitTester(c, perfNumber = 5)
     } should be(true)
   }
 
@@ -82,7 +81,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 6)
+      new SocLiteTopUnitTester(c, perfNumber = 6)
     } should be(true)
   }
 
@@ -91,7 +90,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 7)
+      new SocLiteTopUnitTester(c, perfNumber = 7)
     } should be(true)
   }
 
@@ -100,7 +99,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 8)
+      new SocLiteTopUnitTester(c, perfNumber = 8)
     } should be(true)
   }
 
@@ -109,7 +108,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 9)
+      new SocLiteTopUnitTester(c, perfNumber = 9)
     } should be(true)
   }
 
@@ -118,7 +117,7 @@ class PerfTest extends ChiselFlatSpec {
       option,
       () => new SocLiteTop(simulation = false, memFile = perfFile)
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, perfNumber = 10)
+      new SocLiteTopUnitTester(c, perfNumber = 10)
     } should be(true)
   }
 
