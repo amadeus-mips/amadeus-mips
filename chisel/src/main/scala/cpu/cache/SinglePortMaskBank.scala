@@ -30,7 +30,7 @@ class SinglePortMaskBank(numberOfSet: Int, minWidth: Int = 8, maskWidth: Int = 4
 
   // only use one port ( read/write ) at one time
   when (io.we) {
-    bank.write(io.addr, (io.writeData).asTypeOf(Vec(maskWidth, UInt(8.W))), io.writeMask.asBools)
+    bank.write(io.addr, (io.writeData).asTypeOf(Vec(maskWidth, UInt(minWidth.W))), io.writeMask.asBools)
   }.otherwise {
     io.readData := bank.read(io.addr).asUInt()
   }

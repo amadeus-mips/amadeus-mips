@@ -44,19 +44,52 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   // assume instructions are always cached
   core.io.rInst <> iCache.io.rInst
 
-  // when they are not uncached
+
+  // buffer the read data
+  // write doesn't have this problem because write valid is asserted
+  // in the same cycle
+  val readDataBuffer = Reg(UInt(32.W))
+  val readHoldUncachedReg = RegInit(false.B)
+  val readHoldCachedReg = RegInit(false.B)
+
+  //TODO: this requires a lot of work
   when (!isUnCached(core.io.rChannel.addr)) {
     core.io.rChannel <> dCache.io.rChannel
     core.io.wChannel <> dCache.io.wChannel
+
+
+    readDataBuffer := DontCare
+
     unCached.io <> DontCare
     unCached.io.rChannel.enable := false.B
     unCached.io.wChannel.enable := false.B
+
+    when (readHoldUncachedReg) {
+      core.io.rChannel.data := unCached.io.rChannel.data
+      readHoldUncachedReg := false.B
+    }
+    when (readHoldCachedReg) {
+      readHoldCachedReg := false.B
+    }
+    readHoldCachedReg := dCache.io.rChannel.valid
   }.otherwise {
     core.io.rChannel <> unCached.io.rChannel
+    // buffer the read data
+
     core.io.wChannel <> unCached.io.wChannel
     dCache.io <> DontCare
     dCache.io.rChannel.enable := false.B
     dCache.io.wChannel.enable := false.B
+
+    when (readHoldCachedReg) {
+      core.io.rChannel.data := dCache.io.rChannel.data
+      readHoldCachedReg := false.B
+    }
+    when (readHoldUncachedReg) {
+      readHoldUncachedReg := false.B
+    }
+
+    readHoldUncachedReg := unCached.io.rChannel.valid
   }
 
 //  axiInterface.io.data <> dCache.io.axi

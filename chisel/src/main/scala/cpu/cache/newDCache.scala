@@ -373,7 +373,7 @@ class newDCache(
       }.elsewhen(io.wChannel.enable) {
         when(isHit) {
           // write to the way that is hit
-          we(hitWay)(index) := true.B
+          we(hitWay)(bankOffset) := true.B
           // make the line dirty
           dirty(hitWay)(index) := true.B
           // update the LRU
@@ -521,7 +521,7 @@ class newDCache(
   } yield {
     // word aligned banks
     val bank = Module(
-      new SinglePortMaskBank(numberOfSet = setAmount, minWidth = 8, maskWidth = bankAmount, syncRead = true)
+      new SinglePortMaskBank(numberOfSet = setAmount, minWidth = 8, maskWidth = 4, syncRead = true)
     )
     // read and write share the address
     bank.io.addr := indexWire

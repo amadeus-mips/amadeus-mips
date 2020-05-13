@@ -18,7 +18,6 @@ class UnCachedUnit extends Module {
   val readAddressReg = Reg(UInt(32.W))
   // delay the read data a cycle
   val readDataReg = Reg(UInt(32.W))
-  val validReadDataReg = RegInit(false.B)
   assert(!io.rChannel.enable || (io.rChannel.enable && io.rChannel.addr(31,29) === "b101".U(3.W)))
 
   val writeIdle :: writeAW :: writeTransfer :: writeFinish :: Nil = Enum(4)
@@ -32,7 +31,7 @@ class UnCachedUnit extends Module {
   //-----------------------------------------------------------------------------
   //------------------default IO--------------------------------------
   //-----------------------------------------------------------------------------
-  io.rChannel.data := DontCare
+  io.rChannel.data := readDataReg
   io.rChannel.valid := false.B
 
   io.wChannel.valid := false.B
@@ -72,10 +71,6 @@ class UnCachedUnit extends Module {
   switch(readState) {
     is(readIdle) {
       // check the delayed read data register
-      when (validReadDataReg) {
-        io.rChannel.data := readDataReg
-        validReadDataReg := false.B
-      }
       when (io.rChannel.enable) {
         readAddressReg := io.rChannel.addr
         readState := readWaitForAR
@@ -92,7 +87,6 @@ class UnCachedUnit extends Module {
         //TODO: check I-D-Cache for this enable
         val sameAddress = readAddressReg === io.rChannel.addr && io.rChannel.enable
         io.rChannel.valid := sameAddress
-        validReadDataReg := sameAddress
         readDataReg := io.axi.r.bits.data
         assert(io.axi.r.bits.last)
       }
@@ -120,7 +114,7 @@ class UnCachedUnit extends Module {
     }
     is(writeFinish) {
       when (io.axi.b.fire) {
-        io.wChannel.valid := writeAddressReg === io.wChannel.addr && io.rChannel.enable
+        io.wChannel.valid := writeAddressReg === io.wChannel.addr && io.wChannel.enable
         writeState := writeIdle
       }
     }
