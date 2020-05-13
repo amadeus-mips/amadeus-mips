@@ -353,6 +353,47 @@ class newDCache(
     LRU.io.accessEnable := true.B
     LRU.io.accessWay    := accessWay
   }
+
+  /**
+    * invalidate the cache line
+    * @param evictWay from which way to evict
+    * @param setIndex which is the index to evict
+    */
+  def invalidateLine(evictWay: UInt, setIndex: UInt): Unit = {
+    // make the set not full
+    // invalidate now and dispatch to buffer
+    valid(evictWay)(setIndex) := false.B
+    dirty(evictWay)(setIndex) := false.B
+  }
+
+  def dispatchToWrite(): Unit = {
+    writeMissWayReg       := lruLine
+    waitForAWHandshake := true.B
+    writeDataBuffer       := bankData(lruLine)
+    writeBufferCounter    := 0.U
+  }
+
+  /**
+    * handle a read miss
+    * if the line is dirty and set is full, invalidate the line and dispatch to write
+    * if the line is not dirty or set is not full, enter read miss
+    */
+  def handleReadMiss(): Unit = {
+    // now we are on a write miss
+    // check if LRU is dirty
+    recordMemAddress()
+    // when LRU line is dirty and set is not full
+    when(dirtyWire(lruLine) && !isSetNotFull) {
+      // make the set not full
+      // invalidate now and dispatch to write buffer
+      invalidateLine(evictWay = lruLine, setIndex = index)
+      dispatchToWrite()
+      state                 := sTransfer
+    }.otherwise {
+      // enter read miss
+      state := sWaitForAR
+    }
+  }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -367,8 +408,7 @@ class newDCache(
         when(isHit) {
           updateLRU(hitWay)
         }.otherwise {
-          state := sWaitForAR
-          recordMemAddress()
+          handleReadMiss()
         }
       }.elsewhen(io.wChannel.enable) {
         when(isHit) {
@@ -379,25 +419,7 @@ class newDCache(
           // update the LRU
           updateLRU(hitWay)
         }.otherwise {
-          // now we are on a write miss
-          // check if LRU is dirty
-          recordMemAddress()
-          // when LRU line is dirty and set is not full
-          when(dirtyWire(lruLine) && !isSetNotFull) {
-            // make the set not full
-            // invalidate now and dispatch to buffer
-            valid(lruLine)(index) := false.B
-            dirty(lruLine)(index) := false.B
-            writeDataBuffer       := bankData(lruLine)
-            writeBufferCounter    := 0.U
-            state                 := sTransfer
-            writeMissWayReg       := lruLine
-            // aw and w doesn't need order
-            waitForAWHandshake := true.B
-          }.otherwise {
-            // enter read miss
-            state := sWaitForAR
-          }
+          handleReadMiss()
         }
       }
     }
@@ -475,6 +497,7 @@ class newDCache(
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
       valid(lruWayReg)(indexReg) := true.B
+      dirty(lruWayReg)(indexReg) := false.B
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
@@ -529,7 +552,7 @@ class newDCache(
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j), io.wChannel.data)
-    bank.io.writeMask := io.wChannel.sel
+    bank.io.writeMask := Mux(isWriteBack, 15.U(4.W),io.wChannel.sel)
     bankData(i)(j)    := bank.io.readData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
