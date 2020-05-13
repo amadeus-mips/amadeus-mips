@@ -113,8 +113,12 @@ class newDCache(
 
   // records if the current set is full
   // this is to make sure empty lines are filled ahead of LRU
-  val isSetNotFull = WireDefault(false.B)
-  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
+  val isSetNotFull = Wire(Bool())
+  isSetNotFull := false.B
+  dontTouch(isSetNotFull)
+  val emptyPtr = Wire(UInt(log2Ceil(wayAmount).W))
+  emptyPtr := 0.U
+  dontTouch(emptyPtr)
 
   // keep track of whether there has been an aw handshake yet
   // true means still waiting, false means that the handshake has finished
@@ -318,6 +322,7 @@ class newDCache(
     //    lruWayReg := lruLine
     tagReg        := tag
     bankOffsetReg := bankOffset
+    lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
   }
 
   /**
@@ -482,7 +487,7 @@ class newDCache(
         when(io.axi.r.bits.last) {
           // update the lru way register on the last cycle of refill
           // this will best reflect the LRU state
-          lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
+//          lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
           state     := sWriteBack
         }
       }
