@@ -220,8 +220,8 @@ class SocLiteTopUnitTester(
 
   def printPerfLog(): Unit = {
     require(isPerf)
-    val fileName = "perflog.txt"
-    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName)))
+    val fileName = "./perfLog/perfLog.txt"
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName, true)))
     for (character <- perfLog) {
       writer.write(character)
     }
