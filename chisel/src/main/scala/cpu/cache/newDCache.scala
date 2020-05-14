@@ -142,7 +142,13 @@ class newDCache(
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
   val addr = io.rChannel.addr
-  assert( (addr(31, 29) =/= "b101".U && (io.rChannel.enable || io.wChannel.enable)) || (!io.rChannel.enable && !io.wChannel.enable), "this should be a cached transaction")
+  assert(
+    (addr(
+      31,
+      29
+    ) =/= "b101".U && (io.rChannel.enable || io.wChannel.enable)) || (!io.rChannel.enable && !io.wChannel.enable),
+    "this should be a cached transaction"
+  )
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
   val bankOffset = addr(log2Ceil(blockSize) - 1, log2Ceil(bankSize))
@@ -205,7 +211,7 @@ class newDCache(
 
   // check across all ways in the desired set
   for (i <- 0 until wayAmount) {
-    when(!valid(i)(index)) {
+    when(!valid(i)(indexReg)) {
       isSetNotFull := true.B
       emptyPtr     := i.U
     }
@@ -318,11 +324,9 @@ class newDCache(
   }
 
   def recordMemAddress(): Unit = {
-    indexReg := index
-    //    lruWayReg := lruLine
+    indexReg      := index
     tagReg        := tag
     bankOffsetReg := bankOffset
-    lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
   }
 
   /**
@@ -371,11 +375,11 @@ class newDCache(
     dirty(evictWay)(setIndex) := false.B
   }
 
-  def dispatchToWrite(): Unit = {
-    writeMissWayReg       := lruLine
+  def dispatchToWrite(waySelect: UInt): Unit = {
+    writeMissWayReg    := waySelect
     waitForAWHandshake := true.B
-    writeDataBuffer       := bankData(lruLine)
-    writeBufferCounter    := 0.U
+    writeDataBuffer    := bankData(waySelect)
+    writeBufferCounter := 0.U
   }
 
   /**
@@ -388,16 +392,8 @@ class newDCache(
     // check if LRU is dirty
     recordMemAddress()
     // when LRU line is dirty and set is not full
-    when(dirtyWire(lruLine) && !isSetNotFull) {
-      // make the set not full
-      // invalidate now and dispatch to write buffer
-      invalidateLine(evictWay = lruLine, setIndex = index)
-      dispatchToWrite()
-      state                 := sTransfer
-    }.otherwise {
-      // enter read miss
-      state := sWaitForAR
-    }
+    // enter read miss
+    state := sWaitForAR
   }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
@@ -487,8 +483,13 @@ class newDCache(
         when(io.axi.r.bits.last) {
           // update the lru way register on the last cycle of refill
           // this will best reflect the LRU state
-//          lruWayReg := Mux(isSetNotFull, emptyPtr, lruLine)
-          state     := sWriteBack
+          val lruSelWay = Mux(isSetNotFull, emptyPtr, lruLine)
+          lruWayReg := lruSelWay
+          when(dirty(lruSelWay)(indexReg)) {
+            invalidateLine(lruSelWay, indexReg)
+            dispatchToWrite(lruSelWay)
+          }
+          state := sWriteBack
         }
       }
     }
@@ -509,7 +510,7 @@ class newDCache(
       checkRefillBufferHit()
       checkDCacheHit()
 
-      state := sIdle
+      state := Mux(waitForAWHandshake, sTransfer, sIdle)
     }
     is(sTransfer) {
       // after an aw handshake, waitfor signal is de asserted
@@ -557,7 +558,7 @@ class newDCache(
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j), io.wChannel.data)
-    bank.io.writeMask := Mux(isWriteBack, 15.U(4.W),io.wChannel.sel)
+    bank.io.writeMask := Mux(isWriteBack, 15.U(4.W), io.wChannel.sel)
     bankData(i)(j)    := bank.io.readData
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
