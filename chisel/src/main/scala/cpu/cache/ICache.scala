@@ -110,9 +110,9 @@ class ICache(
   //-------------------------------------------------------------------------------
   //--------------------set up the memory banks and wire them to their states------
   //-------------------------------------------------------------------------------
-  /** valid(way)(index) */
+  /** valid(index)(way) */
   //TODO: change the order if it is not banked
-  val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
+  val valid = RegInit(VecInit(Seq.fill(setAmount)(VecInit(Seq.fill(wayAmount)(false.B)))))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -156,16 +156,14 @@ class ICache(
   hitWay := 0.U
 
   // check across all ways in the desired set
-  for (i <- 0 until wayAmount) {
-    when(!valid(i)(indexReg)) {
-      isSetNotFull := true.B
-      emptyPtr := i.U
-    }
-    when(valid(i)(index) && tagData(i) === tag) {
-      hitWay := i.U
-      isHit := true.B
-    }
-  }
+  isSetNotFull := valid(indexReg).contains(false.B)
+  emptyPtr := valid(indexReg).indexWhere(isWayValid => !isWayValid)
+
+  val tagCheckVec = Wire(Vec(wayAmount, Bool()))
+  tagCheckVec := (tagData.map( _ === tag) zip valid(index)).map{case (tagMatch, isValid) => tagMatch && isValid}
+  hitWay := tagCheckVec.indexWhere(tagMatchAndValid => tagMatchAndValid  === true.B)
+  isHit := tagCheckVec.contains(true.B)
+
 
   //-----------------------------------------------------------------------------
   //------------------initialize default IO--------------------------------
@@ -368,7 +366,7 @@ class ICache(
       // write the data to the corresbonding bank
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
-      valid(lruWayReg)(indexReg) := true.B
+      valid(indexReg)(lruWayReg) := true.B
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
