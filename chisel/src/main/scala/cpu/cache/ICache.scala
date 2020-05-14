@@ -157,7 +157,7 @@ class ICache(
 
   // check across all ways in the desired set
   for (i <- 0 until wayAmount) {
-    when(!valid(i)(index)) {
+    when(!valid(i)(indexReg)) {
       isSetNotFull := true.B
       emptyPtr := i.U
     }
@@ -198,16 +198,14 @@ class ICache(
     */
   io.axi.ar.valid := isWaitForAR
 
-  //  io.axi.r.ready := state === sReFill
-  io.axi.r.ready := true.B
 
   // these are hard wired as required by Loongson
   io.axi.ar.bits.lock := 0.U
   //TODO: can we utilize this?
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U
-  // hardcode r to always be ready
-  //TODO: check in case of problem
+
+  io.axi.r.ready := state === sReFill
 
   val instruction = Wire(UInt(dataLen.W))
   val hitWayReg = RegNext(hitWay)
@@ -238,7 +236,6 @@ class ICache(
 
   def beginARTransaction(): Unit = {
     indexReg := index
-//    lruWayReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -426,11 +423,4 @@ class ICache(
     io.performanceMonitorIO.get := performanceMonitorWire
   }
 
-  assert(io.axi.r.ready === true.B, "r ready signal should always be high")
-
-  /** just erase high 3 bits */
-  def virToPhy(addr: UInt): UInt = {
-    require(addr.getWidth == addrLen)
-    Cat(0.U(3.W), addr(28, 0))
-  }
 }
