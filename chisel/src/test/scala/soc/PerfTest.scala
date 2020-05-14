@@ -26,7 +26,7 @@ class AllTest extends ChiselFlatSpec {
 class PerfTest extends ChiselFlatSpec {
   val perfFile = "./src/test/resources/loongson/perf/axi_ram.coe"
 
-  implicit val tcfg = new TestConfig(banLog = true, runAllPerf = true, vcdOn = false)
+  implicit val tcfg = new TestConfig(banLog = true, vcdOn = false)
   val option =
     if (tcfg.vcdOn) Array("--backend-name", "verilator")
     else Array("--backend-name", "verilator", "--generate-vcd-output", "off")

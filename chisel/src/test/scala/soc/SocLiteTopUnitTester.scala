@@ -39,7 +39,7 @@ class SocLiteTopUnitTester(
   val isPerf = tcfg.runAllPerf || perfNumber != 0
 
   val traceFile =
-    if (isPerf) s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/golden_trace.txt"
+    if (isPerf && perfNumber!=0) s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/golden_trace.txt"
     else "./src/test/resources/loongson/func/golden_trace.txt"
 
   /** get switch data */
