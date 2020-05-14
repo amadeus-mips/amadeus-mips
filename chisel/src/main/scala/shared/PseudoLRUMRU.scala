@@ -8,8 +8,9 @@ import chisel3.util.random._
   * @note Don't read from its output when updating it
   * @param numOfSets how many sets there are in the cache
   * @param numOfWay how many ways there are in each set
+  * @param searchOrder when it is false, search from backward to forward ( prioritize large index )
   */
-class PseudoLRUMRU(numOfSets: Int, numOfWay: Int) extends Module {
+class PseudoLRUMRU(numOfSets: Int, numOfWay: Int, searchOrder: Boolean = false) extends Module {
   require(numOfWay != 2, "number of way should not be 2. We have a true LRU for 2")
   require(isPow2(numOfWay), "number of way should be a power of 2")
   require(isPow2(numOfSets), "number of sets should be a power of 2")
@@ -39,5 +40,9 @@ class PseudoLRUMRU(numOfSets: Int, numOfWay: Int) extends Module {
   }
   // if it is a 1, don't take it.
   // if it is a 0, take the first element
-  io.lruLine := lruReg(io.accessSet).indexWhere((isMRU => !isMRU))
+  if (searchOrder) {
+    io.lruLine := lruReg(io.accessSet).indexWhere((isMRU => !isMRU))
+  } else {
+    io.lruLine := lruReg(io.accessSet).lastIndexWhere((isMRU => !isMRU))
+  }
 }
