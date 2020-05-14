@@ -180,7 +180,7 @@ class newDCache(
   val tagData = Wire(Vec(wayAmount, UInt(tagLen.W)))
 
   // there are several backends for LRU, mru performs better than tree
-  val LRU = Module(new PseudoLRUMRU(numOfWay = wayAmount, numOfSets = setAmount))
+  val LRU = Module(new PseudoLRUMRU(numOfSets = setAmount, numOfWay = wayAmount ))
 
   val tagWire = Wire(UInt(tagLen.W))
 

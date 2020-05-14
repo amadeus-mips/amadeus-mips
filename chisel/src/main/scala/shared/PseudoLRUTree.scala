@@ -8,7 +8,7 @@ class treeNode extends Bundle {
   val lower = Bool()
 }
 
-class PseudoLRUTree(numOfWay: Int, numOfSets: Int) extends Module {
+class PseudoLRUTree( numOfSets: Int, numOfWay: Int) extends Module {
   require(numOfWay == 4, "number of way should not be 2. We have a true LRU for 2")
   require(isPow2(numOfWay), "number of way should be a power of 2")
   require(isPow2(numOfSets), "number of sets should be a power of 2")
