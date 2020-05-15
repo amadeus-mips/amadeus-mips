@@ -3,7 +3,8 @@
 package cpu.cache
 
 import chisel3._
-import shared.{CircularShifter, CircularShifterInt, PseudoLRUMRU, PseudoLRUTree, TrueLRU}
+import shared.LRU.PseudoLRUMRU
+import shared.{CircularShifter, CircularShifterInt}
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
 import cpu.common.NiseSramReadIO

@@ -1,4 +1,5 @@
-package shared
+package shared.LRU
+
 import chisel3._
 import chisel3.util._
 
@@ -8,7 +9,7 @@ class treeNode extends Bundle {
   val lower = Bool()
 }
 
-class PseudoLRUTree( numOfSets: Int, numOfWay: Int) extends Module {
+class PseudoLRUTree( numOfSets: Int, numOfWay: Int) extends BaseLRU(pNumOfSets = numOfSets, pNumOfWays = numOfWay) {
   require(numOfWay == 4, "number of way should not be 2. We have a true LRU for 2")
   require(isPow2(numOfWay), "number of way should be a power of 2")
   require(isPow2(numOfSets), "number of sets should be a power of 2")
@@ -17,7 +18,6 @@ class PseudoLRUTree( numOfSets: Int, numOfWay: Int) extends Module {
     * access way is the newly accessed way
     * lru line is the output indicating which line is the lease recently used
     */
-  val io = IO(new LRUIO(pNumOfSets = numOfSets, pNumOfWays = numOfWay))
   val treeP = RegInit(VecInit(Seq.fill(numOfSets)(0.U.asTypeOf(new treeNode))))
   when(io.accessEnable) {
     // when accessing line 0,1, point the root to upper ( lru is in 2,3 )

@@ -20,6 +20,7 @@ class QueueLine(lineWidth: Int, addrWidth: Int) extends Bundle {
 class WriteQueue(blockWidth: Int, blockSize: Int, capacity: Int = 2, addrWidth: Int = 32) extends Module {
   val lineWidth = blockWidth * blockSize
   require(capacity >= 1 && capacity <= 8, "capacity of the write queue should not be too large or too small")
+  require(isPow2(capacity), "capacity should be a power of 2 to ensure that ")
   val io = IO(new Bundle {
     // io for enqueue and dequeue
     // ready means whether write queue is full
@@ -35,11 +36,10 @@ class WriteQueue(blockWidth: Int, blockSize: Int, capacity: Int = 2, addrWidth: 
   })
   val inQueue = RegInit(0.U(log2Ceil(capacity).W))
 
-  // point at the oldest pointer
-  val oldestPtr = RegInit(0.U(log2Ceil(capacity).W))
+  val fifoOrder = Queue()
 
   val valid = RegInit(VecInit(Seq.fill(capacity)(false.B)))
-  val c = Queue
+
   // whether the write queue is full is whether it has reached capacity
   io.enqueue.ready := inQueue === capacity.U
 
