@@ -21,6 +21,7 @@ class TestConfig(
 ) {
 
   def check(perfNumber: Int) = {
+    require(!(needAssert && vcdOn))
     require(perfNumber >= 0 && perfNumber <= 10, "perfNumber should in 0~10")
     require(
       !(runAllPerf && vcdOn),
@@ -31,5 +32,18 @@ class TestConfig(
     require(!(writeTrace && trace), "Can't write or read trace together")
     require(!(writeTrace && perfNumber == 0), "Write trace should specify the perf number")
   }
+
+  val perfMap = Map(
+    (1, "bit count"),
+    (2, "bubble sort"),
+    (3, "coremark"),
+    (4, "crc32"),
+    (5, "dhrystone"),
+    (6, "quick sort"),
+    (7, "select sort"),
+    (8, "sha"),
+    (9, "stream copy"),
+    (10, "string search")
+  )
 
 }

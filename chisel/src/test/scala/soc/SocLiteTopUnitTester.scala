@@ -17,29 +17,18 @@ class SocLiteTopUnitTester(
   perfNumber:     Int = 0
 )(implicit tcfg: TestConfig)
     extends PeekPokeTester(c) {
-  tcfg.check(perfNumber)
-
-  val perfMap = Map(
-    (1, "bit count"),
-    (2, "bubble sort"),
-    (3, "coremark"),
-    (4, "crc32"),
-    (5, "dhrystone"),
-    (6, "quick sort"),
-    (7, "select sort"),
-    (8, "sha"),
-    (9, "stream copy"),
-    (10, "string search")
-  )
-  val writeTraceFile =
-    if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/cmp.txt") else None
 
   import chisel3._
+
+  tcfg.check(perfNumber)
+
+  val writeTraceFile =
+    if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/cmp.txt") else None
 
   val isPerf = tcfg.runAllPerf || perfNumber != 0
 
   val traceFile =
-    if (isPerf && perfNumber!=0) s"./src/test/resources/loongson/perf/${perfMap(perfNumber)}/golden_trace.txt"
+    if (isPerf && perfNumber!=0) s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/golden_trace.txt"
     else "./src/test/resources/loongson/func/golden_trace.txt"
 
   /** get switch data */
@@ -77,11 +66,11 @@ class SocLiteTopUnitTester(
   var result = true
   if (tcfg.runAllPerf) {
     for (i <- 1 to 10) {
-      info(s"${perfMap(i)} started:")
+      info(s"${tcfg.perfMap(i)} started:")
       resetConfreg(i)
       reInit()
       result &= run()
-      info(s"${perfMap(i)} finished.")
+      info(s"${tcfg.perfMap(i)} finished.")
     }
   } else {
     resetConfreg()
