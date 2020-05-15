@@ -113,12 +113,8 @@ class newDCache(
 
   // records if the current set is full
   // this is to make sure empty lines are filled ahead of LRU
-  val isSetNotFull = Wire(Bool())
-  isSetNotFull := false.B
-  dontTouch(isSetNotFull)
-  val emptyPtr = Wire(UInt(log2Ceil(wayAmount).W))
-  emptyPtr := 0.U
-  dontTouch(emptyPtr)
+  val isSetNotFull = WireDefault(false.B)
+  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
 
   // keep track of whether there has been an aw handshake yet
   // true means still waiting, false means that the handshake has finished
@@ -156,16 +152,11 @@ class newDCache(
   //-------------------------------------------------------------------------------
   //--------------------set up the memory banks and wire them to their states------
   //-------------------------------------------------------------------------------
-  /** valid(way)(index) */
-  val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
+  /** valid(index)(way) */
+  val valid = RegInit(VecInit(Seq.fill(setAmount)(VecInit(Seq.fill(wayAmount)(false.B)))))
 
-  /**
-    * dirty(way)(index)
-    */
-  val dirty = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
-
-  // the dirty status of the set.
-  val dirtyWire = Wire(Vec(wayAmount, Bool()))
+  /** dirty(index)(way) */
+  val dirty = RegInit(VecInit(Seq.fill(setAmount)(VecInit(Seq.fill(wayAmount)(false.B)))))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -210,17 +201,12 @@ class newDCache(
   hitWay := 0.U
 
   // check across all ways in the desired set
-  for (i <- 0 until wayAmount) {
-    when(!valid(i)(indexReg)) {
-      isSetNotFull := true.B
-      emptyPtr     := i.U
-    }
-    when(valid(i)(index) && tagData(i) === tag) {
-      hitWay := i.U
-      isHit  := true.B
-    }
-    dirtyWire(i) := dirty(i)(index)
-  }
+  isSetNotFull := valid(indexReg).contains(false.B)
+  emptyPtr := valid(indexReg).indexWhere(isWayValid => !isWayValid)
+  val tagCheckVec = Wire(Vec(wayAmount, Bool()))
+  tagCheckVec := (tagData.map( _ === tag) zip valid(index)).map{case (tagMatch, isValid) => tagMatch && isValid}
+  hitWay := tagCheckVec.indexWhere(tagMatchAndValid => tagMatchAndValid  === true.B)
+  isHit := tagCheckVec.contains(true.B)
 
   //-----------------------------------------------------------------------------
   //------------------initialize default IO--------------------------------
@@ -371,8 +357,8 @@ class newDCache(
   def invalidateLine(evictWay: UInt, setIndex: UInt): Unit = {
     // make the set not full
     // invalidate now and dispatch to buffer
-    valid(evictWay)(setIndex) := false.B
-    dirty(evictWay)(setIndex) := false.B
+    valid(setIndex)(evictWay) := false.B
+    dirty(setIndex)(evictWay) := false.B
   }
 
   def dispatchToWrite(waySelect: UInt): Unit = {
@@ -416,7 +402,7 @@ class newDCache(
           // write to the way that is hit
           we(hitWay)(bankOffset) := true.B
           // make the line dirty
-          dirty(hitWay)(index) := true.B
+          dirty(index)(hitWay) := true.B
           // update the LRU
           updateLRU(hitWay)
         }.otherwise {
@@ -485,7 +471,7 @@ class newDCache(
           // this will best reflect the LRU state
           val lruSelWay = Mux(isSetNotFull, emptyPtr, lruLine)
           lruWayReg := lruSelWay
-          when(dirty(lruSelWay)(indexReg)) {
+          when(dirty(indexReg)(lruSelWay)) {
             invalidateLine(lruSelWay, indexReg)
             dispatchToWrite(lruSelWay)
           }
@@ -502,8 +488,8 @@ class newDCache(
       // write the data to the corresbonding bank
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
-      valid(lruWayReg)(indexReg) := true.B
-      dirty(lruWayReg)(indexReg) := false.B
+      valid(indexReg)(lruWayReg) := true.B
+      dirty(indexReg)(lruWayReg) := false.B
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
