@@ -3,6 +3,7 @@
 package cpu.cache
 
 import chisel3._
+import chisel3.internal.naming.chiselName
 import cpu.common.NiseSramWriteIO
 import shared.LRU.PseudoLRUMRU
 import shared.{CircularShifter, CircularShifterInt}
@@ -194,6 +195,11 @@ class newDCache(
   // this hit works both for read hit and write hit
   val isHit = WireDefault(false.B)
 
+  // check during reFill whether tag and index are the same as old
+  val isTagSameAsOld = tag === tagReg
+  val isIndexSameAsOld = index === indexReg
+  val isBankOffsetSameAsOld = bankOffset === bankOffsetReg
+
   // check which is the lru line
   val lruLine = LRU.io.lruLine
 
@@ -256,9 +262,9 @@ class newDCache(
   io.axi.aw.bits.len   := (bankAmount - 1).U(4.W)
   io.axi.aw.bits.size  := "b010".U(3.W)
   io.axi.aw.bits.burst := "b10".U(2.W)
-  io.axi.ar.bits.cache := 0.U
-  io.axi.ar.bits.prot  := 0.U
-  io.axi.ar.bits.lock  := 0.U
+  io.axi.aw.bits.cache := 0.U
+  io.axi.aw.bits.prot  := 0.U
+  io.axi.aw.bits.lock  := 0.U
 
   io.axi.aw.bits.addr :=
     Cat(0.U(3.W), Cat(tagReg, indexReg), 0.U((log2Ceil(bankAmount) + 2).W))
@@ -420,6 +426,38 @@ class newDCache(
       assert(io.axi.r.bits.id === DATA_ID, "r id is not supposed to be different from d-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
+
+
+
+
+      io.rChannel.valid := false.B
+      // by default, this is connected to the rChannel register that preserves the hit
+      // in refill buffer or axi from the previous cycle, this could also be connected
+      // to d-cache ( instruction variable )
+      io.rChannel.data := rChannelReg
+      // this defaults to false, as this value is only used in the write back state
+      rValidReg := false.B
+      checkDCacheHit()
+
+      /**
+        * check if there is a hit in the d-cache
+        */
+      when(isHit && io.rChannel.enable) {
+        io.rChannel.valid := true.B
+        rDCacheHitReg     := true.B
+        updateLRU(hitWay)
+      }
+
+      /**
+        * check if there is a hit in the refill buffer
+        */
+      when(refillWriteVec(bankOffset) && io.rChannel.enable && isTagSameAsOld && isIndexSameAsOld) {
+        // if the hit occurs in the refill buffer
+        io.rChannel.valid := true.B
+        rChannelReg       := reFillBuffer(bankOffset)
+        rValidReg         := true.B
+      }
+
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         // update the write mask
@@ -433,40 +471,16 @@ class newDCache(
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
 
-        io.rChannel.valid := false.B
-        // by default, this is connected to the rChannel register that preserves the hit
-        // in refill buffer or axi from the previous cycle, this could also be connected
-        // to d-cache ( instruction variable )
-        io.rChannel.data := rChannelReg
-        // this defaults to false, as this value is only used in the write back state
-        rValidReg := false.B
-        checkDCacheHit()
-
-        /**
-          * check if there is a hit in the d-cache
-          */
-        when(isHit && io.rChannel.enable) {
-          io.rChannel.valid := true.B
-          rDCacheHitReg     := true.B
-          updateLRU(hitWay)
-        }
-
         // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
         // when index and tag are hit
-        when((tag === tagReg) && (index === indexReg) && io.rChannel.enable) {
+        when(isTagSameAsOld && isIndexSameAsOld && io.rChannel.enable && isBankOffsetSameAsOld) {
           // when there is a direct hit from the bank
-          when((bankOffset === bankOffsetReg)) {
             io.rChannel.valid := true.B
             rValidReg         := true.B
-            // r data reg = axi r bits by default
-          }.elsewhen(refillWriteVec(bankOffset)) {
-            // if the hit occurs in the refill buffer
-            io.rChannel.valid := true.B
-            rChannelReg       := reFillBuffer(bankOffset)
-            rValidReg         := true.B
-          }
+            // as rChannel reg is implicitly axi r bits data, no need to reassign
         }
 
+        //TODO: performance counter: how many writes will be issued?
         when(io.axi.r.bits.last) {
           // update the lru way register on the last cycle of refill
           // this will best reflect the LRU state
