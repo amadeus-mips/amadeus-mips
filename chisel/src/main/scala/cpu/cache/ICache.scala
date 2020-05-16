@@ -145,6 +145,11 @@ class ICache(
   val isReFill = state === sReFill
   val isWriteBack = state === sWriteBack
 
+  // check during reFill whether tag and index are the same as old
+  val isTagSameAsOld = tag === tagReg
+  val isIndexSameAsOld = index === indexReg
+  val isBankOffsetSameAsOld = bankOffset === bankOffsetReg
+
   // check if there is a hit and the line that got the hit if there is a hit
   // despite its name, this indicates a true hit
   val isHit = WireDefault(false.B)
@@ -303,6 +308,32 @@ class ICache(
       assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from i-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
+      io.rInst.valid := false.B
+      // by default, this is connected to the rData register that preserves the hit
+      // in refill buffer or axi from the previous cycle, this could also be connected
+      // to i-cache ( instruction variable )
+      io.rInst.data := rDataReg
+      // this defaults to false, as this value is only used in the write back state
+      rValidReg := false.B
+      checkICacheHit()
+
+      /**
+        * check if there is a hit in the I-cache
+        */
+      when(isHit && io.rInst.enable) {
+        io.rInst.valid := true.B
+        rICacheHitReg := true.B
+        updateLRU(hitWay)
+      }
+
+      // check if there is a hit in the write vec
+      when(writeVec(bankOffset) && io.rInst.enable && isTagSameAsOld && isIndexSameAsOld) {
+        // if the hit occurs in the refill buffer
+        io.rInst.valid := true.B
+        rDataReg := reFillBuffer(bankOffset)
+        rValidReg := true.B
+      }
+
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         // update the write mask
@@ -316,38 +347,13 @@ class ICache(
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
 
-        io.rInst.valid := false.B
-        // by default, this is connected to the rData register that preserves the hit
-        // in refill buffer or axi from the previous cycle, this could also be connected
-        // to i-cache ( instruction variable )
-        io.rInst.data := rDataReg
-        // this defaults to false, as this value is only used in the write back state
-        rValidReg := false.B
-        checkICacheHit()
-
-        /**
-          * check if there is a hit in the I-cache
-          */
-        when(isHit && io.rInst.enable) {
-          io.rInst.valid := true.B
-          rICacheHitReg := true.B
-          updateLRU(hitWay)
-        }
-
         // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
         // when index and tag are hit
-        when((tag === tagReg) && (index === indexReg) && io.rInst.enable) {
+        when(isTagSameAsOld && isIndexSameAsOld && io.rInst.enable && isBankOffsetSameAsOld) {
           // when there is a direct hit from the bank
-          when(bankOffset === bankOffsetReg) {
             io.rInst.valid := true.B
             rValidReg := true.B
             // r data reg = axi r bits by default
-          }.elsewhen(writeVec(bankOffset)) {
-            // if the hit occurs in the refill buffer
-            io.rInst.valid := true.B
-            rDataReg := reFillBuffer(bankOffset)
-            rValidReg := true.B
-          }
         }
 
         when(io.axi.r.bits.last) {
