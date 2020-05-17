@@ -3,6 +3,7 @@ package cpu.cache
 import java.io.{BufferedWriter, FileOutputStream, OutputStreamWriter}
 
 import chisel3._
+import chisel3.internal.naming.chiselName
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import chisel3.stage.ChiselStage
 import chisel3.util._
@@ -68,6 +69,7 @@ class PerfectTest extends FlatSpec with Matchers {
   }
 }
 
+@chiselName
 class CacheRandTestModule extends Module {
   val io = IO(new Bundle {
     val rChannel = Flipped(new NiseSramReadIO)
@@ -81,9 +83,6 @@ class CacheRandTestModule extends Module {
 }
 
 class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
-  memRead(2284)
-  memWrite(2288, List(84, 38, 48, 3))
-  memRead(2288)
   def memRead(addr: Int): Unit = {
     poke(dut.io.wChannel.enable, false)
     poke(dut.io.rChannel.enable, true)
@@ -102,6 +101,7 @@ class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) 
       result,
       s"the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
     )
+    step(1)
   }
 
   def memWrite(addr: Int, data: List[Int], mask: List[Boolean] = List.fill(4)(true)): Unit = {
@@ -122,16 +122,33 @@ class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) 
   }
 }
 
+class CacheCheckLRUTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) extends CacheRandUnitTester(dut, goldenModel) {
+  memRead(4)
+  memRead(2052)
+//  memRead(4100)
+//  memRead(6148)
+  memWrite(4, List(48,214, 43,24))
+  memRead(2052)
+}
+
 class CacheRandTest extends ChiselFlatSpec with Matchers {
   behavior.of("cache random tester")
   val reference = new PerfectMemory(8192)
   reference.dumpToDisk()
   it should "success" in {
     Driver.execute(
-      Array("--generate-vcd-output", "on"),
+      Array("--generate-vcd-output", "on", "--backend-name", "verilator"),
       () => new CacheRandTestModule
     ) { dut =>
       new CacheRandUnitTester(dut, reference)
+    } should be(true)
+  }
+  it should "check lru and evict behavior" in {
+    Driver.execute(
+      Array("--generate-vcd-output", "on", "--backend-name", "treadle"),
+      () => new CacheRandTestModule
+    ) { dut =>
+      new CacheCheckLRUTester(dut, reference)
     } should be(true)
   }
 }

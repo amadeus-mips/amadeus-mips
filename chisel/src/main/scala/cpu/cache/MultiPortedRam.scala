@@ -12,7 +12,7 @@ import chisel3.internal.naming.chiselName
   * @param numPorts
   * @tparam T
   */
-//@chiselName
+@chiselName
 class MultiPortedRam[T <: Data](size: Int, elType: T, numPorts: Int = 2) extends Module {
   val io = IO(new Bundle {
     val port = Vec(numPorts, new Bundle {

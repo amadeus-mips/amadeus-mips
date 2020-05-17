@@ -579,6 +579,7 @@ class newDCache(
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j).asUInt, io.wChannel.data)
     bank.io.writeMask := Mux(isWriteBack, 15.U(4.W), io.wChannel.sel)
     bankData(i)(j)    := bank.io.readData
+    bank.desiredName
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
