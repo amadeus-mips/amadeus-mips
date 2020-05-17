@@ -1,3 +1,6 @@
+setAmount = 8
+wayAmount = 4
+bankAmount = 8
 print("please give the memory address:")
 addr = input()
 if (len(addr) != 8):

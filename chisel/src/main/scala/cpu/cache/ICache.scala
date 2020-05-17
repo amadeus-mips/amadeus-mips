@@ -391,6 +391,7 @@ class ICache(
     j <- 0 until bankAmount
   } yield {
     val bank = Module(new SinglePortBank(setAmount, dataLen, syncRead = true))
+    bank.suggestName(s"dbank_way${i}_bankOffset${j}")
     bank.io.we := we(i)(j)
     bank.io.en.get := true.B
     bank.io.addr := indexWire
@@ -399,6 +400,7 @@ class ICache(
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
+    bank.suggestName(s"tagBank_bankOffset${i}")
     bank.io.we := tagWe(i)
     bank.io.addr := indexWire
     bank.io.inData := tagReg

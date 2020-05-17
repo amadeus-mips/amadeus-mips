@@ -70,7 +70,7 @@ class PerfectTest extends FlatSpec with Matchers {
 }
 
 @chiselName
-class CacheRandTestModule extends Module {
+class DCacheTestModule extends Module {
   val io = IO(new Bundle {
     val rChannel = Flipped(new NiseSramReadIO)
     val wChannel = Flipped(new NiseSramWriteIO)
@@ -82,7 +82,18 @@ class CacheRandTestModule extends Module {
   io.wChannel  <> cache.io.wChannel
 }
 
-class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
+@chiselName
+class ICacheTestModule extends Module {
+  val io = IO(new Bundle {
+    val rChannel = Flipped(new NiseSramReadIO)
+  })
+  val cache = Module(new ICache(8, 4, 8, false))
+  val ram = Module(new memoryAXIWrap("./perfMon/mem.txt"))
+  cache.io.axi <> ram.io.axi
+  io.rChannel  <> cache.io.rInst
+}
+
+class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
   def memRead(addr: Int): Unit = {
     poke(dut.io.wChannel.enable, false)
     poke(dut.io.rChannel.enable, true)
@@ -120,9 +131,41 @@ class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) 
     }
     step(1)
   }
+
+  def randDelay(): Unit = {
+    poke(dut.io.wChannel.enable, false)
+    poke(dut.io.rChannel.enable, false)
+  }
 }
 
-class CacheCheckLRUTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) extends CacheRandUnitTester(dut, goldenModel) {
+
+class ICacheBaseTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
+  def memRead(addr: Int): Unit = {
+    poke(dut.io.rChannel.enable, true)
+    poke(dut.io.rChannel.addr, addr)
+    while (peek(dut.io.rChannel.valid) == 0) {
+      step(1)
+    }
+    step(1)
+    val ref = goldenModel.readFromMem(addr)
+    var result: BigInt = BigInt(0)
+    for (i <- 0 until 4) {
+      result += BigInt(ref(i)) << (8 * (3-i))
+    }
+    expect(
+      dut.io.rChannel.data,
+      result,
+      s"the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+    )
+    step(1)
+  }
+
+  def randDelay(): Unit = {
+    poke(dut.io.rChannel.enable, false)
+  }
+}
+
+class DCacheCheckLRUTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends DCacheBaseTester(dut, goldenModel) {
   memRead(4)
   memRead(2052)
 //  memRead(4100)
@@ -131,24 +174,46 @@ class CacheCheckLRUTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) 
   memRead(2052)
 }
 
-class CacheRandTest extends ChiselFlatSpec with Matchers {
-  behavior.of("cache random tester")
+class ICacheCheckLRUTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extends ICacheBaseTester(dut, goldenModel) {
+  memRead(4)
+  memRead(256)
+  memRead(512)
+  memRead(768)
+  memRead(1024)
+}
+
+class DCacheRandTest extends ChiselFlatSpec with Matchers {
+  behavior.of("dcache testers")
   val reference = new PerfectMemory(8192)
   reference.dumpToDisk()
   it should "success" in {
     Driver.execute(
       Array("--generate-vcd-output", "on", "--backend-name", "verilator"),
-      () => new CacheRandTestModule
+      () => new DCacheTestModule
     ) { dut =>
-      new CacheRandUnitTester(dut, reference)
+      new DCacheBaseTester(dut, reference)
     } should be(true)
   }
   it should "check lru and evict behavior" in {
     Driver.execute(
       Array("--generate-vcd-output", "on", "--backend-name", "treadle"),
-      () => new CacheRandTestModule
+      () => new DCacheTestModule
     ) { dut =>
-      new CacheCheckLRUTester(dut, reference)
+      new DCacheCheckLRUTester(dut, reference)
+    } should be(true)
+  }
+}
+
+class ICacheTest extends ChiselFlatSpec with Matchers {
+  behavior.of("icache testers")
+  val reference = new PerfectMemory(1 << 15)
+  reference.dumpToDisk()
+  it should "check the LRU bahaviors" in {
+    Driver.execute(
+      Array("--generate-vcd-output", "on", "--backend-name", "treadle"),
+      () => new ICacheTestModule
+    ) { dut =>
+      new ICacheCheckLRUTester(dut, reference)
     } should be(true)
   }
 }

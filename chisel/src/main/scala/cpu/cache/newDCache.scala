@@ -571,6 +571,7 @@ class newDCache(
     val bank = Module(
       new SinglePortMaskBank(numberOfSet = setAmount, minWidth = 8, maskWidth = 4, syncRead = true)
     )
+    bank.suggestName(s"dbank_way${i}_bankOffset${j}")
     // read and write share the address
     bank.io.addr := indexWire
     bank.io.we   := we(i)(j)
@@ -583,6 +584,7 @@ class newDCache(
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
+    bank.suggestName(s"tagBank_way_${i}")
     bank.io.we     := tagWe(i)
     bank.io.addr   := indexWire
     bank.io.inData := tagReg
