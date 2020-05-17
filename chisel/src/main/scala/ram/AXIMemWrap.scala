@@ -4,7 +4,8 @@ import chisel3._
 import chisel3.util._
 import shared.AXIIO
 
-class AXIMemory(
+@deprecated
+class AXIMemWrap(
   dataWidth:      Int = 32,
   addrWidth:      Int = 32,
   strbWidth:      Int = 4,
@@ -17,7 +18,7 @@ class AXIMemory(
   })
 
   val axiMem = Module(
-    new AXIMemBackend(
+    new AXIMemBlackBox(
       dataWidth,
       addrWidth,
       strbWidth,

@@ -62,9 +62,8 @@ import chisel3.util.ValidIO
 import confreg.Confreg
 import cpu.CPUTop
 import cpu.performance.SocPerformanceIO
-import memory.memoryAXIWrap
+import ram.AXIRam
 import shared.{DebugBundle, GPIO}
-import ram.{AXIMemBackend, AXIMemory}
 
 /**
   *
@@ -74,9 +73,9 @@ import ram.{AXIMemBackend, AXIMemory}
 class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonitorEnable: Boolean = false)
     extends Module {
   val io = IO(new Bundle {
-    val gp = new GPIO
-    val uart = new ValidIO(UInt(8.W))
-    val debug = Output(new DebugBundle)
+    val gp          = new GPIO
+    val uart        = new ValidIO(UInt(8.W))
+    val debug       = Output(new DebugBundle)
     val performance = if (performanceMonitorEnable) Some(new SocPerformanceIO) else None
   })
 
@@ -84,20 +83,20 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
 
   /** 2x2 interconnect */
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.criticalWord))
-  val confreg = Module(new Confreg(simulation))
-  val ram = Module(new memoryAXIWrap(memFile))
+  val confreg         = Module(new Confreg(simulation))
+  val ram             = Module(new AXIRam(memFile))
 //  val ram = Module(new AXIMemory(fileName = memFile))
 
   // the optional performance IO
-  axiInterconnect.io.slaves(0) <> cpu.io.dataAXI
-  axiInterconnect.io.slaves(1) <> cpu.io.instAXI
+  axiInterconnect.io.slaves(0)  <> cpu.io.dataAXI
+  axiInterconnect.io.slaves(1)  <> cpu.io.instAXI
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 
   cpu.io.intr := 0.U // high active
-  io.gp <> confreg.io.gp
-  io.uart <> confreg.io.uart
-  io.debug <> cpu.io.debug
+  io.gp       <> confreg.io.gp
+  io.uart     <> confreg.io.uart
+  io.debug    <> cpu.io.debug
   if (performanceMonitorEnable) {
     io.performance.get.cpu := cpu.io.performance.get
   }

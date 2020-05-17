@@ -1,10 +1,10 @@
 package ram
 
 import chisel3._
-import chisel3.util._
 import chisel3.experimental._
+import chisel3.util._
 
-class AXIMemBackend(
+class AXIMemBlackBox(
   dataWidth:      Int = 32,
   addrWidth:      Int = 32,
   strbWidth:      Int = 4,
@@ -13,10 +13,10 @@ class AXIMemBackend(
   fileName:       String
 ) extends BlackBox(
       Map(
-        "DATA_WIDTH" -> IntParam(dataWidth),
-        "ADDR_WIDTH" -> IntParam(addrWidth),
-        "STRB_WIDTH" -> IntParam(strbWidth),
-        "ID_WIDTH" -> IntParam(idWidth),
+        "DATA_WIDTH"      -> IntParam(dataWidth),
+        "ADDR_WIDTH"      -> IntParam(addrWidth),
+        "STRB_WIDTH"      -> IntParam(strbWidth),
+        "ID_WIDTH"        -> IntParam(idWidth),
         "PIPELINE_OUTPUT" -> IntParam(pipelineOutput)
       )
     )
