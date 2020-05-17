@@ -10,7 +10,7 @@ import shared.{AXIIO, CircularShifter}
   * @param id the id in the axi graph
   * @param burstLength in beats, the length of the burst
   */
-class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
+class AXIWrapToSRAM(id: UInt, burstLength: Int = 8) extends Module {
   val io = IO(new Bundle {
     val bus = AXIIO.slave()
     val ram = new SimpleSramIO
@@ -55,7 +55,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 16) extends Module {
     (readState === rIdle && portState =/= portRead) || (portState === portRead),
     "when port state is not port read, the read state should always be idle"
   )
-  assert(!io.bus.ar.fire || (io.bus.ar.fire && io.bus.ar.bits.len === burstLength.U))
+  assert(!io.bus.ar.fire || (io.bus.ar.fire && io.bus.ar.bits.len === (burstLength - 1).U), s"axi handshake length is ${io.bus.ar.bits.len}, acceptable length is $burstLength")
   assert(!io.bus.aw.fire || (io.bus.aw.fire && io.bus.aw.bits.len === burstLength.U))
 
   // default signals for write
