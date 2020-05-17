@@ -132,6 +132,9 @@ class newDCache(
 
   // the counter that records which word to dispatch to axi from write data buffer
   val writeBufferCounter = RegInit(0.U(log2Ceil(bankAmount).W))
+
+  // hold the dispatch to write address
+  val writeAddrReg = RegInit(0.U(32.W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
@@ -270,8 +273,7 @@ class newDCache(
   io.axi.aw.bits.prot  := 0.U
   io.axi.aw.bits.lock  := 0.U
 
-  io.axi.aw.bits.addr :=
-    Cat(0.U(3.W), Cat(tagReg, indexReg), 0.U((log2Ceil(bankAmount) + 2).W))
+  io.axi.aw.bits.addr := writeAddrReg
 
   // aw handshake has not taken place, and is in the transfer state
   io.axi.aw.valid := waitForAWHandshake
@@ -373,11 +375,13 @@ class newDCache(
     dirty(setIndex)(evictWay) := false.B
   }
 
-  def dispatchToWrite(waySelect: UInt): Unit = {
+  def dispatchToWrite(waySelect: UInt, indexSelect: UInt): Unit = {
     writeMissWayReg    := waySelect
     waitForAWHandshake := true.B
     writeDataBuffer    := bankData(waySelect)
     writeBufferCounter := 0.U
+    writeAddrReg := Cat(tagData(waySelect), indexReg, 0.U((log2Ceil(bankAmount) + 2).W))
+    assert(Cat(tagData(waySelect), indexReg, 0.U((log2Ceil(bankAmount) + 2).W)).getWidth == 32)
   }
 
   /**
@@ -506,7 +510,7 @@ class newDCache(
           lruWayReg := lruSelWay
           when(dirty(indexReg)(lruSelWay)) {
             invalidateLine(lruSelWay, indexReg)
-            dispatchToWrite(lruSelWay)
+            dispatchToWrite(lruSelWay, indexReg)
           }
           state := sWriteBack
         }
@@ -545,7 +549,7 @@ class newDCache(
       }
 
       // when all line has been evicted
-      when(writeBufferCounter === (wayAmount - 1).U) {
+      when(writeBufferCounter === (bankAmount - 1).U) {
         io.axi.w.bits.last := true.B
         state              := sWriteFinish
         // let's handle the b channel there

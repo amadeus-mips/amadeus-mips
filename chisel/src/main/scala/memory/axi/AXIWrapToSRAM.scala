@@ -56,7 +56,7 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 8) extends Module {
     "when port state is not port read, the read state should always be idle"
   )
   assert(!io.bus.ar.fire || (io.bus.ar.fire && io.bus.ar.bits.len === (burstLength - 1).U), s"axi handshake length is ${io.bus.ar.bits.len}, acceptable length is $burstLength")
-  assert(!io.bus.aw.fire || (io.bus.aw.fire && io.bus.aw.bits.len === burstLength.U))
+  assert(!io.bus.aw.fire || (io.bus.aw.fire && io.bus.aw.bits.len === (burstLength-1).U))
 
   // default signals for write
   // NO interleaving, assumes in order transfer

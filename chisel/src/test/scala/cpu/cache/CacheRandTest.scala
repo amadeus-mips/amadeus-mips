@@ -110,12 +110,13 @@ class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extend
     expect(
       dut.io.rChannel.data,
       result,
-      s"the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+      s"the read address is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
     )
     step(1)
   }
 
-  def memWrite(addr: Int, data: List[Int], mask: List[Boolean] = List.fill(4)(true)): Unit = {
+  def memWrite(addr: Int, mask: List[Boolean] = List.fill(4)(true)): Unit = {
+    val data = List.tabulate(4)((x: Int) => scala.util.Random.nextInt(256))
     poke(dut.io.wChannel.enable, true)
     poke(dut.io.rChannel.enable, false)
     poke(dut.io.rChannel.addr, addr)
@@ -155,7 +156,7 @@ class ICacheBaseTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extend
     expect(
       dut.io.rChannel.data,
       result,
-      s"the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+      s"the read address is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
     )
     step(1)
   }
@@ -166,12 +167,18 @@ class ICacheBaseTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extend
 }
 
 class DCacheCheckLRUTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends DCacheBaseTester(dut, goldenModel) {
-  memRead(4)
-  memRead(2052)
-//  memRead(4100)
-//  memRead(6148)
-  memWrite(4, List(48,214, 43,24))
-  memRead(2052)
+  for (i <- 0 until 4) {
+    memRead(i*256 + 4)
+  }
+  for (i <- 0 until 3) {
+    memWrite(i*256 + 4)
+  }
+  for (i <- 4 until 11) {
+    memRead(i * 256)
+  }
+  for (i <- 0 until 4) {
+    memRead(i*256 + 4)
+  }
 }
 
 class ICacheCheckLRUTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extends ICacheBaseTester(dut, goldenModel) {
