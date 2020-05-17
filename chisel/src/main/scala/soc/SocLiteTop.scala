@@ -62,7 +62,7 @@ import chisel3.util.ValidIO
 import confreg.Confreg
 import cpu.CPUTop
 import cpu.performance.SocPerformanceIO
-import ram.AXIRam
+import ram.{AXIRam, AXIRamRandomWrap}
 import shared.{DebugBundle, GPIO}
 
 /**
@@ -84,7 +84,7 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
   /** 2x2 interconnect */
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.criticalWord))
   val confreg         = Module(new Confreg(simulation))
-  val ram             = Module(new AXIRam(memFile))
+  val ram             = Module(new AXIRamRandomWrap(memFile))
 //  val ram = Module(new AXIMemory(fileName = memFile))
 
   // the optional performance IO
@@ -97,6 +97,7 @@ class SocLiteTop(simulation: Boolean = false, memFile: String, performanceMonito
   io.gp       <> confreg.io.gp
   io.uart     <> confreg.io.uart
   io.debug    <> cpu.io.debug
+  ram.io.ramRandomMask := confreg.io.ram_random_mask
   if (performanceMonitorEnable) {
     io.performance.get.cpu := cpu.io.performance.get
   }

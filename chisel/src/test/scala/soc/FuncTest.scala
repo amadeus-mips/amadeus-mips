@@ -10,7 +10,7 @@ class FuncNoVcdTest extends ChiselFlatSpec {
   it should "use verilator without vcd file with performance metrics enabled" in {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
-      () => new SocLiteTop(simulation = true, memFile = funcFile, performanceMonitorEnable = true)
+      () => new SocLiteTop(simulation = false, memFile = funcFile, performanceMonitorEnable = true)
     ) { c =>
       new SocLiteTopUnitTester(c)
     } should be(true)
@@ -25,7 +25,7 @@ class FuncWithVcdTest extends ChiselFlatSpec {
   it should "use verilator to generate vcd file" in {
     Driver.execute(
       Array("--backend-name", "verilator"),
-      () => new SocLiteTop(simulation = true, memFile = funcFile)
+      () => new SocLiteTop(simulation = false, memFile = funcFile)
     ) { c =>
       new SocLiteTopUnitTester(c)
     } should be(true)
