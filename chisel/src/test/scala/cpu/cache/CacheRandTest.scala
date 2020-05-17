@@ -29,7 +29,6 @@ class PerfectMemory(size: Int) {
       writer.write(s"\n")
     }
     writer.close()
-    print("the write has finished")
   }
 
   def writeToMem(addr: Int, data: List[Int], writeMask: List[Boolean]): Unit = {
@@ -83,6 +82,8 @@ class CacheRandTestModule extends Module {
 
 class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
   memRead(2284)
+  memWrite(2288, List(84, 38, 48, 3))
+  memRead(2288)
   def memRead(addr: Int): Unit = {
     poke(dut.io.wChannel.enable, false)
     poke(dut.io.rChannel.enable, true)
@@ -92,17 +93,37 @@ class CacheRandUnitTester(dut: CacheRandTestModule, goldenModel: PerfectMemory) 
     }
     step(1)
     val ref = goldenModel.readFromMem(addr)
-    var result: BigInt = 0
+    var result: BigInt = BigInt(0)
     for (i <- 0 until 4) {
-      result += ref(i) << (8*(3-i))
-      print(s"reference i is ${ref(i).toHexString} \n")
+      result += BigInt(ref(i)) << (8 * (3-i))
     }
-    expect(dut.io.rChannel.data, result)
+    expect(
+      dut.io.rChannel.data,
+      result,
+      s"the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+    )
+  }
+
+  def memWrite(addr: Int, data: List[Int], mask: List[Boolean] = List.fill(4)(true)): Unit = {
+    poke(dut.io.wChannel.enable, true)
+    poke(dut.io.rChannel.enable, false)
+    poke(dut.io.rChannel.addr, addr)
+    poke(dut.io.wChannel.sel, 15)
+    var writeData: BigInt = BigInt(0)
+    for (i <- 0 until 4) {
+      writeData += BigInt(data(i)) << (8 * (3 - i))
+    }
+    poke(dut.io.wChannel.data, writeData)
+    goldenModel.writeToMem(addr, data, mask)
+    while (peek(dut.io.wChannel.valid) == 0) {
+      step(1)
+    }
+    step(1)
   }
 }
 
 class CacheRandTest extends ChiselFlatSpec with Matchers {
-  behavior of ("cache random tester")
+  behavior.of("cache random tester")
   val reference = new PerfectMemory(8192)
   reference.dumpToDisk()
   it should "success" in {
