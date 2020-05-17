@@ -81,10 +81,14 @@ class newDCache(
   // write vec marks which words in the refill buffer has been written to i.e. per word valid
   val refillWriteVec = RegInit(VecInit(Seq.fill(bankAmount)(false.B)))
 
+  // whether there is a write to the write vec
+  val refillWriteVecDirty = RegInit(false.B)
+
   // refill buffer is a buffer for holding values from axi r channel
   // at the end of the refill states this buffer will be re-written to
   // the d-cache line
-  val reFillBuffer = RegInit(VecInit(Seq.fill(bankAmount)(0.U(32.W))))
+  val reFillBuffer = RegInit(VecInit(Seq.fill(bankAmount)(VecInit(Seq.fill(4)(0.U(8.W))))))
+//  RegInit(VecInit(Seq.fill(bankAmount)(0.U(32.W))))
 
   // record the memory address info on a read miss
   // keep track of which way to write to
@@ -313,6 +317,7 @@ class newDCache(
     // of ugly
     refillWriteVec := 0.U.asTypeOf(refillWriteVec)
     reFillBuffer   := 0.U.asTypeOf(reFillBuffer)
+    refillWriteVecDirty := false.B
     // don't invalidate this line
   }
 
@@ -423,7 +428,7 @@ class newDCache(
       }
     }
     is(sReFill) {
-      assert(io.axi.r.bits.id === DATA_ID, "r id is not supposed to be different from d-cache id")
+//      assert(io.axi.r.bits.id === DATA_ID, "r id is not supposed to be different from d-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
 
@@ -454,8 +459,21 @@ class newDCache(
       when(refillWriteVec(bankOffset) && io.rChannel.enable && isTagSameAsOld && isIndexSameAsOld) {
         // if the hit occurs in the refill buffer
         io.rChannel.valid := true.B
-        rChannelReg       := reFillBuffer(bankOffset)
+        rChannelReg       := reFillBuffer(bankOffset).asUInt
         rValidReg         := true.B
+      }
+
+      /**
+        * check if I could write into reFill buffer
+        */
+      when (io.wChannel.enable && isTagSameAsOld && isIndexSameAsOld && refillWriteVec(bankOffset)) {
+        for ( i <- 0 until 4 ) {
+          when (io.wChannel.sel(i)) {
+            reFillBuffer(bankOffset)(i) := io.wChannel.data(i*8+7, i*8)
+          }
+        }
+        io.wChannel.valid := true.B
+        refillWriteVecDirty := true.B
       }
 
       // with every successful transaction, increment the bank offset register to reflect the new value
@@ -464,7 +482,7 @@ class newDCache(
         refillWriteMask.io.shiftEnable := true.B
 
         // write to the refill buffer instead of the data bank
-        reFillBuffer(refillWriteMask.io.vector) := io.axi.r.bits.data
+        reFillBuffer(refillWriteMask.io.vector) := io.axi.r.bits.data.asTypeOf(Vec(4, UInt(8.W)))
         // update the vec to record which positions has been written to
         refillWriteVec(refillWriteMask.io.vector) := true.B
 
@@ -504,7 +522,7 @@ class newDCache(
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
       valid(indexReg)(lruWayReg) := true.B
-      dirty(indexReg)(lruWayReg) := false.B
+      dirty(indexReg)(lruWayReg) := refillWriteVecDirty
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
@@ -558,7 +576,7 @@ class newDCache(
     bank.io.we   := we(i)(j)
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
-    bank.io.writeData := Mux(isWriteBack, reFillBuffer(j), io.wChannel.data)
+    bank.io.writeData := Mux(isWriteBack, reFillBuffer(j).asUInt, io.wChannel.data)
     bank.io.writeMask := Mux(isWriteBack, 15.U(4.W), io.wChannel.sel)
     bankData(i)(j)    := bank.io.readData
   }
