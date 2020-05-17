@@ -3,7 +3,8 @@
 package cpu.cache
 
 import chisel3._
-import shared.{CircularShifter, CircularShifterInt, PseudoLRUMRU, PseudoLRUTree, TrueLRU}
+import shared.LRU.PseudoLRUMRU
+import shared.{CircularShifter, CircularShifterInt}
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
 import cpu.common.NiseSramReadIO
@@ -14,6 +15,8 @@ import shared.Constants._
 
 //TODO: discuss propagating the signal
 //TODO: change into a read only interface
+//TODO: be able to invalidate the refill buffer
+//TODO: optimize axi port
 /**
   * icache with an AXI interface
   * @param setAmount how many sets there are in the i-cache
@@ -22,11 +25,11 @@ import shared.Constants._
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class ICache(
-  setAmount:                Int = 64,
-  wayAmount:                Int = 4,
-  bankAmount:               Int = 16,
-  performanceMonitorEnable: Boolean = false
-) extends Module {
+              setAmount:                Int = 64,
+              wayAmount:                Int = 4,
+              bankAmount:               Int = 16,
+              performanceMonitorEnable: Boolean = false
+            ) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
@@ -100,7 +103,6 @@ class ICache(
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
   val addr = io.rInst.addr
-  val cachedTrans = true.B
 
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
@@ -109,9 +111,9 @@ class ICache(
   //-------------------------------------------------------------------------------
   //--------------------set up the memory banks and wire them to their states------
   //-------------------------------------------------------------------------------
-  /** valid(way)(index) */
+  /** valid(index)(way) */
   //TODO: change the order if it is not banked
-  val valid = RegInit(VecInit(Seq.fill(wayAmount)(VecInit(Seq.fill(setAmount)(false.B)))))
+  val valid = RegInit(VecInit(Seq.fill(setAmount)(VecInit(Seq.fill(wayAmount)(false.B)))))
 
   /** Write enable mask, we(way)(bank) */
   val we = Wire(Vec(wayAmount, Vec(bankAmount, Bool())))
@@ -126,7 +128,7 @@ class ICache(
   val tagData = Wire(Vec(wayAmount, UInt(tagLen.W)))
 
   // there are several backends for LRU, mru performs better than tree
-  val LRU = Module(new PseudoLRUMRU(numOfWay = wayAmount, numOfSets = setAmount))
+  val LRU = Module(new PseudoLRUMRU( numOfSets = setAmount, numOfWay = wayAmount))
 
   val tagWire = Wire(UInt(tagLen.W))
 
@@ -143,6 +145,11 @@ class ICache(
   val isReFill = state === sReFill
   val isWriteBack = state === sWriteBack
 
+  // check during reFill whether tag and index are the same as old
+  val isTagSameAsOld = tag === tagReg
+  val isIndexSameAsOld = index === indexReg
+  val isBankOffsetSameAsOld = bankOffset === bankOffsetReg
+
   // check if there is a hit and the line that got the hit if there is a hit
   // despite its name, this indicates a true hit
   val isHit = WireDefault(false.B)
@@ -155,16 +162,14 @@ class ICache(
   hitWay := 0.U
 
   // check across all ways in the desired set
-  for (i <- 0 until wayAmount) {
-    when(!valid(i)(index)) {
-      isSetNotFull := true.B
-      emptyPtr := i.U
-    }
-    when(valid(i)(index) && tagData(i) === tag) {
-      hitWay := i.U
-      isHit := true.B
-    }
-  }
+  isSetNotFull := valid(indexReg).contains(false.B)
+  emptyPtr := valid(indexReg).indexWhere(isWayValid => !isWayValid)
+
+  val tagCheckVec = Wire(Vec(wayAmount, Bool()))
+  tagCheckVec := (tagData.map( _ === tag) zip valid(index)).map{case (tagMatch, isValid) => tagMatch && isValid}
+  hitWay := tagCheckVec.indexWhere(tagMatchAndValid => tagMatchAndValid  === true.B)
+  isHit := tagCheckVec.contains(true.B)
+
 
   //-----------------------------------------------------------------------------
   //------------------initialize default IO--------------------------------
@@ -183,14 +188,11 @@ class ICache(
   io.axi := DontCare
 
   io.axi.ar.bits.id := INST_ID
-  io.axi.ar.bits.addr := Mux(
-    cachedTrans,
-    //    Cat(0.U(3.W), addr(28, 2 + log2Ceil(bankAmount)), 0.U((2 + log2Ceil(bankAmount)).W)),
-    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0))),
-    virToPhy(addr)
-  )
+  io.axi.ar.bits.addr :=
+    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0)))
 
-  io.axi.ar.bits.len := Mux(cachedTrans, (bankAmount - 1).U(4.W), 0.U(4.W)) // 16 or 1
+
+  io.axi.ar.bits.len := (bankAmount - 1).U(4.W)
   io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
   io.axi.ar.bits.burst := "b10".U(2.W) // wrap burst
 
@@ -200,22 +202,20 @@ class ICache(
     */
   io.axi.ar.valid := isWaitForAR
 
-  //  io.axi.r.ready := state === sReFill
-  io.axi.r.ready := true.B
 
   // these are hard wired as required by Loongson
   io.axi.ar.bits.lock := 0.U
   //TODO: can we utilize this?
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U
-  // hardcode r to always be ready
-  //TODO: check in case of problem
+
+  io.axi.r.ready := state === sReFill
 
   val instruction = Wire(UInt(dataLen.W))
   val hitWayReg = RegNext(hitWay)
   val bankOffSetNextReg = RegNext(bankOffset)
   instruction := bankData(hitWayReg)(bankOffSetNextReg)
-  io.rInst.valid := cachedTrans && isIdle && isHit && io.rInst.enable
+  io.rInst.valid := isIdle && isHit && io.rInst.enable
   io.rInst.data := instruction
 
   LRU.io.accessEnable := false.B
@@ -240,7 +240,6 @@ class ICache(
 
   def beginARTransaction(): Unit = {
     indexReg := index
-//    lruWayReg := lruLine
     tagReg := tag
     bankOffsetReg := bankOffset
   }
@@ -309,6 +308,32 @@ class ICache(
       assert(io.axi.r.bits.id === INST_ID, "r id is not supposed to be different from i-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
 
+      io.rInst.valid := false.B
+      // by default, this is connected to the rData register that preserves the hit
+      // in refill buffer or axi from the previous cycle, this could also be connected
+      // to i-cache ( instruction variable )
+      io.rInst.data := rDataReg
+      // this defaults to false, as this value is only used in the write back state
+      rValidReg := false.B
+      checkICacheHit()
+
+      /**
+        * check if there is a hit in the I-cache
+        */
+      when(isHit && io.rInst.enable) {
+        io.rInst.valid := true.B
+        rICacheHitReg := true.B
+        updateLRU(hitWay)
+      }
+
+      // check if there is a hit in the write vec
+      when(writeVec(bankOffset) && io.rInst.enable && isTagSameAsOld && isIndexSameAsOld) {
+        // if the hit occurs in the refill buffer
+        io.rInst.valid := true.B
+        rDataReg := reFillBuffer(bankOffset)
+        rValidReg := true.B
+      }
+
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         // update the write mask
@@ -322,38 +347,13 @@ class ICache(
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
 
-        io.rInst.valid := false.B
-        // by default, this is connected to the rData register that preserves the hit
-        // in refill buffer or axi from the previous cycle, this could also be connected
-        // to i-cache ( instruction variable )
-        io.rInst.data := rDataReg
-        // this defaults to false, as this value is only used in the write back state
-        rValidReg := false.B
-        checkICacheHit()
-
-        /**
-          * check if there is a hit in the I-cache
-          */
-        when(isHit && io.rInst.enable) {
-          io.rInst.valid := true.B
-          rICacheHitReg := true.B
-          updateLRU(hitWay)
-        }
-
         // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
         // when index and tag are hit
-        when((tag === tagReg) && (index === indexReg) && io.rInst.enable) {
+        when(isTagSameAsOld && isIndexSameAsOld && io.rInst.enable && isBankOffsetSameAsOld) {
           // when there is a direct hit from the bank
-          when(bankOffset === bankOffsetReg) {
-            io.rInst.valid := true.B
-            rValidReg := true.B
-            // r data reg = axi r bits by default
-          }.elsewhen(writeVec(bankOffset)) {
-            // if the hit occurs in the refill buffer
-            io.rInst.valid := true.B
-            rDataReg := reFillBuffer(bankOffset)
-            rValidReg := true.B
-          }
+          io.rInst.valid := true.B
+          rValidReg := true.B
+          // r data reg = axi r bits by default
         }
 
         when(io.axi.r.bits.last) {
@@ -373,7 +373,7 @@ class ICache(
       // write the data to the corresbonding bank
       we(lruWayReg) := Seq.fill(bankAmount)(true.B)
       // update the valid to be true, whether it is before
-      valid(lruWayReg)(indexReg) := true.B
+      valid(indexReg)(lruWayReg) := true.B
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
@@ -416,8 +416,8 @@ class ICache(
     when(io.rInst.valid) {
       hitCycleCounter := hitCycleCounter + 1.U
     }.elsewhen(io.rInst.enable && !io.rInst.valid) {
-        missCycleCounter := missCycleCounter + 1.U
-      }
+      missCycleCounter := missCycleCounter + 1.U
+    }
       .otherwise {
         idleCycleCounter := idleCycleCounter + 1.U
       }
@@ -428,11 +428,4 @@ class ICache(
     io.performanceMonitorIO.get := performanceMonitorWire
   }
 
-  assert(io.axi.r.ready === true.B, "r ready signal should always be high")
-
-  /** just erase high 3 bits */
-  def virToPhy(addr: UInt): UInt = {
-    require(addr.getWidth == addrLen)
-    Cat(0.U(3.W), addr(28, 0))
-  }
 }

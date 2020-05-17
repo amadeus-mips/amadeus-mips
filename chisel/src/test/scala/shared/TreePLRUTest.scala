@@ -2,6 +2,7 @@ package shared
 import chisel3._
 import chisel3.util._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
+import shared.LRU.PseudoLRUTree
 
 class TreePLRUTest extends ChiselFlatSpec {
   behavior.of("tree plru")

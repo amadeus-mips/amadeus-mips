@@ -1,8 +1,7 @@
-package shared
+package shared.LRU
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.random._
 
 class PseudoLRUMRU(numOfWay: Int, numOfSets: Int) extends Module {
   require(numOfWay != 2, "number of way should not be 2. We have a true LRU for 2")
