@@ -335,7 +335,7 @@ class newDCache(
     * if there is a hit, send the cacheContents ( this cycle )
     * to the rChannel, valid has been asserted last cycle
     */
-  def checkDCacheHit(): Unit = {
+  def checkPreviousDCacheHit(): Unit = {
     when(rDCacheHitReg) {
       rDCacheHitReg    := false.B
       io.rChannel.data := cacheContents
@@ -347,7 +347,7 @@ class newDCache(
     * this is to preserve the result across the fsm
     * state boundary
     */
-  def checkRefillBufferHit(): Unit = {
+  def checkPreviousRefillBufferHit(): Unit = {
     when(rValidReg) {
       rValidReg        := false.B
       io.rChannel.data := rChannelReg
@@ -397,6 +397,56 @@ class newDCache(
     // enter read miss
     state := sWaitForAR
   }
+
+  def handleWriteHit(): Unit = {
+    // flag wChannel valid to show that this operation has completed
+    io.wChannel.valid := true.B
+
+    // write to the way that is hit
+    we(hitWay)(bankOffset) := true.B
+    // by default, the write mask is connected
+    // make the line dirty
+    dirty(index)(hitWay) := true.B
+    // update the LRU
+    updateLRU(hitWay)
+  }
+
+  /**
+    * check if there is a hit in the refill buffer
+    */
+  def checkRefillBufferHit(): Unit = {
+    /** if the reFill buffer could have a hit*/
+    when(refillWriteVec(bankOffset) && isTagSameAsOld && isIndexSameAsOld) {
+      // if it is a read hit, buffer the result, assert read valid
+      when (io.rChannel.enable) {
+        // if the hit occurs in the refill buffer
+        io.rChannel.valid := true.B
+        rChannelReg := reFillBuffer(bankOffset).asUInt
+        rValidReg := true.B
+      }.elsewhen(io.wChannel.enable) {
+        // if it is a write hit, write into reFill buffer
+        for ( i <- 0 until 4 ) {
+          when (io.wChannel.sel(i)) {
+            reFillBuffer(bankOffset)(i) := io.wChannel.data(i*8+7, i*8)
+          }
+        }
+        io.wChannel.valid := true.B
+        refillWriteVecDirty := true.B
+      }
+    }
+  }
+
+  def checkDCacheHit(): Unit = {
+    when (isHit) {
+      when(io.rChannel.enable) {
+        io.rChannel.valid := true.B
+        rDCacheHitReg     := true.B
+        updateLRU(hitWay)
+      }.elsewhen(io.wChannel.enable) {
+        handleWriteHit()
+      }
+    }
+  }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -415,12 +465,7 @@ class newDCache(
         }
       }.elsewhen(io.wChannel.enable) {
         when(isHit) {
-          // write to the way that is hit
-          we(hitWay)(bankOffset) := true.B
-          // make the line dirty
-          dirty(index)(hitWay) := true.B
-          // update the LRU
-          updateLRU(hitWay)
+          handleWriteHit()
         }.otherwise {
           handleReadMiss()
         }
@@ -440,45 +485,15 @@ class newDCache(
 
 
       io.rChannel.valid := false.B
-      // by default, this is connected to the rChannel register that preserves the hit
-      // in refill buffer or axi from the previous cycle, this could also be connected
-      // to d-cache ( instruction variable )
-      io.rChannel.data := rChannelReg
+
       // this defaults to false, as this value is only used in the write back state
       rValidReg := false.B
+
+      checkPreviousDCacheHit()
+      checkPreviousRefillBufferHit()
+
+      checkRefillBufferHit()
       checkDCacheHit()
-
-      /**
-        * check if there is a hit in the d-cache
-        */
-      when(isHit && io.rChannel.enable) {
-        io.rChannel.valid := true.B
-        rDCacheHitReg     := true.B
-        updateLRU(hitWay)
-      }
-
-      /**
-        * check if there is a hit in the refill buffer
-        */
-      when(refillWriteVec(bankOffset) && io.rChannel.enable && isTagSameAsOld && isIndexSameAsOld) {
-        // if the hit occurs in the refill buffer
-        io.rChannel.valid := true.B
-        rChannelReg       := reFillBuffer(bankOffset).asUInt
-        rValidReg         := true.B
-      }
-
-      /**
-        * check if I could write into reFill buffer
-        */
-      when (io.wChannel.enable && isTagSameAsOld && isIndexSameAsOld && refillWriteVec(bankOffset)) {
-        for ( i <- 0 until 4 ) {
-          when (io.wChannel.sel(i)) {
-            reFillBuffer(bankOffset)(i) := io.wChannel.data(i*8+7, i*8)
-          }
-        }
-        io.wChannel.valid := true.B
-        refillWriteVecDirty := true.B
-      }
 
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
@@ -492,15 +507,6 @@ class newDCache(
 
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
-
-        // refill is hit when tag is a hit, and index is a hit, and the data from axi is ready
-        // when index and tag are hit
-        when(isTagSameAsOld && isIndexSameAsOld && io.rChannel.enable && isBankOffsetSameAsOld) {
-          // when there is a direct hit from the bank
-            io.rChannel.valid := true.B
-            rValidReg         := true.B
-            // as rChannel reg is implicitly axi r bits data, no need to reassign
-        }
 
         //TODO: performance counter: how many writes will be issued?
         when(io.axi.r.bits.last) {
@@ -530,12 +536,14 @@ class newDCache(
       // update LRU to point at the refilled line
       updateLRU(lruWayReg)
       // preserve across the boundary in the state change
-      checkRefillBufferHit()
-      checkDCacheHit()
+      checkPreviousRefillBufferHit()
+      checkPreviousDCacheHit()
 
       state := Mux(waitForAWHandshake, sTransfer, sIdle)
     }
     is(sTransfer) {
+      checkPreviousDCacheHit()
+      checkDCacheHit()
       // after an aw handshake, waitfor signal is de asserted
       // aw valid is de asserted
       when(io.axi.aw.fire) {

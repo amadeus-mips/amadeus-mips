@@ -94,6 +94,10 @@ class ICacheTestModule extends Module {
 }
 
 class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
+  /**
+    * read the memory at addr and compare it with the golden memory
+    * @param addr the memory op address
+    */
   def memRead(addr: Int): Unit = {
     poke(dut.io.wChannel.enable, false)
     poke(dut.io.rChannel.enable, true)
@@ -115,6 +119,11 @@ class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extend
     step(1)
   }
 
+  /**
+    * write a random value to addr and update the golden model
+    * @param addr write at addr
+    * @param mask the write mask
+    */
   def memWrite(addr: Int, mask: List[Boolean] = List.fill(4)(true)): Unit = {
     val data = List.tabulate(4)((x: Int) => scala.util.Random.nextInt(256))
     poke(dut.io.wChannel.enable, true)
@@ -167,10 +176,13 @@ class ICacheBaseTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extend
 }
 
 class DCacheCheckLRUTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends DCacheBaseTester(dut, goldenModel) {
+  /**
+    * check for correct lru and evict behavior
+    */
   for (i <- 0 until 4) {
     memRead(i*256 + 4)
   }
-  for (i <- 0 until 3) {
+  for (i <- 0 until 8) {
     memWrite(i*256 + 4)
   }
   for (i <- 4 until 11) {
@@ -178,6 +190,15 @@ class DCacheCheckLRUTester(dut: DCacheTestModule, goldenModel: PerfectMemory) ex
   }
   for (i <- 0 until 4) {
     memRead(i*256 + 4)
+  }
+  for (i <- 0 until 4) {
+    memRead(i*256+4)
+    memWrite(i*256)
+  }
+  memRead(4 * 256)
+  for ( i <- 0 until 8) {
+    memWrite(1 * 256 + i * 4)
+    memRead(1*256 + i * 4)
   }
 }
 
