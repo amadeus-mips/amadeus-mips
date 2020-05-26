@@ -53,8 +53,10 @@ class SocLiteTop(
   val confreg         = Module(new Confreg(socCfg.simulation))
   val ram             = Module(new AXIRamRandomWrap())
 
-  axiInterconnect.io.slaves(0)  <> cpu.io.dataAXI
-  axiInterconnect.io.slaves(1)  <> cpu.io.instAXI
+  // the optional performance IO
+  axiInterconnect.io.slaves(0) <> cpu.io.dataAXI
+  axiInterconnect.io.slaves(1) <> cpu.io.instAXI
+  axiInterconnect.io.slaves(2) <> cpu.io.unCachedAXI
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 

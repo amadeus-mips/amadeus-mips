@@ -25,11 +25,11 @@ import shared.Constants._
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class ICache(
-              setAmount:                Int = 64,
-              wayAmount:                Int = 4,
-              bankAmount:               Int = 16,
-              performanceMonitorEnable: Boolean = false
-            ) extends Module {
+  setAmount:                Int = 64,
+  wayAmount:                Int = 4,
+  bankAmount:               Int = 16,
+  performanceMonitorEnable: Boolean = false
+) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
     val rInst = Flipped(new NiseSramReadIO)
@@ -351,9 +351,9 @@ class ICache(
         // when index and tag are hit
         when(isTagSameAsOld && isIndexSameAsOld && io.rInst.enable && isBankOffsetSameAsOld) {
           // when there is a direct hit from the bank
-          io.rInst.valid := true.B
-          rValidReg := true.B
-          // r data reg = axi r bits by default
+            io.rInst.valid := true.B
+            rValidReg := true.B
+            // r data reg = axi r bits by default
         }
 
         when(io.axi.r.bits.last) {
@@ -391,6 +391,7 @@ class ICache(
     j <- 0 until bankAmount
   } yield {
     val bank = Module(new SinglePortBank(setAmount, dataLen, syncRead = true))
+    bank.suggestName(s"dbank_way${i}_bankOffset${j}")
     bank.io.we := we(i)(j)
     bank.io.en.get := true.B
     bank.io.addr := indexWire
@@ -399,6 +400,7 @@ class ICache(
   }
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
+    bank.suggestName(s"tagBank_bankOffset${i}")
     bank.io.we := tagWe(i)
     bank.io.addr := indexWire
     bank.io.inData := tagReg
@@ -416,8 +418,8 @@ class ICache(
     when(io.rInst.valid) {
       hitCycleCounter := hitCycleCounter + 1.U
     }.elsewhen(io.rInst.enable && !io.rInst.valid) {
-      missCycleCounter := missCycleCounter + 1.U
-    }
+        missCycleCounter := missCycleCounter + 1.U
+      }
       .otherwise {
         idleCycleCounter := idleCycleCounter + 1.U
       }

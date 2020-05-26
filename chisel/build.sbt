@@ -39,6 +39,9 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("releases")
 )
 
+// enable @chiselName and other macros
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map(
   "chisel3" -> "3.2.+",
@@ -50,6 +53,7 @@ libraryDependencies ++= Seq("chisel3", "chisel-iotesters").map {
 }
 
 libraryDependencies += "net.fornwall.jelf" % "jelf" % "0.4.1"
+libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.2.1"
 
 libraryDependencies += "org.typelevel" %% "spire" % "0.14.1"
 

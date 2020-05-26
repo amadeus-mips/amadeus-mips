@@ -5,7 +5,10 @@ import java.nio.file.{Files, Paths}
 
 import chisel3.iotesters.PeekPokeTester
 
+import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
+
+import java.io._
 
 /**
   *
@@ -18,12 +21,15 @@ class SocLiteTopUnitTester(
 )(implicit tcfg: TestConfig)
     extends PeekPokeTester(c) {
 
-  import chisel3._
-
   tcfg.check(perfNumber)
 
   val writeTraceFile =
     if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/cmp.txt") else None
+
+  val perfLog = ArrayBuffer('p','e','r','f','l','o','g','\n')
+
+  import chisel3._
+
 
   val isPerf = tcfg.runAllPerf || perfNumber != 0
 
@@ -141,6 +147,9 @@ class SocLiteTopUnitTester(
       }
       update(1)
     }
+    if (isPerf) {
+      printPerfLog()
+    }
     true
   }
 
@@ -179,23 +188,36 @@ class SocLiteTopUnitTester(
   def uartSimu(): Unit = {
     if (peek(c.io.uart.valid) != 0) {
       print(peek(c.io.uart.bits).toChar)
+      if (isPerf) {
+        perfLog += peek(c.io.uart.bits).toChar
+      }
     }
+  }
+
+  def printPerfLog(): Unit = {
+    require(isPerf)
+    val fileName = "./perfLog/perfLog.txt"
+    val writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName, true)))
+    for (character <- perfLog) {
+      writer.write(character)
+    }
+    writer.close()
   }
 
   def debugInfo = f"pc--0x$pc%08x, wen--${(wen != 0).toString}%5s, wnum--$wnum%02x, wdata--0x$wdata%08x"
 
   def err(msg: String) = {
-    println(Console.RED + "Error: " + msg + Console.RESET)
+    println(scala.Console.RED + "Error: " + msg + scala.Console.RESET)
   }
 
   def log(msg: String) = {
     if (!tcfg.banLog) {
-      println(Console.CYAN + "Log: " + msg + Console.RESET)
+      println(scala.Console.CYAN + "Log: " + msg + scala.Console.RESET)
     }
   }
 
   def info(msg: String) = {
-    println(Console.CYAN + "Info: " + msg + Console.RESET)
+    println(scala.Console.CYAN + "Info: " + msg + scala.Console.RESET)
   }
 
   if (tcfg.trace) source.get.close()
