@@ -53,6 +53,7 @@ libraryDependencies ++= Seq("chisel3", "chisel-iotesters").map {
 }
 
 libraryDependencies += "net.fornwall.jelf" % "jelf" % "0.4.1"
+libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.2.1"
 
 libraryDependencies += "org.typelevel" %% "spire" % "0.14.1"
 

@@ -3,14 +3,13 @@
 package cpu.cache
 
 import chisel3._
-import chisel3.internal.naming.chiselName
 import cpu.common.NiseSramWriteIO
-import shared.LRU.PseudoLRUMRU
-import shared.{CircularShifter, CircularShifterInt}
+import shared.CircularShifterInt
+import shared.LRU.PLRUMRUNM
 //import chisel3.util.{log2Ceil, Cat}
 import chisel3.util._
-import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
+import cpu.common.NiseSramReadIO
 import cpu.performance.CachePerformanceMonitorIO
 import shared.AXIIO
 import shared.Constants._
@@ -20,7 +19,7 @@ import shared.Constants._
 //TODO: be able to invalidate the refill buffer
 //TODO: optimize axi port
 //TODO: Don't make untranslated/uncached go through d-cache
-
+//TODO: Don't get in the way of the critical path
 //TODO: better software engineering with d-cache
 /**
   * DCache with an AXI interface
@@ -180,7 +179,7 @@ class newDCache(
   val tagData = Wire(Vec(wayAmount, UInt(tagLen.W)))
 
   // there are several backends for LRU, mru performs better than tree
-  val LRU = Module(new PseudoLRUMRU(numOfSets = setAmount, numOfWay = wayAmount ))
+  val LRU = PLRUMRUNM(numOfSets = setAmount, numOfWay = wayAmount)
 
   val tagWire = Wire(UInt(tagLen.W))
 
@@ -208,7 +207,7 @@ class newDCache(
   val isBankOffsetSameAsOld = bankOffset === bankOffsetReg
 
   // check which is the lru line
-  val lruLine = LRU.io.lruLine
+  val lruLine = LRU.getLRU(index)
 
   // check if there is a hit and determine the way of the hit
   val hitWay = Wire(UInt(log2Ceil(wayAmount).W))
@@ -302,9 +301,6 @@ class newDCache(
   // a write is successful the state is idle and write enable is asserted
   io.wChannel.valid := isIdle && isHit && io.wChannel.enable
 
-  LRU.io.accessEnable := false.B
-  LRU.io.accessWay    := DontCare
-  LRU.io.accessSet    := index
 
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
@@ -355,15 +351,6 @@ class newDCache(
   }
 
   /**
-    * update lru to point at the access way
-    * @param accessWay the way that I'm going to access
-    */
-  def updateLRU(accessWay: UInt): Unit = {
-    LRU.io.accessEnable := true.B
-    LRU.io.accessWay    := accessWay
-  }
-
-  /**
     * invalidate the cache line
     * @param evictWay from which way to evict
     * @param setIndex which is the index to evict
@@ -398,6 +385,46 @@ class newDCache(
     state := sWaitForAR
   }
 
+  def checkDCacheHit(): Unit = {
+    when(isHit) {
+      when(io.rChannel.enable) {
+        io.rChannel.valid := true.B
+        rDCacheHitReg := true.B
+        LRU.update(index, hitWay)
+      }.elsewhen(io.wChannel.enable && !io.axi.r.bits.last) {
+        //TODO: check this and get it out of the critical path
+        // Don't write to underlying banks when r last, dirty will be discarded if
+        // in the same index, same way
+        handleWriteHit()
+      }
+    }
+  }
+
+  /**
+    * check if there is a hit in the refill buffer
+    */
+  def checkRefillBufferHit(): Unit = {
+    /** if the reFill buffer could have a hit */
+    when(refillWriteVec(bankOffset) && isTagSameAsOld && isIndexSameAsOld) {
+      // if it is a read hit, buffer the result, assert read valid
+      when(io.rChannel.enable) {
+        // if the hit occurs in the refill buffer
+        io.rChannel.valid := true.B
+        rChannelReg := reFillBuffer(bankOffset).asUInt
+        rValidReg := true.B
+      }.elsewhen(io.wChannel.enable) {
+        // if it is a write hit, write into reFill buffer
+        for ( i <- 0 until 4 ) {
+          when(io.wChannel.sel(i)) {
+            reFillBuffer(bankOffset)(i) := io.wChannel.data(i * 8 + 7, i * 8)
+          }
+        }
+        io.wChannel.valid := true.B
+        refillWriteVecDirty := true.B
+      }
+    }
+  }
+
   def handleWriteHit(): Unit = {
     // flag wChannel valid to show that this operation has completed
     io.wChannel.valid := true.B
@@ -408,45 +435,9 @@ class newDCache(
     // make the line dirty
     dirty(index)(hitWay) := true.B
     // update the LRU
-    updateLRU(hitWay)
+    LRU.update(index, hitWay)
   }
 
-  /**
-    * check if there is a hit in the refill buffer
-    */
-  def checkRefillBufferHit(): Unit = {
-    /** if the reFill buffer could have a hit*/
-    when(refillWriteVec(bankOffset) && isTagSameAsOld && isIndexSameAsOld) {
-      // if it is a read hit, buffer the result, assert read valid
-      when (io.rChannel.enable) {
-        // if the hit occurs in the refill buffer
-        io.rChannel.valid := true.B
-        rChannelReg := reFillBuffer(bankOffset).asUInt
-        rValidReg := true.B
-      }.elsewhen(io.wChannel.enable) {
-        // if it is a write hit, write into reFill buffer
-        for ( i <- 0 until 4 ) {
-          when (io.wChannel.sel(i)) {
-            reFillBuffer(bankOffset)(i) := io.wChannel.data(i*8+7, i*8)
-          }
-        }
-        io.wChannel.valid := true.B
-        refillWriteVecDirty := true.B
-      }
-    }
-  }
-
-  def checkDCacheHit(): Unit = {
-    when (isHit) {
-      when(io.rChannel.enable) {
-        io.rChannel.valid := true.B
-        rDCacheHitReg     := true.B
-        updateLRU(hitWay)
-      }.elsewhen(io.wChannel.enable) {
-        handleWriteHit()
-      }
-    }
-  }
   //-----------------------------------------------------------------------------
   //------------------fsm transformation-----------------------------------------
   //-----------------------------------------------------------------------------
@@ -459,7 +450,7 @@ class newDCache(
       when(io.rChannel.enable) {
         // enable already ensures that the address is aligned
         when(isHit) {
-          updateLRU(hitWay)
+          LRU.update(index, hitWay)
         }.otherwise {
           handleReadMiss()
         }
@@ -479,10 +470,6 @@ class newDCache(
     is(sReFill) {
 //      assert(io.axi.r.bits.id === DATA_ID, "r id is not supposed to be different from d-cache id")
       assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
-
-
-
-
 
       io.rChannel.valid := false.B
 
@@ -534,7 +521,7 @@ class newDCache(
       valid(indexReg)(lruWayReg) := true.B
       dirty(indexReg)(lruWayReg) := refillWriteVecDirty
       // update LRU to point at the refilled line
-      updateLRU(lruWayReg)
+      LRU.update(indexReg, lruWayReg)
       // preserve across the boundary in the state change
       checkPreviousRefillBufferHit()
       checkPreviousDCacheHit()
