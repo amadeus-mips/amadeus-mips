@@ -2,7 +2,8 @@
 package memory.axi
 
 import chisel3._
-import shared.{AXIIO, Constants}
+import _root_.axi.AXIIO
+import shared.Constants
 
 class AXI1x2SramInterface extends Module {
   val io = IO(new Bundle {

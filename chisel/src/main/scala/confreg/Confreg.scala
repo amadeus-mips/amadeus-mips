@@ -50,7 +50,8 @@ package confreg
 
 import chisel3._
 import chisel3.util._
-import shared.{AXIIO, GPIO}
+import axi.AXIIO
+import shared.GPIO
 
 /**
   * If you want to add address map,  you need to modify function [[axi_interfaceHandle()]] at least.

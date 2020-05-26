@@ -4,7 +4,7 @@ package cpu
 
 import chisel3._
 import chisel3.util._
-import shared.AXIIO
+import axi.AXIIO
 
 class AXIInterface extends Module {
   val io = IO(new Bundle {

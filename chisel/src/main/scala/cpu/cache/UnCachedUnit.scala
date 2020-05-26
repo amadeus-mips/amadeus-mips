@@ -3,7 +3,8 @@ package cpu.cache
 import chisel3._
 import chisel3.util._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
-import shared.{AXIIO, Constants}
+import axi.AXIIO
+import shared.Constants
 
 //TODO: what if trap during write
 class UnCachedUnit extends Module {

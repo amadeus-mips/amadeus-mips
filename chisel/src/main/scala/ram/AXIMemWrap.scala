@@ -2,7 +2,7 @@ package ram
 
 import chisel3._
 import chisel3.util._
-import shared.AXIIO
+import axi.AXIIO
 
 @deprecated
 class AXIMemWrap(

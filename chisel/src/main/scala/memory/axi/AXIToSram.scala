@@ -4,7 +4,7 @@ package memory.axi
 
 import chisel3._
 import chisel3.util._
-import shared.AXIIO
+import _root_.axi.AXIIO
 
 class QueueBundle extends Bundle {
   val addr = UInt(32.W)

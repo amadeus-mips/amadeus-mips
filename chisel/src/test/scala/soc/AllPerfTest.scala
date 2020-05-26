@@ -3,14 +3,17 @@ package soc
 import chisel3.iotesters.{ChiselFlatSpec, Driver}
 class AllPerfTest extends ChiselFlatSpec {
   behavior of ("soc run perf test")
-  val perfFile = "./src/test/resources/loongson/perf/axi_ram.coe"
+  // soc config
+  implicit val socCfg = SocConfig.perfConfig(simulation = true)
+  // test config
+  implicit val tcfg = new TestConfig(banLog = true, runAllPerf = true, vcdOn = false)
 
   "log" should "be dumped" in {
     Driver.execute(
       Array("--backend-name", "verilator", "--generate-vcd-output", "off"),
-      () => new SocLiteTop(simulation = true, memFile = perfFile)
+      () => new SocLiteTop()
     ) { c =>
-      new SocLiteTopUnitTester(c, banLog = true, runAllPerf = true)
+      new SocLiteTopUnitTester(c)
     } should be(true)
   }
 }

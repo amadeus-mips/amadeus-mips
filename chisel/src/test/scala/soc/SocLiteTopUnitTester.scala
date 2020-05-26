@@ -140,7 +140,7 @@ class SocLiteTopUnitTester(
           writeTrace()
         }
       }
-      if (!(current - lastTime < 10000)) {
+      if (!(current - lastTime < 20000)) {
         err(lastDebugInfo)
         err("Exit-time exceed")
         return false

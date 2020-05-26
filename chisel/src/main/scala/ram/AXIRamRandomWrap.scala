@@ -34,7 +34,7 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 package ram
 
 import chisel3._
-import shared.AXIIO
+import axi.AXIIO
 import soc.DelayType.{NoDelay, RandomDelay, StaticDelay}
 import soc.SocConfig
 

@@ -10,7 +10,7 @@ import chisel3.util._
 import cpu.common.NiseSramReadIO
 import cpu.common.DefaultConfig._
 import cpu.performance.CachePerformanceMonitorIO
-import shared.AXIIO
+import axi.AXIIO
 import shared.Constants._
 
 //TODO: discuss propagating the signal

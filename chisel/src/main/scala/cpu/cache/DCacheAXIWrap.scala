@@ -6,7 +6,7 @@ import chisel3._
 import chisel3.util.Cat
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.common.DefaultConfig._
-import shared.AXIIO
+import axi.AXIIO
 import shared.Constants._
 
 class DCacheAXIWrap extends Module {

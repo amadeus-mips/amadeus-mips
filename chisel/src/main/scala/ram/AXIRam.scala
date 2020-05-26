@@ -1,10 +1,11 @@
 package ram
 
+import axi.{AXIAddrBundle, AXIIO}
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
 import firrtl.annotations.MemoryLoadFileType
-import shared.{AXIAddrBundle, AXIIO, Constants, Util}
+import shared.{Constants, Util}
 
 /**
   * Only for simulation

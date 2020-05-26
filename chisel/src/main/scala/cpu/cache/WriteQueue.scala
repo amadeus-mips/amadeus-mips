@@ -2,7 +2,8 @@ package cpu.cache
 
 import chisel3._
 import chisel3.util._
-import shared.{AXIIO, Constants}
+import axi.AXIIO
+import shared.Constants
 
 class BufferLineAddr(val tagWidth: Int, val indexWidth: Int) extends Bundle {
   val tag = UInt(tagWidth.W)

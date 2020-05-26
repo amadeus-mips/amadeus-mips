@@ -4,7 +4,7 @@ package memory
 import chisel3._
 import memory.axi.AXI1x2SramInterface
 import memory.physicalMem.{DMemCombinationalPortForAXI, DualPortedCombinMemory, IMemCombinationalPortForAXI}
-import shared.AXIIO
+import _root_.axi.AXIIO
 
 class memoryAXIWrap(memFile: String) extends Module {
   val io = IO(new Bundle {

@@ -2,7 +2,8 @@ package memory.axi
 
 import chisel3._
 import chisel3.util._
-import shared.{AXIIO, CircularShifter}
+import _root_.axi.AXIIO
+import shared.CircularShifter
 
 /**
   * a ram axi slave end with fixed burst length and fixed burst type of wrap

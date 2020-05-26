@@ -2,11 +2,12 @@
 
 package cpu
 
+import axi.AXIIO
 import chisel3._
-import cpu.cache.{newDCache, DCacheAXIWrap, ICache, UnCachedUnit}
+import cpu.cache.{newDCache, ICache, UnCachedUnit}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
-import shared.{AXIIO, DebugBundle}
+import shared.DebugBundle
 
 /**
   * instantiate the top level module of the CPU
@@ -19,8 +20,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
     /** hardware interrupt */
     val intr = Input(UInt(6.W))
 
-    val instAXI = AXIIO.master()
-    val dataAXI = AXIIO.master()
+    val instAXI     = AXIIO.master()
+    val dataAXI     = AXIIO.master()
     val unCachedAXI = AXIIO.master()
 
     val debug = Output(new DebugBundle)
@@ -28,10 +29,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
 
-//  val axiInterface = Module(new AXIInterface)
-
-  val iCache = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
-  val dCache = Module(new newDCache)
+  val iCache   = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
+  val dCache   = Module(new newDCache)
   val unCached = Module(new UnCachedUnit)
 
   val core = Module(new Core_ls)
@@ -47,10 +46,6 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
   // in the same cycle
-  val readDataBuffer = Reg(UInt(32.W))
-  val readHoldUncachedReg = RegInit(false.B)
-  val readHoldCachedReg = RegInit(false.B)
-
   val useDCache = RegInit(true.B)
 
   when(!isUnCached(core.io.rChannel.addr)) {
