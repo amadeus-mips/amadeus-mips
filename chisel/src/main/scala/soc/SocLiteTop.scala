@@ -23,7 +23,7 @@
 package soc
 
 /** Modified by Discreater */
-import axi.{AXIInterconnect, AXIInterconnectConfig}
+import axi.{AXIArbiter, AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import chisel3.util.ValidIO
 import confreg.Confreg
@@ -48,13 +48,20 @@ class SocLiteTop(
 
   val cpu = Module(new CPUTop(socCfg.performanceMonitor))
 
-  /** 2x2 interconnect */
-  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.criticalWord))
-  val confreg         = Module(new Confreg(socCfg.simulation))
-  val ram             = Module(new AXIRamRandomWrap())
+  /** 2x1 arbiter */
+  val axiArbiter = Module(new AXIArbiter(2))
 
-  axiInterconnect.io.slaves(0)  <> cpu.io.dataAXI
-  axiInterconnect.io.slaves(1)  <> cpu.io.instAXI
+  /** 1x2 interconnect */
+  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func()))
+
+  val confreg = Module(new Confreg(socCfg.simulation))
+  val ram     = Module(new AXIRamRandomWrap())
+
+  axiArbiter.io.slaves(0) <> cpu.io.dataAXI
+  axiArbiter.io.slaves(1) <> cpu.io.instAXI
+
+  axiInterconnect.io.slaves(0) <> axiArbiter.io.master
+
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 
