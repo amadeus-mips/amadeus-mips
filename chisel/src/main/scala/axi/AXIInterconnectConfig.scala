@@ -202,10 +202,17 @@ class AXIInterconnectConfig
 }
 
 object AXIInterconnectConfig {
-  /** 1 * 2 axi crossbar */
-  def loongson_func = new AXIInterconnectConfig(
-    sCount = 1,
-    mCount = 2,
+
+
+  /**
+    * base loongson func and perf test.
+    * @param sCount the number of slave interface
+    * @param mCount the number of master interface
+    * @return
+    */
+  def loongson_func(sCount: Int = 1, mCount: Int = 2) = new AXIInterconnectConfig(
+    sCount = sCount,
+    mCount = mCount,
     idWidth = 4,
     forwardID = true,
     mRegions = 5,
@@ -219,7 +226,8 @@ object AXIInterconnectConfig {
     )
   )
 
-  /** 2 * 2 */
+  /** use [[loongson_func]] */
+  @deprecated
   def criticalWord = new AXIInterconnectConfig(
     sCount = 2,
     mCount = 2,

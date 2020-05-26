@@ -79,9 +79,9 @@ class SocLiteTopUnitTester(
   }
   if (tcfg.needAssert) require(result)
   step(5)
-  log("Finished!")
-  log(s"run $cCount cycles, $iCount instructions")
-  log(s"IPC is ${iCount.toFloat / cCount}")
+  info("Finished!")
+  info(s"run $cCount cycles, $iCount instructions")
+  info(s"IPC is ${iCount.toFloat / cCount}")
   if (tcfg.performanceMonitorEnable) {
     log(
       s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
