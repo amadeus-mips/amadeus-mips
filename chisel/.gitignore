@@ -349,3 +349,4 @@ project/
 simulator_run_dir/
 perfLog/
 /src/test/resources/loongson/perf/*/*.txt
+verilog/

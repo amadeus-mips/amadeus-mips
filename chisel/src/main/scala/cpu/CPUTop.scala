@@ -4,9 +4,11 @@ package cpu
 
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
+import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import cpu.cache.{ICache, UnCachedUnit, newDCache}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
+import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
 
 /**
@@ -83,4 +85,12 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
     require(addr.getWidth == 32)
     addr(31, 29) === "b101".U(3.W)
   }
+}
+
+object elaborateCPU extends App {
+  (new ChiselStage).execute(
+    Array("--help", "-X", "verilog"),
+    Seq(ChiselGeneratorAnnotation(() => new CPUTop()),
+      TargetDirAnnotation("verilog"))
+  )
 }
