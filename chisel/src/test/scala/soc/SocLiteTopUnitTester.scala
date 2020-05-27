@@ -1,14 +1,12 @@
 package soc
 
-import java.io.PrintWriter
+import java.io.{PrintWriter, _}
 import java.nio.file.{Files, Paths}
 
 import chisel3.iotesters.PeekPokeTester
 
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
-
-import java.io._
 
 /**
   *
@@ -140,7 +138,7 @@ class SocLiteTopUnitTester(
           writeTrace()
         }
       }
-      if (!(current - lastTime < 20000)) {
+      if (!(current - lastTime < 6000)) {
         err(lastDebugInfo)
         err("Exit-time exceed")
         return false

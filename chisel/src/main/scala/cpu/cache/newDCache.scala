@@ -7,11 +7,11 @@ import cpu.common.NiseSramWriteIO
 import shared.CircularShifterInt
 import shared.LRU.PLRUMRUNM
 //import chisel3.util.{log2Ceil, Cat}
+import axi.AXIIO
 import chisel3.util._
 import cpu.common.DefaultConfig._
 import cpu.common.NiseSramReadIO
 import cpu.performance.CachePerformanceMonitorIO
-import axi.AXIIO
 import shared.Constants._
 
 //TODO: discuss propagating the signal
@@ -275,6 +275,7 @@ class newDCache(
   io.axi.aw.bits.addr := writeAddrReg
 
   // aw handshake has not taken place, and is in the transfer state
+  //TODO: this is kind of out of sync with the states
   io.axi.aw.valid := waitForAWHandshake
 //  assert(
 //    state =/= sTransfer && waitForAWHandshake,
@@ -385,19 +386,13 @@ class newDCache(
     state := sWaitForAR
   }
 
-  def checkDCacheHit(): Unit = {
-    when(isHit) {
-      when(io.rChannel.enable) {
-        io.rChannel.valid := true.B
-        rDCacheHitReg := true.B
-        LRU.update(index, hitWay)
-      }.elsewhen(io.wChannel.enable && !io.axi.r.bits.last) {
-        //TODO: check this and get it out of the critical path
-        // Don't write to underlying banks when r last, dirty will be discarded if
-        // in the same index, same way
-        handleWriteHit()
-      }
-    }
+  val tagBanks = for (i <- 0 until wayAmount) yield {
+    val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
+    bank.suggestName(s"tagBank_way_${i}")
+    bank.io.we := tagWe(i)
+    bank.io.addr := Mux(isReFill && io.axi.r.bits.last, indexReg, indexWire)
+    bank.io.inData := tagReg
+    tagData(i) := bank.io.outData
   }
 
   /**
@@ -480,7 +475,7 @@ class newDCache(
       checkPreviousRefillBufferHit()
 
       checkRefillBufferHit()
-      checkDCacheHit()
+
 
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
@@ -506,6 +501,9 @@ class newDCache(
             dispatchToWrite(lruSelWay, indexReg)
           }
           state := sWriteBack
+        }.otherwise {
+          // in the rlast cycle tag will be accessed to evict the dirty line
+          checkDCacheHit()
         }
       }
     }
@@ -541,14 +539,15 @@ class newDCache(
         // increment the write counter
         writeBufferCounter := writeBufferCounter + 1.U
         io.axi.w.bits.data := writeDataBuffer(writeBufferCounter)
+        // when all line has been evicted
+        when(writeBufferCounter === (bankAmount - 1).U) {
+          io.axi.w.bits.last := true.B
+          state := sWriteFinish
+          // let's handle the b channel there
+        }
       }
 
-      // when all line has been evicted
-      when(writeBufferCounter === (bankAmount - 1).U) {
-        io.axi.w.bits.last := true.B
-        state              := sWriteFinish
-        // let's handle the b channel there
-      }
+
     }
     is(sWriteFinish) {
       // when b successfully handshakes
@@ -573,21 +572,28 @@ class newDCache(
     bank.suggestName(s"dbank_way${i}_bankOffset${j}")
     // read and write share the address
     bank.io.addr := indexWire
-    bank.io.we   := we(i)(j)
+    bank.io.we := we(i)(j)
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j).asUInt, io.wChannel.data)
     bank.io.writeMask := Mux(isWriteBack, 15.U(4.W), io.wChannel.sel)
-    bankData(i)(j)    := bank.io.readData
+    bankData(i)(j) := bank.io.readData
     bank.desiredName
   }
-  val tagBanks = for (i <- 0 until wayAmount) yield {
-    val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
-    bank.suggestName(s"tagBank_way_${i}")
-    bank.io.we     := tagWe(i)
-    bank.io.addr   := indexWire
-    bank.io.inData := tagReg
-    tagData(i)     := bank.io.outData
+
+  def checkDCacheHit(): Unit = {
+    when(isHit) {
+      when(io.rChannel.enable) {
+        io.rChannel.valid := true.B
+        rDCacheHitReg := true.B
+        LRU.update(index, hitWay)
+      }.elsewhen(io.wChannel.enable) {
+        //TODO: check this and get it out of the critical path
+        // Don't write to underlying banks when r last, dirty will be discarded if
+        // in the same index, same way
+        handleWriteHit()
+      }
+    }
   }
 
   //-----------------------------------------------------------------------------
