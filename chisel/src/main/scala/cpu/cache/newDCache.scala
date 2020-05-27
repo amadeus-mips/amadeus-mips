@@ -464,7 +464,7 @@ class newDCache(
     }
     is(sReFill) {
 //      assert(io.axi.r.bits.id === DATA_ID, "r id is not supposed to be different from d-cache id")
-      assert(io.axi.r.bits.resp === 0.U, "the response should always be okay")
+      assert(!io.axi.r.valid || (io.axi.r.bits.resp === 0.U), "the response should always be okay")
 
       io.rChannel.valid := false.B
 

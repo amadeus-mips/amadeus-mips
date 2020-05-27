@@ -34,7 +34,7 @@ class AXIArbiter(sCount: Int = 3) extends Module {
   val rSelect_reg = RegInit(0.U(log2Ceil(sCount).W))
   switch(rState) {
     is(sRIdle) {
-      when(io.master.ar.fire()) {
+      when(io.slaves(rChosen).ar.valid) {
         rState      := sRTran
         rSelect_reg := rChosen
       }
@@ -70,7 +70,7 @@ class AXIArbiter(sCount: Int = 3) extends Module {
   val wSelect_reg = RegInit(0.U(log2Ceil(sCount).W))
   switch(wState) {
     is(sWIdle) {
-      when(io.master.aw.fire()) {
+      when(io.slaves(wChosen).aw.valid) {
         wState      := sWTran
         wSelect_reg := wChosen
       }
