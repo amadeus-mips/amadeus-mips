@@ -49,14 +49,12 @@ class SocLiteTop(
   val cpu = Module(new CPUTop(socCfg.performanceMonitor))
 
   /** 2x2 interconnect */
-  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func(3, 2)))
+  val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_func()))
   val confreg         = Module(new Confreg(socCfg.simulation))
   val ram             = Module(new AXIRamRandomWrap())
 
   // the optional performance IO
-  axiInterconnect.io.slaves(0) <> cpu.io.dataAXI
-  axiInterconnect.io.slaves(1) <> cpu.io.instAXI
-  axiInterconnect.io.slaves(2) <> cpu.io.unCachedAXI
+  axiInterconnect.io.slaves(0) <> cpu.io.axi
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 

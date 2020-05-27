@@ -2,9 +2,9 @@
 
 package cpu
 
-import axi.AXIIO
+import axi.{AXIArbiter, AXIIO}
 import chisel3._
-import cpu.cache.{newDCache, ICache, UnCachedUnit}
+import cpu.cache.{ICache, UnCachedUnit, newDCache}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
 import shared.DebugBundle
@@ -19,15 +19,13 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 
     /** hardware interrupt */
     val intr = Input(UInt(6.W))
-
-    val instAXI     = AXIIO.master()
-    val dataAXI     = AXIIO.master()
-    val unCachedAXI = AXIIO.master()
-
+    val axi = AXIIO.master()
     val debug = Output(new DebugBundle)
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
+
+  val axiArbiter = Module(new AXIArbiter())
 
   val iCache   = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
   val dCache   = Module(new newDCache)
@@ -73,9 +71,11 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
   core.io.rChannel.data := Mux(useDCache, dCache.io.rChannel.data, unCached.io.rChannel.data)
 
   iCache.io.axi  := DontCare
-  io.dataAXI     <> dCache.io.axi
-  io.instAXI     <> iCache.io.axi
-  io.unCachedAXI <> unCached.io.axi
+  axiArbiter.io.slaves(0) <> dCache.io.axi
+  axiArbiter.io.slaves(1) <> unCached.io.axi
+  axiArbiter.io.slaves(2) <> iCache.io.axi
+
+  io.axi <> axiArbiter.io.master
 
   io.debug <> core.io_ls.debug
 
