@@ -1,8 +1,7 @@
-package shared
+package shared.LRU
 
 import chisel3._
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
-import shared.LRU.{LRUIO, TrueLRUNM}
 
 class LRUWrapper(numOfSet: Int, numOfWay: Int) extends Module {
   val io = IO(new LRUIO(numOfSet, numOfWay))
