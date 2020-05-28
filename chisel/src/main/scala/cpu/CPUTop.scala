@@ -16,7 +16,7 @@ import shared.DebugBundle
   *
   * @param performanceMonitorEnable enable the performance monitor IO of the CPU
   */
-class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConfig) extends Module {
+class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConfig = CPUConfig.Build) extends Module {
   val io = IO(new Bundle {
 
     /** hardware interrupt */

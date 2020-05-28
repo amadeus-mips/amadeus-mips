@@ -11,7 +11,7 @@ import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
 import shared.Buffer
 
-class Core extends MultiIOModule {
+class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
@@ -19,8 +19,6 @@ class Core extends MultiIOModule {
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
   })
-
-  implicit val conf: CPUConfig = new CPUConfig()
 
   /**
     * fetch | decodeTop | executeTop | memoryTop | wb

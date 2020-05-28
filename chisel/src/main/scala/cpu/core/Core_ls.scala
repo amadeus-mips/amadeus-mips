@@ -4,10 +4,11 @@ package cpu.core
 
 import chisel3._
 import chisel3.util.Fill
+import cpu.CPUConfig
 import cpu.core.Constants._
 import shared.DebugBundle
 
-class Core_ls extends Core {
+class Core_ls(implicit conf: CPUConfig) extends Core {
   val io_ls = IO(new Bundle {
     val ex_addr = Output(UInt(addrLen.W))
     val debug = Output(new DebugBundle)
