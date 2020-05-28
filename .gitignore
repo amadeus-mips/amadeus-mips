@@ -3,3 +3,4 @@
 # ip 相关
 /*/ip/*
 !/*/ip/*.xci
+.vscode/

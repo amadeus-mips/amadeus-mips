@@ -16,7 +16,7 @@ import shared.DebugBundle
   *
   * @param performanceMonitorEnable enable the performance monitor IO of the CPU
   */
-class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
+class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** hardware interrupt */
@@ -88,9 +88,10 @@ class CPUTop(performanceMonitorEnable: Boolean = false) extends Module {
 }
 
 object elaborateCPU extends App {
+  implicit val cpuCfg = new CPUConfig(build = true)
   (new ChiselStage).execute(
-    Array("--help", "-X", "verilog"),
+    Array(),
     Seq(ChiselGeneratorAnnotation(() => new CPUTop()),
-      TargetDirAnnotation("verilog"))
+      TargetDirAnnotation("generation"))
   )
 }

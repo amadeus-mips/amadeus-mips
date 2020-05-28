@@ -27,7 +27,7 @@ import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import chisel3.util.ValidIO
 import confreg.Confreg
-import cpu.CPUTop
+import cpu.{CPUConfig, CPUTop}
 import cpu.performance.SocPerformanceIO
 import ram.AXIRamRandomWrap
 import shared.{DebugBundle, GPIO}
@@ -45,6 +45,8 @@ class SocLiteTop(
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
   })
+
+  implicit val cpuCfg = new CPUConfig(build = false)
 
   val cpu = Module(new CPUTop(socCfg.performanceMonitor))
 
