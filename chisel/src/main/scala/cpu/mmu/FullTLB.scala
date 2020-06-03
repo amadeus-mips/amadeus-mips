@@ -1,0 +1,53 @@
+package cpu.mmu
+
+import chisel3._
+import chisel3.util._
+
+/**
+  *
+  * @param numOfReadPorts how many read ports there are
+  * @param vAddrWidth     how wide the virtual address is ( excluding bits that won't be translated )
+  * @param TLBSize        how many entries are in TLB
+  * @param phyAddrWidth   how wide the translated physical address is
+  */
+class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: Int)
+  extends Module {
+  val io = IO(new Bundle {
+    val query = Input(Vec(numOfReadPorts, new TLBQuery(vAddrWidth)))
+    val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize, phyAddrWidth)))
+
+    // there should be only 1 operation port that can handle both read and write
+    val instrReq = Input(new TLBRWReq(vAddrWidth))
+    val readResp = Output(new TLBEntry(phyAddrWidth))
+
+    // the probing instruction
+    val probeReq = Input(UInt(vAddrWidth.W))
+    val probeResp = Output(UInt(32.W))
+  })
+
+  val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(new TLBEntry(phyAddrWidth))))
+
+  // read port for I-cache, D-cache, uncached
+  val hitWire = Wire(Vec(numOfReadPorts, Vec(TLBSize, Bool())))
+  val hitIndex = Wire(Vec(numOfReadPorts, UInt(log2Ceil(TLBSize).W)))
+  for (i <- 0 until numOfReadPorts) {
+    hitWire(i) := physicalTLB.map((entry: TLBEntry) =>
+      (entry.vpn2 === io.query(i).vAddr(vAddrWidth - 1, 1)) && ((entry.asid === io.query(i).asid) || (entry.global))
+    )
+    hitIndex(i) := hitWire(i).indexWhere((hit: Bool) => hit)
+    io.result(i) := hitWire(i).contains(true.B)
+    io.result(i).hitIndex := hitIndex(i)
+    io.result(i).pageInfo := physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
+  }
+
+  // the probe request and response
+  val probeWire = Wire(Vec(TLBSize, Bool()))
+  probeWire := physicalTLB map ((entry: TLBEntry) => (entry.vpn2 === io.probeReq(vAddrWidth - 1, 1)))
+  io.probeResp := Cat(!probeWire.contains(true.B), 0.U((32 - log2Ceil(TLBSize) - 1).W), probeWire.indexWhere((hit: Bool) => hit))
+
+  // the read and write request
+  when(io.instrReq.writeEn) {
+    physicalTLB(io.instrReq.TLBIndex) := io.instrReq.writeData
+  }
+  io.readResp := physicalTLB(io.instrReq.TLBIndex)
+}

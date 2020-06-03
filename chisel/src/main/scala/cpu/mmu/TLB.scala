@@ -28,9 +28,20 @@ class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
   val hit = Bool()
   val hitIndex = UInt(log2Ceil(TLBSize).W)
   val pageInfo = new PhysicalPage(physicalAddrWidth)
+  val exception = UInt(3.W)
 }
 
-//TODO: make this work with VIPT cache
+trait TLBException {
+  val NONE = 0.U(3.W)
+}
+
+class TLBRWReq(addrWidth: Int) extends Bundle {
+  val TLBIndex = UInt(addrWidth.W)
+  val writeEn = Bool()
+  val writeData = new TLBEntry(addrWidth)
+}
+
+
 class TLBLookup(virtualAddrWidth: Int = 20, physicalAddrWidth: Int, TLBSize: Int) extends Module {
   val io = IO(new Bundle {
     val query = Input(new TLBQuery(virtualAddrWidth))
