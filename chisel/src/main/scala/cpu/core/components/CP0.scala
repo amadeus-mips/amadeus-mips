@@ -3,7 +3,7 @@
 package cpu.core.components
 
 import chisel3._
-import chisel3.util.{Cat, MuxCase, MuxLookup}
+import chisel3.util.{Cat, MuxCase, MuxLookup, log2Ceil}
 import cpu.common.CP0Struct
 import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
@@ -25,19 +25,29 @@ class CP0IO extends Bundle {
   val EPC_o    = Output(UInt(dataLen.W))
 }
 
-class CP0 extends Module {
+class CP0(tlbEntries: Int = 32) extends Module {
   val io = IO(new CP0IO)
 
+  val index    = RegInit(0.U(32.W))
+  val entryLo0 = RegInit(0.U(32.W))
+  val entryLo1 = RegInit(0.U(32.W))
+  val pageMask = RegInit(0.U(32.W))
   val badVAddr = RegInit(0.U(32.W))
   val count    = RegInit(0.U(32.W))
+  val entryHi  = RegInit(0.U(32.W))
 //  val status = RegInit(Cat(0.U(9.W), 1.U(1.W), 0.U(22.W))) ???
   val status = RegInit("h00400000".U(32.W))
   val cause  = RegInit(0.U(32.W))
   val epc    = RegInit(0.U(32.W))
 
   val cp0Map = Map(
+    con_Index    -> index,
+    con_EntryLo0 -> entryLo0,
+    con_EntryLo1 -> entryLo1,
+    con_PageMask -> pageMask,
     con_BadVAddr -> badVAddr,
     con_Count    -> count,
+    con_EntryHi  -> entryHi,
     con_Status   -> status,
     con_Cause    -> cause,
     con_EPC      -> epc
@@ -93,6 +103,38 @@ class CP0 extends Module {
     )
 
   // @formatter:off
+  // TODO add hardware write index entryLo0/1 pageMask entryHi
+  index := Cat(
+    /* 31     P */ 0.U,
+    /* 30:n   0 */ 0.U((31-log2Ceil(tlbEntries)).W),
+    /* n-1:0  index */ wtf(con_Index, (log2Ceil(tlbEntries)-1, 0))
+  )
+
+  //noinspection DuplicatedCode
+  entryLo0 := Cat(
+    /* 31:30  Fill*/ 0.U(2.W),
+    /* 29:6   PFN */ wtf(con_EntryLo0, (29, 6)),
+    /* 5:3    C   */ wtf(con_EntryLo0, (5, 3)),
+    /* 2      D   */ wtf(con_EntryLo0, 2),
+    /* 1      V   */ wtf(con_EntryLo0, 1),
+    /* 0      G   */ wtf(con_EntryLo0, 0)
+  )
+  //noinspection DuplicatedCode
+  entryLo1 := Cat(
+    /* 31:30  Fill*/ 0.U(2.W),
+    /* 29:6   PFN */ wtf(con_EntryLo1, (29, 6)),
+    /* 5:3    C   */ wtf(con_EntryLo1, (5, 3)),
+    /* 2      D   */ wtf(con_EntryLo1, 2),
+    /* 1      V   */ wtf(con_EntryLo1, 1),
+    /* 0      G   */ wtf(con_EntryLo1, 0)
+  )
+
+  pageMask := Cat(
+    /* 31:29  0   */  0.U(3.W),
+    /* 28:13  Mask*/  wtf(con_PageMask, (28,13)),
+    /* 12:0   0   */  0.U(13.W)
+  )
+
   badVAddr := Mux(
     io.except(EXCEPT_FETCH) ||
       io.except(EXCEPT_LOAD) ||
@@ -103,6 +145,13 @@ class CP0 extends Module {
 
   /** increase 1 every two cycle */
   count := Mux(compareWriteCP0(con_Count), wdata, count + tick)
+
+  entryHi := Cat(
+    /* 31:13  VPN2  */ wtf(con_EntryHi, (31,13)),
+    /* 12:11  VPN2X */ wtf(con_EntryHi, (12,11)),
+    /* 10:8   0     */ 0.U(3.W),
+    /* 6:0    ASID  */ wtf(con_EntryHi, (7, 0))
+  )
 
   status := Cat(
     /* 31:23  0   */  0.U(9.W),
@@ -135,13 +184,7 @@ class CP0 extends Module {
   io.data := MuxLookup(
     io.addr,
     0.U,
-    Array(
-      con_Count.addr.U    -> count,
-      con_Status.addr.U   -> status,
-      con_Cause.addr.U    -> cause,
-      con_EPC.addr.U      -> epc,
-      con_BadVAddr.addr.U -> badVAddr
-    )
+    cp0Map.toSeq.map(e => e._1.addr.U -> e._2)
   )
 
   io.status_o := status
