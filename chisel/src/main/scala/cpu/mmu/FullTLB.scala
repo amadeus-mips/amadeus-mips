@@ -43,6 +43,7 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
     hitIndex(i) := indexTLB
     io.result(i).hit := isHit
     io.result(i).pageInfo := page
+    io.result(i).untranslated := io.query(i).vAddr(19, 17) === "b101".U(3.W)
   }
 
   // the probe request and response

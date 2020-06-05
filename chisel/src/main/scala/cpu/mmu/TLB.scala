@@ -31,6 +31,7 @@ class TLBQuery(vAddrW: Int) extends Bundle {
 
 class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
   val hit = Bool()
+  val untranslated = Bool()
   val pageInfo = new PhysicalPage(physicalAddrWidth)
 }
 
