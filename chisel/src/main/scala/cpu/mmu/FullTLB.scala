@@ -7,14 +7,15 @@ import chisel3.util._
   * this is a TLB that only translate the upper bits
   *
   * @param numOfReadPorts how many read ports there are
-  * @param vAddrWidth     how wide the virtual address is ( excluding bits that won't be translated )
   * @param TLBSize        how many entries are in TLB
   * @param phyAddrWidth   how wide the translated physical address is
   */
-class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: Int)
-  extends Module {
+class FullTLB(numOfReadPorts: Int, TLBSize: Int, phyAddrWidth: Int) extends Module {
+  require(isPow2(TLBSize), "TLB size should be a power of 2")
   val io = IO(new Bundle {
-    val query = Input(Vec(numOfReadPorts, new TLBQuery(vAddrWidth)))
+    val asid = Input(UInt(8.W))
+    val kseg0Unmapped = Input(Bool())
+    val query = Input(Vec(numOfReadPorts, new TLBQuery()))
     val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize, phyAddrWidth)))
 
     // there should be only 1 operation port that can handle both read and write
@@ -22,7 +23,7 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
     val readResp = Output(new TLBEntry(phyAddrWidth))
 
     // the probing instruction
-    val probeReq = Input(UInt(vAddrWidth.W))
+    val probeReq = Input(UInt(20.W))
     val probeResp = Output(UInt(32.W))
   })
 
@@ -35,14 +36,14 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
   val hitIndex = Wire(Vec(numOfReadPorts, UInt(log2Ceil(TLBSize).W)))
   for (i <- 0 until numOfReadPorts) {
     hitWire(i) := physicalTLB.map((entry: TLBEntry) =>
-      (entry.vpn2 === io.query(i).vAddr(vAddrWidth - 1, 1)) && ((entry.asid === io.query(i).asid) || (entry.global))
+      (entry.vpn2 === io.query(i).vAddr(19, 1)) && ((entry.asid === io.asid) || (entry.global))
     )
     val isHit = hitWire(i).contains(true.B)
     val indexTLB = hitWire(i).indexWhere((hit: Bool) => hit)
     val page = physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
-    val mapped = page.cacheControl === 2.U
-    val cached = page.cacheControl === 3.U
-    //    val untranslated = io.query(i).vAddr(19, 18) === "b10".U(2.W) || io.query(i).vAddr(19, 16) === "b1100".U(4.W)
+    val mapped =
+      (!io.query(i).vAddr(19)) || (io.query(i).vAddr(19, 18) === "b11".U(2.W))
+    val uncached = (io.query(i).vAddr(19, 17) === "b101".U(3.W)) || (io.query(i).vAddr(19, 17) === "b100".U(3.W) && io.kseg0Unmapped)
     hitIndex(i) := indexTLB
     io.result(i).hit := isHit
     io.result(i).pageInfo := page
@@ -50,13 +51,17 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
       io.result(i).pageInfo.pfn := io.query(i).vAddr
     }
     io.result(i).mapped := mapped
-    io.result(i).cached := cached
+    io.result(i).uncached := uncached
   }
 
   // the probe request and response
   val probeWire = Wire(Vec(TLBSize, Bool()))
-  probeWire := physicalTLB map ((entry: TLBEntry) => (entry.vpn2 === io.probeReq(vAddrWidth - 1, 1)))
-  io.probeResp := Cat(!probeWire.contains(true.B), 0.U((32 - log2Ceil(TLBSize) - 1).W), probeWire.indexWhere((hit: Bool) => hit))
+  probeWire := physicalTLB.map((entry: TLBEntry) => (entry.vpn2 === io.probeReq(19, 1)))
+  io.probeResp := Cat(
+    !probeWire.contains(true.B),
+    0.U((32 - log2Ceil(TLBSize) - 1).W),
+    probeWire.indexWhere((hit: Bool) => hit)
+  )
 
   // the read and write request
   when(io.instrReq.writeEn) {

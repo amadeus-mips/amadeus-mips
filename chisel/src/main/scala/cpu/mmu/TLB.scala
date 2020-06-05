@@ -3,8 +3,8 @@ package cpu.mmu
 import chisel3._
 import chisel3.util._
 
-class PhysicalPage(physicalAddrW: Int) extends Bundle {
-  val pfn = UInt(physicalAddrW.W)
+class PhysicalPage() extends Bundle {
+  val pfn = UInt(20.W)
   val cacheControl = UInt(3.W)
   val valid = Bool()
   val dirty = Bool()
@@ -16,23 +16,21 @@ class TLBEntry(physicalAddrWidth: Int) extends Bundle {
   val vpn2 = UInt(19.W)
   // Don't need a page mask, only supports 4k page
   //  val pageMask = UInt(12.W)
-  val pages = Vec(2, new PhysicalPage(physicalAddrWidth))
+  val pages = Vec(2, new PhysicalPage)
 }
 
 /**
   * the bundle for a TLB query, issued by Icache or memory unit
   *
-  * @param vAddrW the address width of the virtual address
   */
-class TLBQuery(vAddrW: Int) extends Bundle {
-  val vAddr = UInt(vAddrW.W)
-  val asid = UInt(8.W)
+class TLBQuery extends Bundle {
+  val vAddr = UInt(20.W)
 }
 
 class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
   val hit = Bool()
   val mapped = Bool()
-  val cached = Bool()
+  val uncached = Bool()
   val pageInfo = new PhysicalPage(physicalAddrWidth)
 }
 
