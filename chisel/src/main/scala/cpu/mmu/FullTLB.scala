@@ -40,10 +40,17 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
     val isHit = hitWire(i).contains(true.B)
     val indexTLB = hitWire(i).indexWhere((hit: Bool) => hit)
     val page = physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
+    val mapped = page.cacheControl === 2.U
+    val cached = page.cacheControl === 3.U
+    //    val untranslated = io.query(i).vAddr(19, 18) === "b10".U(2.W) || io.query(i).vAddr(19, 16) === "b1100".U(4.W)
     hitIndex(i) := indexTLB
     io.result(i).hit := isHit
     io.result(i).pageInfo := page
-    io.result(i).untranslated := io.query(i).vAddr(19, 17) === "b101".U(3.W)
+    when(!mapped) {
+      io.result(i).pageInfo.pfn := io.query(i).vAddr
+    }
+    io.result(i).mapped := mapped
+    io.result(i).cached := cached
   }
 
   // the probe request and response
