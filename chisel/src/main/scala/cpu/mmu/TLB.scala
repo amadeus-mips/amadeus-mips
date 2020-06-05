@@ -19,6 +19,11 @@ class TLBEntry(physicalAddrWidth: Int) extends Bundle {
   val pages = Vec(2, new PhysicalPage(physicalAddrWidth))
 }
 
+/**
+  * the bundle for a TLB query, issued by Icache or memory unit
+  *
+  * @param vAddrW the address width of the virtual address
+  */
 class TLBQuery(vAddrW: Int) extends Bundle {
   val vAddr = UInt(vAddrW.W)
   val asid = UInt(8.W)
@@ -26,19 +31,13 @@ class TLBQuery(vAddrW: Int) extends Bundle {
 
 class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
   val hit = Bool()
-  val hitIndex = UInt(log2Ceil(TLBSize).W)
   val pageInfo = new PhysicalPage(physicalAddrWidth)
-  val exception = UInt(3.W)
 }
 
-trait TLBException {
-  val NONE = 0.U(3.W)
-}
-
-class TLBRWReq(addrWidth: Int) extends Bundle {
-  val TLBIndex = UInt(addrWidth.W)
+class TLBRWReq(virtAddrWidth: Int, phyAddrWidth: Int) extends Bundle {
+  val TLBIndex = UInt(virtAddrWidth.W)
   val writeEn = Bool()
-  val writeData = new TLBEntry(addrWidth)
+  val writeData = new TLBEntry(phyAddrWidth)
 }
 
 

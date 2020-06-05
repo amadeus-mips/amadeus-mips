@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 
 /**
+  * this is a TLB that only translate the upper bits
   *
   * @param numOfReadPorts how many read ports there are
   * @param vAddrWidth     how wide the virtual address is ( excluding bits that won't be translated )
@@ -17,7 +18,7 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
     val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize, phyAddrWidth)))
 
     // there should be only 1 operation port that can handle both read and write
-    val instrReq = Input(new TLBRWReq(vAddrWidth))
+    val instrReq = Input(new TLBRWReq(vAddrWidth, phyAddrWidth))
     val readResp = Output(new TLBEntry(phyAddrWidth))
 
     // the probing instruction
@@ -27,17 +28,21 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
 
   val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(new TLBEntry(phyAddrWidth))))
 
-  // read port for I-cache, D-cache, uncached
+  // read port for I-cache, (D-cache, uncached)
+  // NOTE: query is executed regardless of whether the input is valid, validity of input
+  // will only be judged by outer circuit
   val hitWire = Wire(Vec(numOfReadPorts, Vec(TLBSize, Bool())))
   val hitIndex = Wire(Vec(numOfReadPorts, UInt(log2Ceil(TLBSize).W)))
   for (i <- 0 until numOfReadPorts) {
     hitWire(i) := physicalTLB.map((entry: TLBEntry) =>
       (entry.vpn2 === io.query(i).vAddr(vAddrWidth - 1, 1)) && ((entry.asid === io.query(i).asid) || (entry.global))
     )
-    hitIndex(i) := hitWire(i).indexWhere((hit: Bool) => hit)
-    io.result(i) := hitWire(i).contains(true.B)
-    io.result(i).hitIndex := hitIndex(i)
-    io.result(i).pageInfo := physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
+    val isHit = hitWire(i).contains(true.B)
+    val indexTLB = hitWire(i).indexWhere((hit: Bool) => hit)
+    val page = physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
+    hitIndex(i) := indexTLB
+    io.result(i).hit := isHit
+    io.result(i).pageInfo := page
   }
 
   // the probe request and response
