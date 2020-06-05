@@ -35,8 +35,8 @@ class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
   val pageInfo = new PhysicalPage(physicalAddrWidth)
 }
 
-class TLBRWReq(virtAddrWidth: Int, phyAddrWidth: Int) extends Bundle {
-  val TLBIndex = UInt(virtAddrWidth.W)
+class TLBRWReq(TLBSize: Int, phyAddrWidth: Int) extends Bundle {
+  val TLBIndex = UInt(log2Ceil(TLBSize).W)
   val writeEn = Bool()
   val writeData = new TLBEntry(phyAddrWidth)
 }

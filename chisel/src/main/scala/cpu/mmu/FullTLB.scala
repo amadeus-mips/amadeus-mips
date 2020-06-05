@@ -18,7 +18,7 @@ class FullTLB(numOfReadPorts: Int, vAddrWidth: Int, TLBSize: Int, phyAddrWidth: 
     val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize, phyAddrWidth)))
 
     // there should be only 1 operation port that can handle both read and write
-    val instrReq = Input(new TLBRWReq(vAddrWidth, phyAddrWidth))
+    val instrReq = Input(new TLBRWReq(TLBSize, phyAddrWidth))
     val readResp = Output(new TLBEntry(phyAddrWidth))
 
     // the probing instruction
