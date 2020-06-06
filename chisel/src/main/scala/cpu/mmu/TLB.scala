@@ -10,7 +10,7 @@ class PhysicalPage() extends Bundle {
   val dirty = Bool()
 }
 
-class TLBEntry(physicalAddrWidth: Int) extends Bundle {
+class TLBEntry() extends Bundle {
   val global = Bool()
   val asid = UInt(8.W)
   val vpn2 = UInt(19.W)
@@ -27,16 +27,16 @@ class TLBQuery extends Bundle {
   val vAddr = UInt(20.W)
 }
 
-class TLBResult(TLBSize: Int, physicalAddrWidth: Int) extends Bundle {
+class TLBResult(TLBSize: Int) extends Bundle {
   val hit = Bool()
   val mapped = Bool()
   val uncached = Bool()
-  val pageInfo = new PhysicalPage(physicalAddrWidth)
+  val pageInfo = new PhysicalPage()
 }
 
-class TLBRWReq(TLBSize: Int, phyAddrWidth: Int) extends Bundle {
+class TLBRWReq(TLBSize: Int) extends Bundle {
   val TLBIndex = UInt(log2Ceil(TLBSize).W)
   val writeEn = Bool()
-  val writeData = new TLBEntry(phyAddrWidth)
+  val writeData = new TLBEntry()
 }
 

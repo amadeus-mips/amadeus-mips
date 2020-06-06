@@ -6,18 +6,21 @@ import chisel3._
 import cpu.CPUConfig
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
+import cpu.core.bundles.TLBOpIO
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle, IfIdBundle, MemWbBundle}
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
 import shared.Buffer
 
 class Core(implicit conf: CPUConfig) extends MultiIOModule {
+
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst = new NiseSramReadIO()
+    val rInst    = new NiseSramReadIO()
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
+    val tlb = new TLBOpIO(conf.tlbSize)
   })
 
   /**
@@ -27,12 +30,12 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val decodeTop  = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
   val memoryTop  = Module(new MemoryTop)
-  val wbTop = Module(new WbTop)
+  val wbTop      = Module(new WbTop)
 
-  val regFile    = Module(new RegFile)
-  val cp0        = Module(new CP0)
-  val hilo       = Module(new HILO)
-  val hazard     = Module(new Hazard)
+  val regFile = Module(new RegFile)
+  val cp0     = Module(new CP0)
+  val hilo    = Module(new HILO)
+  val hazard  = Module(new Hazard)
 
   // stages
   val if_id   = Module(new Stage(1, new IfIdBundle))
@@ -89,11 +92,10 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   exe_mem.io.stall := hazard.io.stall
   exe_mem.io.flush := hazard.io.flush
 
-  memoryTop.io.in                 := exe_mem.io.out
-  memoryTop.io.inCP0Handle.status := cp0.io.status_o
-  memoryTop.io.inCP0Handle.cause  := cp0.io.cause_o
-  memoryTop.io.inCP0Handle.EPC    := cp0.io.EPC_o
-  memoryTop.io.wbCP0              := wbTop.io.out.cp0
+  memoryTop.io.in           := exe_mem.io.out
+  memoryTop.io.exceptionCP0 := cp0.io.exceptionCP0
+  memoryTop.io.tlbCP0       := cp0.io.tlbCP0
+  memoryTop.io.wbCP0        := wbTop.io.out.cp0
 
   cp0.io.intr        := io.intr
   cp0.io.cp0Write    := wbTop.io.out.cp0
@@ -103,6 +105,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
   cp0.io.pc          := Mux(memoryTop.io.except(EXCEPT_INTR), wbTop.io.out.pc + 4.U, exe_mem.io.out.pc)
   cp0.io.badAddr     := memoryTop.io.badAddr
+
+  cp0.io.op  := wbTop.io.out.operation
+  cp0.io.tlb := wbTop.io.out.tlb
 
   hilo.io.in := wbTop.io.out.hilo
 
@@ -117,7 +122,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   mem_wb.io.stall := hazard.io.stall
   mem_wb.io.flush := hazard.io.flush
 
-  wbTop.io.in := mem_wb.io.out
+  wbTop.io.in    := mem_wb.io.out
   wbTop.io.rData := io.rChannel.data
 
   io.rInst.addr   := fetchTop.io.out.pc
@@ -125,4 +130,5 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   io.rChannel <> memoryTop.io.rData
   io.wChannel <> memoryTop.io.wData
+  io.tlb <> memoryTop.io.tlb
 }

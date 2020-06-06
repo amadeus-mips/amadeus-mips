@@ -16,18 +16,18 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int, phyAddrWidth: Int) extends Modu
     val asid = Input(UInt(8.W))
     val kseg0Unmapped = Input(Bool())
     val query = Input(Vec(numOfReadPorts, new TLBQuery()))
-    val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize, phyAddrWidth)))
+    val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize)))
 
     // there should be only 1 operation port that can handle both read and write
-    val instrReq = Input(new TLBRWReq(TLBSize, phyAddrWidth))
-    val readResp = Output(new TLBEntry(phyAddrWidth))
+    val instrReq = Input(new TLBRWReq(TLBSize))
+    val readResp = Output(new TLBEntry)
 
     // the probing instruction
     val probeReq = Input(UInt(20.W))
     val probeResp = Output(UInt(32.W))
   })
 
-  val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(new TLBEntry(phyAddrWidth))))
+  val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(new TLBEntry)))
 
   // read port for I-cache, (D-cache, uncached)
   // NOTE: query is executed regardless of whether the input is valid, validity of input

@@ -26,6 +26,7 @@ trait opConstants {
   val INST_MEM    = 4.U(instTypeLen.W)    // 访存
   val INST_BR     = 5.U(instTypeLen.W)    // 跳转指令
   val INST_EXC    = 6.U(instTypeLen.W)    // 例外指令
+  val INST_TLB    = 7.U(instTypeLen.W)    // TLB instruction
 
   val opLen = 6
   val OP_N     = 0.U(opLen.W)   // 无操作
@@ -81,17 +82,25 @@ trait opConstants {
   val EXC_SC    = 44.U(opLen.W)   // syscall 系统调用
   val EXC_ER    = 45.U(opLen.W)   // eret 返回
   val EXC_BR    = 46.U(opLen.W)   // break 中断
+  // TLB type
+  val TLB_WI    = 47.U(opLen.W)
+  val TLB_WR    = 48.U(opLen.W)
+  val TLB_P     = 49.U(opLen.W)
+  val TLB_R     = 50.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
+    require(op.getWidth == opLen)
     Util.listHasElement(List(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW), op)
   }
   /** judge whether op is to save data to memory */
   def opIsStore(op: UInt): Bool = {
+    require(op.getWidth == opLen)
     Util.listHasElement(List(MEM_SB, MEM_SH, MEM_SW), op)
   }
   /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {
+    require(op.getWidth == opLen)
     Util.listHasElement(List(BR_EQ, BR_NE, BR_GTZ, BR_GEZ, BR_GEZAL, BR_LTZ, BR_LTZAL, BR_LEZ), op)
   }
 

@@ -3,12 +3,28 @@
 package cpu.core.components
 
 import chisel3._
-import chisel3.util.{Cat, MuxCase, MuxLookup, log2Ceil}
-import cpu.common.CP0Struct
+import chisel3.util._
+import cpu.common._
 import cpu.core.Constants._
-import cpu.core.bundles.CPBundle
+import cpu.core.bundles.{CPBundle, TLBReadBundle}
+import cpu.mmu.TLBEntry
 
-class CP0IO extends Bundle {
+class TLBHandleBundle(tlbSize: Int) extends Bundle {
+  val entryHi  = new EntryHiBundle
+  val pageMask = new PageMaskBundle
+  val entryLo0 = new EntryLoBundle
+  val entryLo1 = new EntryLoBundle
+  val index    = new IndexBundle(tlbSize)
+  val random   = new RandomBundle(tlbSize)
+}
+
+class ExceptionHandleBundle extends Bundle {
+  val status = new StatusBundle
+  val cause  = new CauseBundle
+  val EPC    = UInt(dataLen.W)
+}
+
+class CP0IO(tlbSize: Int) extends Bundle {
   val intr        = Input(UInt(intrLen.W))
   val cp0Write    = Input(new CPBundle)
   val addr        = Input(UInt(regAddrLen.W))
@@ -18,79 +34,61 @@ class CP0IO extends Bundle {
   val pc          = Input(UInt(addrLen.W))
   val badAddr     = Input(UInt(addrLen.W))
 
+  val op = Input(UInt(opLen.W))
+  val tlb = Input(new TLBReadBundle)
+
   val data = Output(UInt(dataLen.W))
 
-  val status_o = Output(UInt(dataLen.W))
-  val cause_o  = Output(UInt(dataLen.W))
-  val EPC_o    = Output(UInt(dataLen.W))
+  val exceptionCP0 = Output(new ExceptionHandleBundle)
+
+  val tlbCP0 = Output(new TLBHandleBundle(tlbSize))
+
 }
 
-class CP0(tlbEntries: Int = 32) extends Module {
-  val io = IO(new CP0IO)
+class CP0(tlbSize: Int = 32) extends Module {
+  val tlbWidth = log2Ceil(tlbSize)
+  val io       = IO(new CP0IO(tlbSize))
 
-  val index    = RegInit(0.U(32.W))
-  val entryLo0 = RegInit(0.U(32.W))
-  val entryLo1 = RegInit(0.U(32.W))
-  val pageMask = RegInit(0.U(32.W))
-  val badVAddr = RegInit(0.U(32.W))
-  val count    = RegInit(0.U(32.W))
-  val entryHi  = RegInit(0.U(32.W))
+  val index    = new IndexCP0(tlbSize)
+  val random   = new RandomCP0(tlbSize)
+  val entryLo0 = new EntryLoCP0(lo = 0)
+  val entryLo1 = new EntryLoCP0(lo = 1)
+  val pageMask = new PageMaskCP0
+  val wired    = new WiredCP0(tlbSize)
+  val badVAddr = new BadVAddrCP0
+  val count    = new CountCP0
+  val entryHi  = new EntryHiCP0
 //  val status = RegInit(Cat(0.U(9.W), 1.U(1.W), 0.U(22.W))) ???
-  val status = RegInit("h00400000".U(32.W))
-  val cause  = RegInit(0.U(32.W))
-  val epc    = RegInit(0.U(32.W))
+  val status = new StatusCP0
+  val cause  = new CauseCP0
+  val epc    = new EPCCP0
 
-  val cp0Map = Map(
-    con_Index    -> index,
-    con_EntryLo0 -> entryLo0,
-    con_EntryLo1 -> entryLo1,
-    con_PageMask -> pageMask,
-    con_BadVAddr -> badVAddr,
-    con_Count    -> count,
-    con_EntryHi  -> entryHi,
-    con_Status   -> status,
-    con_Cause    -> cause,
-    con_EPC      -> epc
-  )
+  val cp0Seq = Seq(index, random, entryLo0, entryLo1, pageMask, wired, badVAddr, count, entryHi, status, cause, epc)
+
+  // soft write
+  when(io.cp0Write.enable) {
+    val c = io.cp0Write
+    Seq(index, random, wired, entryLo0, entryLo1).foreach(cp0 => {
+      when(cp0.index.U === Cat(c.addr, c.sel)) {
+        cp0.softWrite(c.data)
+      }
+    })
+  }
 
   val tick = RegInit(false.B)
   tick := !tick
 
-  val wdata  = io.cp0Write.data
   val except = io.except.asUInt().orR()
 
-  def compareWriteCP0(p: CP0Struct): Bool = {
+  def compareWriteCP0(p: BaseCP0): Bool = {
     val c = io.cp0Write
     c.enable && c.addr === p.addr.U && c.sel === p.sel.U
   }
 
-  /**
-    * Get the data from cp0 `p(t._1, t._2)` . If it is writing to `p`, will use the writing data.
-    * @param p the source CP0Struct.
-    * @param t the interval.
-    * @return
-    */
-  def wtf(p: CP0Struct, t: (Int, Int)): UInt = {
-    val c = cp0Map(p)
-    require(t._1 > t._2 && t._1 <= 31 && t._2 >= 0)
-    Mux(compareWriteCP0(p), wdata(t._1, t._2), c(t._1, t._2))
-  }
-
-  /**
-    * Get the data from cp0 `p(t._1)`. If it is writing to `p`, will use the writing data.
-    * @param p the source CP0Struct.
-    * @param t the interval.
-    * @return
-    */
-  def wtf(p: CP0Struct, t: Int): UInt = {
-    val c = cp0Map(p)
-    Mux(compareWriteCP0(p), wdata(t), c(t))
-  }
-
   val excCode =
     MuxCase(
-      cause(6, 2),
-      Array(
+      cause.reg.excCode,
+      Seq(
         io.except(EXCEPT_INTR)         -> 0.U(5.W), // int
         io.except(EXCEPT_FETCH)        -> "h04".U(5.W), // AdEL
         io.except(EXCEPT_INST_INVALID) -> "h0a".U(5.W), // RI
@@ -102,92 +100,66 @@ class CP0(tlbEntries: Int = 32) extends Module {
       )
     )
 
-  // @formatter:off
+  // hard write
   // TODO add hardware write index entryLo0/1 pageMask entryHi
-  index := Cat(
-    /* 31     P */ 0.U,
-    /* 30:n   0 */ 0.U((31-log2Ceil(tlbEntries)).W),
-    /* n-1:0  index */ wtf(con_Index, (log2Ceil(tlbEntries)-1, 0))
-  )
+  when(io.op === TLB_R) {
+    entryHi.reg.vpn2 := io.tlb.readResp.vpn2
+    entryHi.reg.asid :=  io.tlb.readResp.asid
+    pageMask.reg.mask := 0.U
+    Seq(entryLo0.reg, entryLo1.reg).zip(io.tlb.readResp.pages).foreach(e => {
+      e._1.pfn := e._2.pfn
+      e._1.c := e._2.cacheControl
+      e._1.v := e._2.valid
+      e._1.d := e._2.dirty
+      e._1.g := io.tlb.readResp.global
+    })
+  }.elsewhen(io.op === TLB_P) {
+    index.reg.p := io.tlb.probeResp(31)
+    index.reg.index := io.tlb.probeResp(tlbWidth-1, 0)
+  }
 
-  //noinspection DuplicatedCode
-  entryLo0 := Cat(
-    /* 31:30  Fill*/ 0.U(2.W),
-    /* 29:6   PFN */ wtf(con_EntryLo0, (29, 6)),
-    /* 5:3    C   */ wtf(con_EntryLo0, (5, 3)),
-    /* 2      D   */ wtf(con_EntryLo0, 2),
-    /* 1      V   */ wtf(con_EntryLo0, 1),
-    /* 0      G   */ wtf(con_EntryLo0, 0)
-  )
-  //noinspection DuplicatedCode
-  entryLo1 := Cat(
-    /* 31:30  Fill*/ 0.U(2.W),
-    /* 29:6   PFN */ wtf(con_EntryLo1, (29, 6)),
-    /* 5:3    C   */ wtf(con_EntryLo1, (5, 3)),
-    /* 2      D   */ wtf(con_EntryLo1, 2),
-    /* 1      V   */ wtf(con_EntryLo1, 1),
-    /* 0      G   */ wtf(con_EntryLo1, 0)
-  )
+  when(compareWriteCP0(wired)) {
+    random.reg.random := (tlbSize - 1).U
+  }.elsewhen(io.op === TLB_WR) {
+    random.reg.random := Mux(random.reg.random.andR(), wired.reg.wired, random.reg.random + 1.U)
+  }
 
-  pageMask := Cat(
-    /* 31:29  0   */  0.U(3.W),
-    /* 28:13  Mask*/  wtf(con_PageMask, (28,13)),
-    /* 12:0   0   */  0.U(13.W)
-  )
-
-  badVAddr := Mux(
-    io.except(EXCEPT_FETCH) ||
-      io.except(EXCEPT_LOAD) ||
-      io.except(EXCEPT_STORE),
-    io.badAddr,
-    badVAddr
-  )
+  when(io.except(EXCEPT_FETCH) || io.except(EXCEPT_LOAD) || io.except(EXCEPT_STORE)) {
+    badVAddr.reg := io.badAddr
+  }
 
   /** increase 1 every two cycle */
-  count := Mux(compareWriteCP0(con_Count), wdata, count + tick)
+  when(!compareWriteCP0(count) && tick) {
+    count.reg := count.reg + 1.U
+  }
 
-  entryHi := Cat(
-    /* 31:13  VPN2  */ wtf(con_EntryHi, (31,13)),
-    /* 12:11  VPN2X */ wtf(con_EntryHi, (12,11)),
-    /* 10:8   0     */ 0.U(3.W),
-    /* 6:0    ASID  */ wtf(con_EntryHi, (7, 0))
-  )
+  when(except) {
+    status.reg.exl := true.B
+  }
 
-  status := Cat(
-    /* 31:23  0   */  0.U(9.W),
-    /* 22     Bev */  1.U(1.W),
-    /* 21:16  0   */  0.U(6.W),
-    /* 15:8   IM7...IM0 */  wtf(con_Status, (15, 8)),
-    /* 7:2    0   */  0.U(6.W),
-    /* 1      EXL */  Mux(except, 1.U(1.W), wtf(con_Status, 1)),
-    /* 0      IE  */  wtf(con_Status, 0),
-  )
+  when(except) {
+    cause.reg.bd := io.inDelaySlot
+  }
+  cause.reg.ipHard  := io.intr
+  cause.reg.excCode := excCode
 
-  cause := Cat(
-    /* 31     BD  */  Mux(except, io.inDelaySlot, cause(31)),
-    /* 30     TI  */  0.U(1.W),
-    /* 29:16  0   */  0.U(14.W),
-    /* 15:10  IP7...IP2 */ io.intr,
-    /* 9:8    IP1...IP0 */ wtf(con_Cause, (9,8)),
-    /* 7      0   */  0.U(1.W),
-    /* 6:2    ExcCode   */ excCode,
-    /* 1:0    0   */  0.U(2.W),
-  )
-
-  epc := Mux(
-    except,
-    Mux(io.inDelaySlot, io.pc - 4.U, io.pc),
-    wtf(con_EPC, (31, 0))
-  )
-  // @formatter:on
+  when(except) {
+    epc.reg := Mux(io.inDelaySlot, io.pc - 4.U, io.pc)
+  }
 
   io.data := MuxLookup(
-    io.addr,
+    Cat(io.addr, io.sel),
     0.U,
-    cp0Map.toSeq.map(e => e._1.addr.U -> e._2)
+    cp0Seq.map(e => e.index.U -> e.raw)
   )
 
-  io.status_o := status
-  io.cause_o  := cause
-  io.EPC_o    := epc
+  io.exceptionCP0.status := status.reg
+  io.exceptionCP0.cause  := cause.reg
+  io.exceptionCP0.EPC    := epc.reg
+  io.tlbCP0.index        := index.reg
+  io.tlbCP0.random       := random.reg
+  io.tlbCP0.pageMask     := pageMask.reg
+  io.tlbCP0.entryHi      := entryHi.reg
+  io.tlbCP0.entryLo0     := entryLo0.reg
+  io.tlbCP0.entryLo1     := entryLo1.reg
 }
