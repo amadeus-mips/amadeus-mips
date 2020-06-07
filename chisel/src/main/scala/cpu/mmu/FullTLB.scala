@@ -22,7 +22,7 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
     val readResp = Output(new TLBEntry)
 
     // the probing instruction
-    val probeReq = Input(UInt(20.W))
+    val probeReq = Input(UInt(19.W))
     val probeResp = Output(UInt(32.W))
   })
 
@@ -35,7 +35,7 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
   val hitIndex = Wire(Vec(numOfReadPorts, UInt(log2Ceil(TLBSize).W)))
   for (i <- 0 until numOfReadPorts) {
     hitWire(i) := physicalTLB.map((entry: TLBEntry) =>
-      (entry.vpn2 === io.query(i).vAddr(19, 1)) && ((entry.asid === io.asid) || (entry.global))
+      (entry.vpn2 === io.query(i).vAddr(19, 1)) && ((entry.asid === io.asid) || entry.global)
     )
     val isHit = hitWire(i).contains(true.B)
     val indexTLB = hitWire(i).indexWhere((hit: Bool) => hit)
@@ -55,7 +55,7 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
 
   // the probe request and response
   val probeWire = Wire(Vec(TLBSize, Bool()))
-  probeWire := physicalTLB.map((entry: TLBEntry) => (entry.vpn2 === io.probeReq(19, 1)))
+  probeWire := physicalTLB.map((entry: TLBEntry) => entry.vpn2 === io.probeReq && (entry.global || entry.asid === io.instrReq.writeData.asid))
   io.probeResp := Cat(
     !probeWire.contains(true.B),
     0.U((32 - log2Ceil(TLBSize) - 1).W),

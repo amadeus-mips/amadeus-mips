@@ -25,6 +25,9 @@ class ExecuteTop extends Module {
     val memCP0  = Input(new CPBundle)
     val wbCP0   = Input(new CPBundle)
 
+    val memOp = Input(UInt(opLen.W))
+    val wbOp  = Input(UInt(opLen.W))
+
     val out      = Output(new ExeMemBundle)
     val branch   = Output(new ValidBundle) // back to `Fetch`
     val stallReq = Output(Bool())
@@ -101,8 +104,9 @@ class ExecuteTop extends Module {
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
 
-  io.branch.bits := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
+  io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
   io.branch.valid := branch.io.branch.valid ^ io.in.brPredicted
 
-  io.stallReq := writeOther.io.stallReq
+  io.stallReq := writeOther.io.stallReq || (io.in.operation === MV_MFC0 &&
+    (VecInit(Seq(TLB_R, TLB_P)).contains(io.memOp) || VecInit(Seq(TLB_R, TLB_P)).contains(io.wbOp)))
 }

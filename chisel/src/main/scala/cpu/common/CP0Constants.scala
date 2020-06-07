@@ -204,6 +204,7 @@ class EntryHiCP0 extends BaseCP0 {
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
     reg     := from.asTypeOf(new EntryHiBundle)
+    reg.vpn2x := reg.vpn2x
     reg.non := reg.non
   }
 }

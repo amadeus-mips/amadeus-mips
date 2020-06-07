@@ -20,7 +20,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
     val rInst    = new NiseSramReadIO()
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
-    val tlb = new TLBOpIO(conf.tlbSize)
+    val tlb      = new TLBOpIO(conf.tlbSize)
   })
 
   /**
@@ -87,6 +87,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.cp0Data := cp0.io.data
   executeTop.io.memCP0  := exe_mem.io.out.cp0
   executeTop.io.wbCP0   := wbTop.io.out.cp0
+  executeTop.io.memOp   := exe_mem.io.out.operation
+  executeTop.io.wbOp    := mem_wb.io.out.operation
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.stall
@@ -130,5 +132,5 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   io.rChannel <> memoryTop.io.rData
   io.wChannel <> memoryTop.io.wData
-  io.tlb <> memoryTop.io.tlb
+  io.tlb      <> memoryTop.io.tlb
 }

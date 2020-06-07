@@ -79,9 +79,9 @@ class MemoryTop(implicit cfg: CPUConfig) extends Module {
 
   io.tlb.instrReq.writeEn := io.in.operation === TLB_WR || io.in.operation === TLB_WI
   io.tlb.instrReq.TLBIndex := Mux(
-    io.in.operation === TLB_WI,
-    forward.io.outTLBCP0.index.index,
-    forward.io.outTLBCP0.random.random
+    io.in.operation === TLB_WR,
+    forward.io.outTLBCP0.random.random,
+    forward.io.outTLBCP0.index.index
   )
 
   io.tlb.instrReq.writeData.global   := forward.io.outTLBCP0.entryLo0.global & forward.io.outTLBCP0.entryLo1.global
