@@ -27,7 +27,7 @@ class TLBQuery extends Bundle {
   val vAddr = UInt(20.W)
 }
 
-class TLBResult(TLBSize: Int) extends Bundle {
+class TLBResult() extends Bundle {
   val hit = Bool()
   val mapped = Bool()
   val uncached = Bool()
@@ -38,5 +38,7 @@ class TLBRWReq(TLBSize: Int) extends Bundle {
   val TLBIndex = UInt(log2Ceil(TLBSize).W)
   val writeEn = Bool()
   val writeData = new TLBEntry()
+
+  override def cloneType: TLBRWReq.this.type = new TLBRWReq(TLBSize).asInstanceOf[this.type ]
 }
 

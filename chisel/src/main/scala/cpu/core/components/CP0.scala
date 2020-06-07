@@ -16,6 +16,8 @@ class TLBHandleBundle(tlbSize: Int) extends Bundle {
   val entryLo1 = new EntryLoBundle
   val index    = new IndexBundle(tlbSize)
   val random   = new RandomBundle(tlbSize)
+
+  override def cloneType: TLBHandleBundle.this.type = new TLBHandleBundle(tlbSize).asInstanceOf[this.type]
 }
 
 class ExceptionHandleBundle extends Bundle {
@@ -43,6 +45,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
 
   val tlbCP0 = Output(new TLBHandleBundle(tlbSize))
 
+  override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type ]
 }
 
 class CP0(tlbSize: Int = 32) extends Module {
@@ -68,7 +71,7 @@ class CP0(tlbSize: Int = 32) extends Module {
   // soft write
   when(io.cp0Write.enable) {
     val c = io.cp0Write
-    Seq(index, random, wired, entryLo0, entryLo1).foreach(cp0 => {
+    cp0Seq.foreach(cp0 => {
       when(cp0.index.U === Cat(c.addr, c.sel)) {
         cp0.softWrite(c.data)
       }
@@ -108,10 +111,10 @@ class CP0(tlbSize: Int = 32) extends Module {
     pageMask.reg.mask := 0.U
     Seq(entryLo0.reg, entryLo1.reg).zip(io.tlb.readResp.pages).foreach(e => {
       e._1.pfn := e._2.pfn
-      e._1.c := e._2.cacheControl
-      e._1.v := e._2.valid
-      e._1.d := e._2.dirty
-      e._1.g := io.tlb.readResp.global
+      e._1.cacheControl := e._2.cacheControl
+      e._1.valid := e._2.valid
+      e._1.dirty := e._2.dirty
+      e._1.global := io.tlb.readResp.global
     })
   }.elsewhen(io.op === TLB_P) {
     index.reg.p := io.tlb.probeResp(31)

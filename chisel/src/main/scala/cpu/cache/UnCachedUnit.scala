@@ -19,7 +19,7 @@ class UnCachedUnit extends Module {
   val readAddressReg = Reg(UInt(32.W))
   // delay the read data a cycle
   val readDataReg = Reg(UInt(32.W))
-  assert(!io.rChannel.enable || (io.rChannel.enable && io.rChannel.addr(31,29) === "b101".U(3.W)))
+//  assert(!io.rChannel.enable || (io.rChannel.enable && io.rChannel.addr(31,29) === "b101".U(3.W)), s"${io.rChannel.addr}")
 
   val writeIdle :: writeAW :: writeTransfer :: writeFinish :: Nil = Enum(4)
   val writeState = RegInit(writeIdle)
@@ -28,7 +28,7 @@ class UnCachedUnit extends Module {
   val writeMaskReg = Reg(UInt(4.W))
   //TODO: does slave support aw and w out of order?
 
-  assert(!io.wChannel.enable || (io.wChannel.enable && io.wChannel.addr(31,29) === "b101".U(3.W)))
+//  assert(!io.wChannel.enable || (io.wChannel.enable && io.wChannel.addr(31,29) === "b101".U(3.W)), s"${io.wChannel.addr}")
   //-----------------------------------------------------------------------------
   //------------------default IO--------------------------------------
   //-----------------------------------------------------------------------------

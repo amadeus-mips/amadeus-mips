@@ -1,7 +1,7 @@
 package cpu.common
 
 import chisel3._
-import chisel3.util.{log2Ceil, Cat, Fill, MuxLookup}
+import chisel3.util.{log2Ceil, MuxLookup}
 
 trait CP0Constants {
   val con_Index    = CP0Struct(0)
@@ -18,22 +18,23 @@ trait CP0Constants {
   val con_EPC      = CP0Struct(14)
 }
 
-/** for forward write mask, not used*/
+/** for forward write mask, not used, get from nontrivial-mips */
 object WriteMask extends CP0Constants {
   var tlbSize  = 32
   def tlbWidth = log2Ceil(tlbSize)
   val map = Seq(
     con_Index.index    -> (tlbSize - 1).U(32.W),
     con_Random.index   -> 0.U(32.W),
-    con_EntryLo0.index -> Cat(0.U(6.W), Fill(26, true.B)),
-    con_EntryLo1.index -> Cat(0.U(6.W), Fill(26, true.B)),
-    con_PageMask.index -> Cat(0.U(3.W), Fill(18, true.B), 0.U(11.W)),
+    con_EntryLo0.index -> "h7fffffff".U(32.W),
+    con_EntryLo1.index -> "h7fffffff".U(32.W),
+    con_PageMask.index -> "b0001_1111_1111_1111_1111_0000_0000_0000".U(32.W),
     con_Wired.index    -> (tlbSize - 1).U(32.W),
-    con_Count.index    -> Fill(32, true.B),
-    con_EntryHi.index  -> Cat(Fill(21, true.B), 0.U(3.W), Fill(8, true.B)),
-    con_Status.index   -> Cat(Fill(9, true.B), false.B, Fill(22, true.B)),
-    con_Cause.index    -> Cat(0.U(8.W), Fill(2, true.B), 0.U(12.W), Fill(2, true.B), 0.U(8.W)),
-    con_EPC.index      -> Fill(32, true.B)
+    con_BadVAddr.index -> 0.U(32.W),
+    con_Count.index    -> "hffffffff".U(32.W),
+    con_EntryHi.index  -> "hfffff0ff".U(32.W),
+    con_Status.index   -> "b1111_1010_0111_1000_1111_1111_0001_0111".U(32.W),
+    con_Cause.index    -> "b0000_0000_1100_0000_0000_0011_0000_0000".U(32.W),
+    con_EPC.index      -> "hffffffff".U(32.W)
   )
   def apply(index: Int): UInt = {
     map.filter(e => e._1 == index).head._2
@@ -114,10 +115,11 @@ class EntryLoBundle extends Bundle {
   val fill = UInt(2.W)
   val non  = UInt(4.W)
   val pfn  = UInt(20.W)
-  val c    = UInt(3.W)
-  val d    = Bool()
-  val v    = Bool()
-  val g    = Bool()
+
+  val cacheControl = UInt(3.W)
+  val dirty        = Bool()
+  val valid        = Bool()
+  val global       = Bool()
 }
 class EntryLoCP0(lo: Int) extends BaseCP0 {
   require(lo == 0 || lo == 1)

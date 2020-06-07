@@ -8,15 +8,14 @@ import chisel3.util._
   *
   * @param numOfReadPorts how many read ports there are
   * @param TLBSize        how many entries are in TLB
-  * @param phyAddrWidth   how wide the translated physical address is
   */
-class FullTLB(numOfReadPorts: Int, TLBSize: Int, phyAddrWidth: Int) extends Module {
+class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
   require(isPow2(TLBSize), "TLB size should be a power of 2")
   val io = IO(new Bundle {
     val asid = Input(UInt(8.W))
-    val kseg0Unmapped = Input(Bool())
+    val kseg0Uncached = Input(Bool())
     val query = Input(Vec(numOfReadPorts, new TLBQuery()))
-    val result = Output(Vec(numOfReadPorts, new TLBResult(TLBSize)))
+    val result = Output(Vec(numOfReadPorts, new TLBResult()))
 
     // there should be only 1 operation port that can handle both read and write
     val instrReq = Input(new TLBRWReq(TLBSize))
@@ -27,7 +26,7 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int, phyAddrWidth: Int) extends Modu
     val probeResp = Output(UInt(32.W))
   })
 
-  val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(new TLBEntry)))
+  val physicalTLB = RegInit(VecInit(Seq.fill(TLBSize)(0.U.asTypeOf(new TLBEntry))))
 
   // read port for I-cache, (D-cache, uncached)
   // NOTE: query is executed regardless of whether the input is valid, validity of input
@@ -43,12 +42,12 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int, phyAddrWidth: Int) extends Modu
     val page = physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
     val mapped =
       (!io.query(i).vAddr(19)) || (io.query(i).vAddr(19, 18) === "b11".U(2.W))
-    val uncached = (io.query(i).vAddr(19, 17) === "b101".U(3.W)) || (io.query(i).vAddr(19, 17) === "b100".U(3.W) && io.kseg0Unmapped)
+    val uncached = (io.query(i).vAddr(19, 17) === "b101".U(3.W)) || (io.query(i).vAddr(19, 17) === "b100".U(3.W) && io.kseg0Uncached)
     hitIndex(i) := indexTLB
     io.result(i).hit := isHit
     io.result(i).pageInfo := page
     when(!mapped) {
-      io.result(i).pageInfo.pfn := io.query(i).vAddr
+      io.result(i).pageInfo.pfn := Cat(0.U(3.W), io.query(i).vAddr(16,0))
     }
     io.result(i).mapped := mapped
     io.result(i).uncached := uncached

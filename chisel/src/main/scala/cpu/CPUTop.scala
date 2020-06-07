@@ -5,8 +5,10 @@ package cpu
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
+import chisel3.util.Cat
 import cpu.cache.{ICache, UnCachedUnit, newDCache}
 import cpu.core.Core_ls
+import cpu.mmu.FullTLB
 import cpu.performance.CPUTopPerformanceIO
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
@@ -16,7 +18,7 @@ import shared.DebugBundle
   *
   * @param performanceMonitorEnable enable the performance monitor IO of the CPU
   */
-class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConfig = CPUConfig.Build) extends Module {
+class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig = CPUConfig.Build) extends Module {
   val io = IO(new Bundle {
 
     /** hardware interrupt */
@@ -33,22 +35,42 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
   val dCache   = Module(new newDCache)
   val unCached = Module(new UnCachedUnit)
 
+  val tlb = Module(new FullTLB(numOfReadPorts = 2, TLBSize = conf.tlbSize))
+
   val core = Module(new Core_ls)
 
   // hook up the performance monitor wires
   if (performanceMonitorEnable) {
     io.performance.get.cache := iCache.io.performanceMonitorIO.get
   }
+
+  core.io.tlb.readResp := tlb.io.readResp
+  core.io.tlb.probeResp := tlb.io.probeResp
+
+  tlb.io.asid := core.io.tlb.asid
+  tlb.io.kseg0Uncached := core.io.tlb.kseg0Uncached
+  tlb.io.instrReq := core.io.tlb.instrReq
+  tlb.io.probeReq := core.io.tlb.probeReq
+
+  tlb.io.query(0).vAddr := core.io.rInst.addr(31, 12)
+  tlb.io.query(1).vAddr := core.io.rChannel.addr(31,12)
+//  assert(!core.io.rInst.enable || !tlb.io.result(0).mapped || tlb.io.result(0).hit, s"${core.io.rInst.addr.litValue()}")
+  when(core.io.rInst.enable && tlb.io.result(0).mapped && !tlb.io.result(0).hit) {
+    printf("error! %d\n", core.io.rInst.addr)
+  }
+  assert(!(core.io.rChannel.enable&&core.io.wChannel.enable) || !tlb.io.result(1).mapped || tlb.io.result(1).hit, s"${core.io.rChannel.addr}")
+
   core.io.intr := io.intr
   // assume instructions are always cached
   core.io.rInst <> iCache.io.rInst
+  iCache.io.rInst.addr := Cat(tlb.io.result(0).pageInfo.pfn, core.io.rInst.addr(11, 0))
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
   // in the same cycle
   val useDCache = RegInit(true.B)
 
-  when(!isUnCached(core.io.rChannel.addr)) {
+  when(!tlb.io.result(1).uncached) {
     when(dCache.io.rChannel.valid) {
       useDCache := true.B
     }
@@ -57,7 +79,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
       useDCache := false.B
     }
   }
-  when(!isUnCached(core.io.rChannel.addr)) {
+  when(!tlb.io.result(1).uncached) {
     core.io.rChannel            <> dCache.io.rChannel
     core.io.wChannel            <> dCache.io.wChannel
     unCached.io                 <> DontCare
@@ -70,6 +92,12 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
     dCache.io.rChannel.enable := false.B
     dCache.io.wChannel.enable := false.B
   }
+  val dataPhyAddr = Cat(tlb.io.result(1).pageInfo.pfn, core.io.rChannel.addr(11, 0))
+  dCache.io.rChannel.addr := dataPhyAddr
+  unCached.io.rChannel.addr := dataPhyAddr
+  dCache.io.wChannel.addr := dataPhyAddr
+  unCached.io.wChannel.addr := dataPhyAddr
+
   core.io.rChannel.data := Mux(useDCache, dCache.io.rChannel.data, unCached.io.rChannel.data)
 
   iCache.io.axi  := DontCare

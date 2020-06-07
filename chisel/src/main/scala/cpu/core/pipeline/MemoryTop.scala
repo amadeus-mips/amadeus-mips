@@ -50,8 +50,8 @@ class MemoryTop(implicit cfg: CPUConfig) extends Module {
 
   except.io.pc        := io.in.pc
   except.io.addr      := io.in.memAddr
-  except.io.cp0Status := forward.io.outExceptionCP0.status
-  except.io.cp0Cause  := forward.io.outExceptionCP0.cause
+  except.io.cp0Status := forward.io.outExceptionCP0.status.asUInt()
+  except.io.cp0Cause  := forward.io.outExceptionCP0.cause.asUInt()
   except.io.inExcept  := io.in.except
 
   forward.io.inExceptionCP0 := io.exceptionCP0
@@ -84,11 +84,11 @@ class MemoryTop(implicit cfg: CPUConfig) extends Module {
     forward.io.outTLBCP0.random.random
   )
 
-  io.tlb.instrReq.writeData.global       := forward.io.outTLBCP0.entryLo0.g & forward.io.outTLBCP0.entryLo1.g
-  io.tlb.instrReq.writeData.asid         := forward.io.outTLBCP0.entryHi.asid
-  io.tlb.instrReq.writeData.vpn2         := forward.io.outTLBCP0.entryHi.vpn2
-  io.tlb.instrReq.writeData.pages(0).pfn := forward.io.outTLBCP0.entryLo0.pfn
-  io.tlb.instrReq.writeData.pages(1).pfn := forward.io.outTLBCP0.entryLo1.pfn
+  io.tlb.instrReq.writeData.global   := forward.io.outTLBCP0.entryLo0.global & forward.io.outTLBCP0.entryLo1.global
+  io.tlb.instrReq.writeData.asid     := forward.io.outTLBCP0.entryHi.asid
+  io.tlb.instrReq.writeData.vpn2     := forward.io.outTLBCP0.entryHi.vpn2
+  io.tlb.instrReq.writeData.pages(0) := forward.io.outTLBCP0.entryLo0
+  io.tlb.instrReq.writeData.pages(1) := forward.io.outTLBCP0.entryLo1
 
   io.tlb.probeReq := forward.io.outTLBCP0.entryHi.vpn2
 }
