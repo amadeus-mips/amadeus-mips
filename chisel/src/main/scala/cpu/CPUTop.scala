@@ -55,9 +55,6 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   tlb.io.query(0).vAddr := core.io.rInst.addr(31, 12)
   tlb.io.query(1).vAddr := core.io.rChannel.addr(31,12)
 //  assert(!core.io.rInst.enable || !tlb.io.result(0).mapped || tlb.io.result(0).hit, s"${core.io.rInst.addr.litValue()}")
-  when(core.io.rInst.enable && tlb.io.result(0).mapped && !tlb.io.result(0).hit) {
-    printf("error! %d\n", core.io.rInst.addr)
-  }
   assert(!(core.io.rChannel.enable&&core.io.wChannel.enable) || !tlb.io.result(1).mapped || tlb.io.result(1).hit, s"${core.io.rChannel.addr}")
 
   core.io.intr := io.intr

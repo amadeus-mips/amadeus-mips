@@ -26,22 +26,23 @@ package soc
 import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import chisel3.util.ValidIO
-import confreg.Confreg
-import cpu.{CPUConfig, CPUTop}
+import confreg.{Confreg, NumMonitorBundle}
 import cpu.performance.SocPerformanceIO
+import cpu.{CPUConfig, CPUTop}
 import ram.AXIRamRandomWrap
 import shared.{DebugBundle, GPIO}
 
 /**
   *
   */
-class SocLiteTop(
-  implicit socCfg: SocConfig
+class SocLiteTop(implicit
+  socCfg: SocConfig
 ) extends Module {
   val io = IO(new Bundle {
     val gp    = new GPIO
     val uart  = new ValidIO(UInt(8.W))
     val debug = Output(new DebugBundle)
+    val num   = Output(new NumMonitorBundle)
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
   })
@@ -56,7 +57,7 @@ class SocLiteTop(
   val ram             = Module(new AXIRamRandomWrap())
 
   // the optional performance IO
-  axiInterconnect.io.slaves(0) <> cpu.io.axi
+  axiInterconnect.io.slaves(0)  <> cpu.io.axi
   axiInterconnect.io.masters(0) <> ram.io.axi
   axiInterconnect.io.masters(1) <> confreg.io.axi
 
@@ -64,7 +65,8 @@ class SocLiteTop(
 
   io.gp    <> confreg.io.gp
   io.uart  <> confreg.io.uart
-  io.debug <> cpu.io.debug
+  io.num   := confreg.io.num
+  io.debug := cpu.io.debug
 
   ram.io.ramRandomMask := confreg.io.ram_random_mask
   // the optional performance IO

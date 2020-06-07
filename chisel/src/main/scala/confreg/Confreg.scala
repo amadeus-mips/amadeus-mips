@@ -48,9 +48,9 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** Modified by Discreater */
 package confreg
 
+import axi.AXIIO
 import chisel3._
 import chisel3.util._
-import axi.AXIIO
 import shared.GPIO
 
 /**
@@ -87,9 +87,11 @@ class Confreg(simulation: Boolean = false) extends Module {
   val NUM_MONITOR_ADDR  =  "hfffc".U(16.W)  //32'hbfaf_fffc
   // @formatter:on
   val io = IO(new Bundle {
-    val axi             = AXIIO.slave()
-    val gp              = new GPIO
-    val uart            = new ValidIO(UInt(8.W))
+    val axi  = AXIIO.slave()
+    val gp   = new GPIO
+    val uart = new ValidIO(UInt(8.W))
+    val num  = Output(new NumMonitorBundle)
+
     val ram_random_mask = Output(UInt(5.W)) // To ram
   })
   val switch_led = Wire(UInt(16.W))
@@ -291,6 +293,7 @@ class Confreg(simulation: Boolean = false) extends Module {
     when(conf_we & (conf_addr(15, 0) === NUM_MONITOR_ADDR)) {
       num_monitor := conf_wdata(0)
     }
+    io.num.monitor := num_monitor
   }
 
   def virtual_uartHandle(): Unit = {
@@ -309,11 +312,21 @@ class Confreg(simulation: Boolean = false) extends Module {
   val short_delay = RegInit(pseudo_random_23(7, 0) === "hff".U(8.W))
 
   io.ram_random_mask := Cat(
-    (pseudo_random_23(10) & pseudo_random_23(20)) & (short_delay | (pseudo_random_23(11) ^ pseudo_random_23(5))) | no_mask,
-    (pseudo_random_23(9) & pseudo_random_23(17)) & (short_delay | (pseudo_random_23(12) ^ pseudo_random_23(4))) | no_mask,
-    (pseudo_random_23(8) & pseudo_random_23(22)) & (short_delay | (pseudo_random_23(13) ^ pseudo_random_23(3))) | no_mask,
-    (pseudo_random_23(7) & pseudo_random_23(19)) & (short_delay | (pseudo_random_23(14) ^ pseudo_random_23(2))) | no_mask,
-    (pseudo_random_23(6) & pseudo_random_23(16)) & (short_delay | (pseudo_random_23(15) ^ pseudo_random_23(1))) | no_mask
+    (pseudo_random_23(10) & pseudo_random_23(20)) & (short_delay | (pseudo_random_23(11) ^ pseudo_random_23(
+      5
+    ))) | no_mask,
+    (pseudo_random_23(9) & pseudo_random_23(17)) & (short_delay | (pseudo_random_23(12) ^ pseudo_random_23(
+      4
+    ))) | no_mask,
+    (pseudo_random_23(8) & pseudo_random_23(22)) & (short_delay | (pseudo_random_23(13) ^ pseudo_random_23(
+      3
+    ))) | no_mask,
+    (pseudo_random_23(7) & pseudo_random_23(19)) & (short_delay | (pseudo_random_23(14) ^ pseudo_random_23(
+      2
+    ))) | no_mask,
+    (pseudo_random_23(6) & pseudo_random_23(16)) & (short_delay | (pseudo_random_23(15) ^ pseudo_random_23(
+      1
+    ))) | no_mask
   )
 
   /** led display */
@@ -493,6 +506,7 @@ class Confreg(simulation: Boolean = false) extends Module {
 
   /** digital number display */
   def digital_numberHandle(): Unit = {
+    io.num.data := num_data
     when(conf_we && conf_addr(15, 0) === NUM_ADDR) {
       num_data := conf_wdata
     }
