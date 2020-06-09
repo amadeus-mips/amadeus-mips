@@ -1,0 +1,9 @@
+bin.lds
+convert
+*.a
+start.o
+inst/*.o
+obj/*.mif
+obj/*.bin
+obj/*.data
+obj/*.elf
