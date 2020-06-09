@@ -189,7 +189,7 @@ class ICache(
 
   io.axi.ar.bits.id := INST_ID
   io.axi.ar.bits.addr :=
-    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0)))
+    Mux(state === sIdle, addr, Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W)))
 
 
   io.axi.ar.bits.len := (bankAmount - 1).U(4.W)

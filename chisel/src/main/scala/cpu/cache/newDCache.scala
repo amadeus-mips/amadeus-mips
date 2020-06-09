@@ -146,13 +146,7 @@ class newDCache(
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
   val addr = io.rChannel.addr
-  assert(
-    (addr(
-      31,
-      29
-    ) =/= "b101".U && (io.rChannel.enable || io.wChannel.enable)) || (!io.rChannel.enable && !io.wChannel.enable),
-    "this should be a cached transaction"
-  )
+
   val tag = addr(dataLen - 1, dataLen - tagLen)
   val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
   val bankOffset = addr(log2Ceil(blockSize) - 1, log2Ceil(bankSize))
@@ -239,7 +233,7 @@ class newDCache(
 
   io.axi.ar.bits.id := DATA_ID
   io.axi.ar.bits.addr :=
-    Cat(0.U(3.W), Mux(state === sIdle, addr(28, 0), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0)))
+    Mux(state === sIdle, addr, Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W)))
 
   io.axi.ar.bits.len   := (bankAmount - 1).U(4.W)
   io.axi.ar.bits.size  := "b010".U(3.W) // 4 Bytes
