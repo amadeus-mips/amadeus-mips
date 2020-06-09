@@ -42,12 +42,14 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
     val page = physicalTLB(hitIndex(i)).pages(io.query(i).vAddr(0))
     val mapped =
       (!io.query(i).vAddr(19)) || (io.query(i).vAddr(19, 18) === "b11".U(2.W))
-    val uncached = (io.query(i).vAddr(19, 17) === "b101".U(3.W)) || (io.query(i).vAddr(19, 17) === "b100".U(3.W) && io.kseg0Uncached)
+    val uncached = (io.query(i).vAddr(19, 17) === "b101".U(3.W)) ||
+      (io.query(i).vAddr(19, 17) === "b100".U(3.W) && io.kseg0Uncached) ||
+      (mapped && io.result(i).pageInfo.cacheControl === "b010".U(2.W))
     hitIndex(i) := indexTLB
     io.result(i).hit := isHit
     io.result(i).pageInfo := page
     when(!mapped) {
-      io.result(i).pageInfo.pfn := Cat(0.U(3.W), io.query(i).vAddr(16,0))
+      io.result(i).pageInfo.pfn := Cat(0.U(3.W), io.query(i).vAddr(16, 0))
     }
     io.result(i).mapped := mapped
     io.result(i).uncached := uncached
@@ -55,7 +57,9 @@ class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
 
   // the probe request and response
   val probeWire = Wire(Vec(TLBSize, Bool()))
-  probeWire := physicalTLB.map((entry: TLBEntry) => entry.vpn2 === io.probeReq && (entry.global || entry.asid === io.instrReq.writeData.asid))
+  probeWire := physicalTLB.map((entry: TLBEntry) =>
+    entry.vpn2 === io.probeReq && (entry.global || entry.asid === io.instrReq.writeData.asid)
+  )
   io.probeResp := Cat(
     !probeWire.contains(true.B),
     0.U((32 - log2Ceil(TLBSize) - 1).W),
