@@ -1,6 +1,7 @@
 package cpu.mmu
 
 import chisel3._
+import chisel3.internal.naming.chiselName
 import chisel3.util._
 
 /**
@@ -9,6 +10,7 @@ import chisel3.util._
   * @param numOfReadPorts how many read ports there are
   * @param TLBSize        how many entries are in TLB
   */
+@chiselName
 class FullTLB(numOfReadPorts: Int, TLBSize: Int) extends Module {
   require(isPow2(TLBSize), "TLB size should be a power of 2")
   val io = IO(new Bundle {

@@ -17,7 +17,8 @@ class TestConfig(
   val performanceMonitorEnable: Boolean = false,
   val trace:                    Boolean = false,
   val writeTrace:               Boolean = false,
-  val vcdOn:                    Boolean = false
+  val vcdOn:                    Boolean = false,
+  val tlbTest:                  Boolean = false
 ) {
 
   def check(perfNumber: Int) = {

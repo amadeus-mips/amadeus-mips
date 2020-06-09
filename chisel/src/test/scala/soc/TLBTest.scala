@@ -6,7 +6,7 @@ class TLBTest extends ChiselFlatSpec {
   /** soc config */
   implicit val socCfg = SocConfig.tlbConfig(simulation = false)
   /** test config */
-  implicit val tcfg = new TestConfig(vcdOn = true)
+  implicit val tcfg = new TestConfig(vcdOn = true, tlbTest = true)
 
   "tlb test" should "use verilator without vcd file" in {
     Driver.execute(

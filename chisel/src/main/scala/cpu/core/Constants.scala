@@ -159,7 +159,7 @@ trait exceptConstants {
 
   def isTLBExcept(exc: Vec[Bool]): Bool = {
     require(exc.length == exceptAmount)
-    exc(EXCEPT_INST_TLB_INVALID) || exc(EXCEPT_INST_TLB_INVALID) || exc(EXCEPT_DATA_TLB_R_REFILL) ||
+    exc(EXCEPT_INST_TLB_REFILL) || exc(EXCEPT_INST_TLB_INVALID) || exc(EXCEPT_DATA_TLB_R_REFILL) ||
     exc(EXCEPT_DATA_TLB_R_INVALID) || exc(EXCEPT_DATA_TLB_W_REFILL) || exc(EXCEPT_DATA_TLB_W_INVALID) ||
     exc(EXCEPT_DATA_TLB_W_MODIFIED)
   }

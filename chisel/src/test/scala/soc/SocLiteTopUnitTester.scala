@@ -124,7 +124,7 @@ class SocLiteTopUnitTester(
     while (pc != pcEnd) {
       val current = System.currentTimeMillis()
       if (pc != 0) {
-        if (pc < BigInt("9fc00000", 16) || (isPerf && pc == BigInt("bfc00384", 16))) {
+        if ((!tcfg.tlbTest && pc < BigInt("9fc00000", 16)) || (isPerf && pc == BigInt("bfc00384", 16))) {
           err(lastDebugInfo)
           err("Exit-wrong pc")
           return false
