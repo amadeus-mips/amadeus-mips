@@ -3,7 +3,7 @@
 package cpu.core
 
 import chisel3._
-import cpu.common.{CP0Constants, DefaultWireLength, Instructions}
+import cpu.common.{CP0Constants, DefaultConfig, DefaultWireLength, Instructions}
 import shared.Util
 
 trait opConstants {
@@ -96,7 +96,7 @@ trait opConstants {
   /** judge whether op is to save data to memory */
   def opIsStore(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    Util.listHasElement(List(MEM_SB, MEM_SH, MEM_SW), op)
+    VecInit(Seq(MEM_SB, MEM_SH, MEM_SW)).contains(op)
   }
   /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {
@@ -127,31 +127,48 @@ trait opConstants {
 
 trait valueConstants {
   val startPC  = "hbfc00000".U(32.W)
-  val exceptPC = "hbfc00380".U(32.W)
+  val tlbRefillExceptPC = "hbfc00200".U(32.W)
+  val generalExceptPC = "hbfc00380".U(32.W)
   val zeroWord = 0.U(32.W)
-  val GPR31 = "b11111".U(5.W)
+  val GPR31    = "b11111".U(5.W)
 }
 
 trait exceptConstants {
-  val EXCEPT_FETCH = 0
-  val EXCEPT_ERET = 1
+  val exceptAmount = 16
+
+  val EXCEPT_FETCH        = 0
+  val EXCEPT_ERET         = 1
   val EXCEPT_INST_INVALID = 2
-  val EXCEPT_BREAK = 3
-  val EXCEPT_SYSCALL = 4
-  val EXCEPT_OVERFLOW = 5
-  val EXCEPT_LOAD = 6
-  val EXCEPT_STORE = 7
+  val EXCEPT_BREAK        = 3
+  val EXCEPT_SYSCALL      = 4
+  val EXCEPT_OVERFLOW     = 5
+  val EXCEPT_LOAD         = 6
+  val EXCEPT_STORE        = 7
 
   /** External interrupt */
   val EXCEPT_INTR = 8
+
+  // TLB
+  val EXCEPT_INST_TLB_REFILL     = 9
+  val EXCEPT_INST_TLB_INVALID    = 10
+  val EXCEPT_DATA_TLB_R_REFILL   = 11
+  val EXCEPT_DATA_TLB_R_INVALID  = 12
+  val EXCEPT_DATA_TLB_W_REFILL   = 13
+  val EXCEPT_DATA_TLB_W_INVALID  = 14
+  val EXCEPT_DATA_TLB_W_MODIFIED = 15
+
+  def isTLBExcept(exc: Vec[Bool]): Bool = {
+    require(exc.length == exceptAmount)
+    exc(EXCEPT_INST_TLB_INVALID) || exc(EXCEPT_INST_TLB_INVALID) || exc(EXCEPT_DATA_TLB_R_REFILL) ||
+    exc(EXCEPT_DATA_TLB_R_INVALID) || exc(EXCEPT_DATA_TLB_W_REFILL) || exc(EXCEPT_DATA_TLB_W_INVALID) ||
+    exc(EXCEPT_DATA_TLB_W_MODIFIED)
+  }
 }
 
-object Constants extends
-  opConstants with
-  exceptConstants with
-  Instructions with
-  DefaultWireLength with
-  valueConstants with
-  CP0Constants {
-
-}
+object Constants
+    extends opConstants
+    with exceptConstants
+    with Instructions
+    with DefaultWireLength
+    with valueConstants
+    with CP0Constants {}

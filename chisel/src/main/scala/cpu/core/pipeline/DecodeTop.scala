@@ -8,7 +8,7 @@ import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stages.{IdExeBundle, IfIdBundle}
-import cpu.core.decode.{AlwaysNotTakenPredictor, AlwaysTakenPredictor}
+import cpu.core.decode.AlwaysTakenPredictor
 import shared.{Util, ValidBundle}
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
@@ -34,7 +34,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     val nextInstInDelaySlot = Output(Bool()) // to Fetch
   })
 
-  val inst = Mux(io.in.instFetchExcept || !io.in.instValid, 0.U, io.inst)
+  val inst = Mux(io.in.except.asUInt().andR() || !io.in.instValid, 0.U, io.inst)
 
   val hazard    = Module(new cpu.core.decode.Hazard)
   val control   = Module(new cpu.core.decode.Control)
@@ -69,25 +69,25 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   decode.io.inst.imm16 := imm16
   decode.io.inst.sel   := inst(2, 0)
 
-  decode.io.signal       <> control.io.out
-  decode.io.instFetchExc := io.in.instFetchExcept
-  decode.io.rsData       := hazard.io.ops(0).outData
-  decode.io.rtData       := hazard.io.ops(1).outData
+  decode.io.signal   := control.io.out
+  decode.io.inExcept := io.in.except
+  decode.io.rsData   := hazard.io.ops(0).outData
+  decode.io.rtData   := hazard.io.ops(1).outData
 
   predictor.io.pc     := io.in.pc
   predictor.io.update := io.predictorUpdate
   predictor.io.taken  := io.predictorTaken
 
   val isJR = Util.listHasElement(Seq(BR_JR, BR_JALR), control.io.out.operation)
-  val isJ = Util.listHasElement(Seq(BR_J, BR_JAL), control.io.out.operation)
+  val isJ  = Util.listHasElement(Seq(BR_J, BR_JAL), control.io.out.operation)
 
   io.out.instType  := control.io.out.instType
   io.out.operation := control.io.out.operation
 
   io.out.op1    := decode.io.op1
   io.out.op2    := decode.io.op2
-  io.out.write  <> decode.io.write
-  io.out.cp0    <> decode.io.cp0
+  io.out.write  := decode.io.write
+  io.out.cp0    := decode.io.cp0
   io.out.except := decode.io.except
 
   io.out.pc          := io.in.pc
@@ -99,7 +99,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   val BTarget = pcPlus4 + Cat(Util.signedExtend(imm16, to = 30), 0.U(2.W))
   val JTarget = Cat(pcPlus4(31, 28), imm26, 0.U(2.W))
   io.predict.valid := predictor.io.prediction && !isJR && control.io.out.instType === INST_BR
-  io.predict.bits := Mux(isJ ,JTarget, BTarget)
+  io.predict.bits  := Mux(isJ, JTarget, BTarget)
 
   io.stallReq := hazard.io.stallReq
 

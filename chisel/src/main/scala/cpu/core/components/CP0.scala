@@ -7,7 +7,6 @@ import chisel3.util._
 import cpu.common._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, TLBReadBundle}
-import cpu.mmu.TLBEntry
 
 class TLBHandleBundle(tlbSize: Int) extends Bundle {
   val entryHi  = new EntryHiBundle
@@ -31,12 +30,13 @@ class CP0IO(tlbSize: Int) extends Bundle {
   val cp0Write    = Input(new CPBundle)
   val addr        = Input(UInt(regAddrLen.W))
   val sel         = Input(UInt(3.W))
-  val except      = Input(Vec(exceptAmount, Bool()))
   val inDelaySlot = Input(Bool())
   val pc          = Input(UInt(addrLen.W))
-  val badAddr     = Input(UInt(addrLen.W))
 
-  val op = Input(UInt(opLen.W))
+  val except  = Input(Vec(exceptAmount, Bool()))
+  val badAddr = Input(UInt(addrLen.W))
+
+  val op  = Input(UInt(opLen.W))
   val tlb = Input(new TLBReadBundle)
 
   val data = Output(UInt(dataLen.W))
@@ -45,7 +45,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
 
   val tlbCP0 = Output(new TLBHandleBundle(tlbSize))
 
-  override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type ]
+  override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
 }
 
 class CP0(tlbSize: Int = 32) extends Module {
@@ -61,10 +61,9 @@ class CP0(tlbSize: Int = 32) extends Module {
   val badVAddr = new BadVAddrCP0
   val count    = new CountCP0
   val entryHi  = new EntryHiCP0
-//  val status = RegInit(Cat(0.U(9.W), 1.U(1.W), 0.U(22.W))) ???
-  val status = new StatusCP0
-  val cause  = new CauseCP0
-  val epc    = new EPCCP0
+  val status   = new StatusCP0
+  val cause    = new CauseCP0
+  val epc      = new EPCCP0
 
   val cp0Seq = Seq(index, random, entryLo0, entryLo1, pageMask, wired, badVAddr, count, entryHi, status, cause, epc)
 
@@ -92,33 +91,45 @@ class CP0(tlbSize: Int = 32) extends Module {
     MuxCase(
       cause.reg.excCode,
       Seq(
-        io.except(EXCEPT_INTR)         -> 0.U(5.W), // int
-        io.except(EXCEPT_FETCH)        -> "h04".U(5.W), // AdEL
-        io.except(EXCEPT_INST_INVALID) -> "h0a".U(5.W), // RI
-        io.except(EXCEPT_OVERFLOW)     -> "h0c".U(5.W), // Ov
-        io.except(EXCEPT_SYSCALL)      -> "h08".U(5.W), // Sys
-        io.except(EXCEPT_BREAK)        -> "h09".U(5.W), // Break
-        io.except(EXCEPT_LOAD)         -> "h04".U(5.W), // AdEL
-        io.except(EXCEPT_STORE)        -> "h05".U(5.W) // AdES
+        io.except(EXCEPT_INTR)                -> 0.U(5.W), // int
+        io.except(EXCEPT_FETCH)               -> "h04".U(5.W), // AdEL
+        io.except(EXCEPT_INST_TLB_REFILL)     -> "h02".U(5.W), // TLBL
+        io.except(EXCEPT_INST_TLB_INVALID)    -> "h02".U(5.W), // TLBL
+        io.except(EXCEPT_INST_INVALID)        -> "h0a".U(5.W), // RI
+        io.except(EXCEPT_OVERFLOW)            -> "h0c".U(5.W), // Ov
+        io.except(EXCEPT_SYSCALL)             -> "h08".U(5.W), // Sys
+        io.except(EXCEPT_BREAK)               -> "h09".U(5.W), // Break
+        io.except(EXCEPT_LOAD)                -> "h04".U(5.W), // AdEL
+        io.except(EXCEPT_STORE)               -> "h05".U(5.W), // AdES
+        io.except(EXCEPT_DATA_TLB_R_REFILL)   -> "h02".U(5.W), // TLBL
+        io.except(EXCEPT_DATA_TLB_W_REFILL)   -> "h03".U(5.W), // TLBS
+        io.except(EXCEPT_DATA_TLB_R_INVALID)  -> "h02".U(5.W), // TLBL
+        io.except(EXCEPT_DATA_TLB_W_INVALID)  -> "h03".U(5.W), // TLBS
+        io.except(EXCEPT_DATA_TLB_W_MODIFIED) -> "h01".U(5.W) // Mod
       )
     )
 
   // hard write
-  // TODO add hardware write index entryLo0/1 pageMask entryHi
   when(io.op === TLB_R) {
-    entryHi.reg.vpn2 := io.tlb.readResp.vpn2
-    entryHi.reg.asid :=  io.tlb.readResp.asid
+    entryHi.reg.vpn2  := io.tlb.readResp.vpn2
+    entryHi.reg.asid  := io.tlb.readResp.asid
     pageMask.reg.mask := 0.U
-    Seq(entryLo0.reg, entryLo1.reg).zip(io.tlb.readResp.pages).foreach(e => {
-      e._1.pfn := e._2.pfn
-      e._1.cacheControl := e._2.cacheControl
-      e._1.valid := e._2.valid
-      e._1.dirty := e._2.dirty
-      e._1.global := io.tlb.readResp.global
-    })
+    Seq(entryLo0.reg, entryLo1.reg)
+      .zip(io.tlb.readResp.pages)
+      .foreach(e => {
+        e._1.pfn          := e._2.pfn
+        e._1.cacheControl := e._2.cacheControl
+        e._1.valid        := e._2.valid
+        e._1.dirty        := e._2.dirty
+        e._1.global       := io.tlb.readResp.global
+      })
   }.elsewhen(io.op === TLB_P) {
-    index.reg.p := io.tlb.probeResp(31)
-    index.reg.index := io.tlb.probeResp(tlbWidth-1, 0)
+    index.reg.p     := io.tlb.probeResp(31)
+    index.reg.index := io.tlb.probeResp(tlbWidth - 1, 0)
+  }
+
+  when(isTLBExcept(io.except)) {
+    entryHi.reg.vpn2 := io.badAddr(31, 13)
   }
 
   when(compareWriteCP0(wired)) {
@@ -127,7 +138,7 @@ class CP0(tlbSize: Int = 32) extends Module {
     random.reg.random := Mux(random.reg.random.andR(), wired.reg.wired, random.reg.random + 1.U)
   }
 
-  when(io.except(EXCEPT_FETCH) || io.except(EXCEPT_LOAD) || io.except(EXCEPT_STORE)) {
+  when(io.except(EXCEPT_FETCH) || io.except(EXCEPT_LOAD) || io.except(EXCEPT_STORE) || isTLBExcept(io.except)) {
     badVAddr.reg := io.badAddr
   }
 
@@ -136,7 +147,9 @@ class CP0(tlbSize: Int = 32) extends Module {
     count.reg := count.reg + 1.U
   }
 
-  when(except) {
+  when(io.except(EXCEPT_ERET)) {
+    status.reg.exl := false.B
+  }.elsewhen(except) {
     status.reg.exl := true.B
   }
 

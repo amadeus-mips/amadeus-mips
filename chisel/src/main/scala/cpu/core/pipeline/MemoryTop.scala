@@ -50,9 +50,14 @@ class MemoryTop(implicit cfg: CPUConfig) extends Module {
 
   except.io.pc        := io.in.pc
   except.io.addr      := io.in.memAddr
+  except.io.op        := io.in.operation
   except.io.cp0Status := forward.io.outExceptionCP0.status.asUInt()
   except.io.cp0Cause  := forward.io.outExceptionCP0.cause.asUInt()
   except.io.inExcept  := io.in.except
+
+  except.io.tlbExcept.refill   := io.tlb.except.data.refill
+  except.io.tlbExcept.invalid  := io.tlb.except.data.invalid
+  except.io.tlbExcept.modified := io.tlb.except.data.modified
 
   forward.io.inExceptionCP0 := io.exceptionCP0
   forward.io.inTLBCP0       := io.tlbCP0

@@ -53,6 +53,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   fetchTop.io.instValid := io.rInst.valid
 
+  fetchTop.io.tlbExcept.refill := io.tlb.except.inst.refill
+  fetchTop.io.tlbExcept.invalid := io.tlb.except.inst.invalid
+
   if_id.io.in    := fetchTop.io.out
   if_id.io.stall := hazard.io.stall
   if_id.io.flush := hazard.io.flush ||

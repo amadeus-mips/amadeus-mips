@@ -12,8 +12,6 @@ trait DefaultWireLength {
   val regAmount = 32
   val regAddrLen = (log(regAmount) / log(2)).toInt   // 5
 
-  val exceptAmount = 9
-
   val intrLen = 6
 }
 

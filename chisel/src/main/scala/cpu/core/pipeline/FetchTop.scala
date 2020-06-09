@@ -27,6 +27,11 @@ class FetchTop extends Module {
     val pcValid = Output(Bool())
     // to ctrl
     val stallReq = Output(Bool())
+
+    val tlbExcept = Input(new Bundle {
+      val refill  = Bool()
+      val invalid = Bool()
+    })
   })
 
   val hazard = Module(new cpu.core.fetch.Hazard)
@@ -43,11 +48,15 @@ class FetchTop extends Module {
   pcMux.io.ins(2) := ValidBundle(io.stall, pcMux.io.pc)
   pcMux.io.ins(3) := hazard.io.out.predict
 
-  io.out.pc              := pcMux.io.pc
-  io.out.instFetchExcept := pcMux.io.pcNotAligned
-  io.out.instValid       := io.instValid
-  io.out.inDelaySlot     := hazard.io.out.inDelaySlot
+  io.out.pc          := pcMux.io.pc
+  io.out.instValid   := io.instValid
+  io.out.inDelaySlot := hazard.io.out.inDelaySlot
 
-  io.pcValid  := !pcMux.io.pcNotAligned
-  io.stallReq := !io.instValid && !pcMux.io.pcNotAligned
+  io.out.except                          := DontCare
+  io.out.except(EXCEPT_FETCH)            := pcMux.io.pcNotAligned
+  io.out.except(EXCEPT_INST_TLB_REFILL)  := io.tlbExcept.refill
+  io.out.except(EXCEPT_INST_TLB_INVALID) := io.tlbExcept.invalid
+
+  io.pcValid  := !io.out.except.asUInt().orR()
+  io.stallReq := !io.instValid && !io.out.except.asUInt().orR()
 }

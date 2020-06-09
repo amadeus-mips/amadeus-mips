@@ -9,22 +9,30 @@ import shared.ValidBundle
 
 class Hazard extends Module {
   val io = IO(new Bundle {
-    val except = Input(Vec(exceptAmount, Bool()))
-    val EPC = Input(UInt(dataLen.W))
-    val stallReqFromFetch = Input(Bool())
-    val stallReqFromDecode = Input(Bool())
+    val except              = Input(Vec(exceptAmount, Bool()))
+    val EPC                 = Input(UInt(dataLen.W))
+    val stallReqFromFetch   = Input(Bool())
+    val stallReqFromDecode  = Input(Bool())
     val stallReqFromExecute = Input(Bool())
-    val stallReqFromMemory = Input(Bool())
+    val stallReqFromMemory  = Input(Bool())
 
-    val flush = Output(Bool())
+    val flush   = Output(Bool())
     val flushPC = Output(UInt(dataLen.W))
-    val stall = Output(UInt(cpuStallLen.W))
+    val stall   = Output(UInt(cpuStallLen.W))
   })
 
   /** Only external signal require stall will buffer the flush signal */
   val stalledByExternal = io.stallReqFromMemory
 
-  val flushPC_tmp = Mux(io.except(EXCEPT_ERET), io.EPC, exceptPC)
+  val flushPC_tmp =
+    MuxCase(
+      generalExceptPC,
+      Seq(
+        io.except(EXCEPT_ERET) -> io.EPC,
+        (io.except(EXCEPT_INST_TLB_REFILL) || io.except(EXCEPT_DATA_TLB_R_REFILL) ||
+          io.except(EXCEPT_DATA_TLB_W_REFILL)) -> tlbRefillExceptPC
+      )
+    )
   val hasExcept = io.except.asUInt() =/= 0.U
 
   /**
