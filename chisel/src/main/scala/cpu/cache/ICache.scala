@@ -3,14 +3,14 @@
 package cpu.cache
 
 import chisel3._
+import shared.CircularShifterInt
 import shared.LRU.PseudoLRUMRU
-import shared.{CircularShifter, CircularShifterInt}
 //import chisel3.util.{log2Ceil, Cat}
-import chisel3.util._
-import cpu.common.NiseSramReadIO
-import cpu.common.DefaultConfig._
-import cpu.performance.CachePerformanceMonitorIO
 import axi.AXIIO
+import chisel3.util._
+import cpu.common.DefaultConfig._
+import cpu.common.NiseSramReadIO
+import cpu.performance.CachePerformanceMonitorIO
 import shared.Constants._
 
 //TODO: discuss propagating the signal
@@ -291,11 +291,6 @@ class ICache(
         }.otherwise {
           state := sWaitForAR
           beginARTransaction()
-
-          io.axi.ar.valid := true.B
-          when(io.axi.ar.fire) {
-            beginRTransaction()
-          }
         }
       }
     }
