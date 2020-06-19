@@ -270,7 +270,7 @@ class newDCache(
 
   // aw handshake has not taken place, and is in the transfer state
   //TODO: this is kind of out of sync with the states
-  io.axi.aw.valid := waitForAWHandshake
+  io.axi.aw.valid := waitForAWHandshake && state === sTransfer
 //  assert(
 //    state =/= sTransfer && waitForAWHandshake,
 //    "when state is not in transfer, wait for aw handshake signal should be low"
