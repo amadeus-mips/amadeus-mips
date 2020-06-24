@@ -6,7 +6,7 @@
 `define ZERO_DOUBLE_WORD 64'h0000_0000_0000_0000
 `define ZERO_WORD       32'h00000000
 
-module div(
+module divider(
     input wire          rst,
     input wire          clk,
 

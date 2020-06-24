@@ -38,7 +38,7 @@ class DIVBlackBox extends BlackBox with HasBlackBoxResource {
     val result_o     = Output(UInt(64.W))
     val ready_o      = Output(Bool())
   })
-  addResource("/div.v")
+  addResource("/divider.v")
 
-  override def desiredName: String = "div"
+  override def desiredName: String = "divider"
 }
