@@ -8,6 +8,7 @@ import cpu.core.bundles.HILOValidBundle
 
 class MultDivIO extends Bundle {
   val enable = Input(Bool())
+  val flush = Input(Bool())
   val op1 = Input(UInt(dataLen.W))
   val op2 = Input(UInt(dataLen.W))
   val signed = Input(Bool())

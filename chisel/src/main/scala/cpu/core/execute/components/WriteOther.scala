@@ -19,6 +19,8 @@ class WriteOther extends Module {
     val op2 = Input(UInt(dataLen.W))
     val operation = Input(UInt(opLen.W))
 
+    val flush = Input(Bool())
+
     val inCP0 = Input(new CPBundle)
 
     val outCP0 = Output(new CPBundle)
@@ -41,19 +43,21 @@ class WriteOther extends Module {
   io.mult.op1 := io.op1
   io.mult.op2 := io.op2
   io.mult.enable := false.B
+  io.mult.flush := io.flush
   io.mult.signed := io.operation === WO_MULT
   io.div.op1 := io.op1
   io.div.op2 := io.op2
   io.div.enable := false.B
+  io.div.flush := io.flush
   io.div.signed := io.operation === WO_DIV
   io.stallReq := false.B
   when(io.operation === WO_MULT || io.operation === WO_MULTU){
     io.mult.enable := !io.mult.result.hi.valid
-    io.stallReq := !io.mult.result.hi.valid
+    io.stallReq := !io.mult.result.hi.valid && !io.flush
     io.outHILO <> io.mult.result
   }.elsewhen(io.operation === WO_DIV || io.operation === WO_DIVU){
     io.div.enable := !io.div.result.hi.valid
-    io.stallReq := !io.div.result.hi.valid
+    io.stallReq := !io.div.result.hi.valid && !io.flush
     io.outHILO <> io.div.result
   }
 }
