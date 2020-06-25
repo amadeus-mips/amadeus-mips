@@ -2,7 +2,7 @@ package cpu.core.pipeline
 
 import chisel3._
 import cpu.core.Constants._
-import cpu.core.bundles.stages.IfIdBundle
+import cpu.core.bundles.stages.IfIf1Bundle
 import shared.ValidBundle
 
 class FetchTop extends Module {
@@ -22,7 +22,7 @@ class FetchTop extends Module {
     val instValid = Input(Bool())
 
     // to IFID
-    val out = Output(new IfIdBundle)
+    val out = Output(new IfIf1Bundle)
     // to ram
     val pcValid = Output(Bool())
     // to ctrl

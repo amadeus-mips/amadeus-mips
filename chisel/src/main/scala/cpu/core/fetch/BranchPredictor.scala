@@ -1,4 +1,4 @@
-package cpu.core.decode
+package cpu.core.fetch
 
 import chisel3._
 import cpu.CPUConfig

@@ -1,8 +1,7 @@
-package cpu.core.decode
+package cpu.core.fetch
 
-import Chisel.ValidIO
 import chisel3._
-import chisel3.util.{BitPat, Cat}
+import chisel3.util.Cat
 import cpu.CPUConfig
 import cpu.core.Constants._
 import shared.{Util, ValidBundle}
