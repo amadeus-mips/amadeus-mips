@@ -20,7 +20,7 @@ class Forward extends Module {
     val outCP0 = Output(new CP0HandleBundle)
   })
 
-  io.outCP0 <> io.inCP0
+  io.outCP0 := io.inCP0
   when(io.wbCP0.enable){
     switch(io.wbCP0.addr){
       is(con_Status.addr.U){
