@@ -162,7 +162,8 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
   )
   arbiter.io.request     := Cat((cfg.sCount * 2 - 1 to 0 by -1).map(i => request(i))) // reverse it
   arbiter.io.acknowledge := Cat((cfg.sCount * 2 - 1 to 0 by -1).map(i => acknowledge(i))) // ^
-  arbiter.io.grant       := grant
+
+  grant := arbiter.io.grant
 
   for (i <- 0 until cfg.sCount) {
     // request generation

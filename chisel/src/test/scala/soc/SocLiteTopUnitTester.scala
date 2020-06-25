@@ -14,8 +14,8 @@ import scala.io.Source
   * @param perfNumber For perf test, it choose which test case to run. For func test, it should be 0
   */
 class SocLiteTopUnitTester(
-  c:              SocLiteTop,
-  perfNumber:     Int = 0
+  c:             SocLiteTop,
+  perfNumber:    Int = 0
 )(implicit tcfg: TestConfig)
     extends PeekPokeTester(c) {
 
@@ -24,15 +24,14 @@ class SocLiteTopUnitTester(
   val writeTraceFile =
     if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/cmp.txt") else None
 
-  val perfLog = ArrayBuffer('p','e','r','f','l','o','g','\n')
+  val perfLog = ArrayBuffer('p', 'e', 'r', 'f', 'l', 'o', 'g', '\n')
 
   import chisel3._
-
 
   val isPerf = tcfg.runAllPerf || perfNumber != 0
 
   val traceFile =
-    if (isPerf && perfNumber!=0) s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/golden_trace.txt"
+    if (isPerf && perfNumber != 0) s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/golden_trace.txt"
     else "./src/test/resources/loongson/func/golden_trace.txt"
 
   /** get switch data */
@@ -40,7 +39,7 @@ class SocLiteTopUnitTester(
 
   /** get trace from trace file */
   val source = if (tcfg.trace) Some(Source.fromFile(traceFile)) else None
-  val lines = if (tcfg.trace) Some(source.get.getLines()) else None
+  val lines  = if (tcfg.trace) Some(source.get.getLines()) else None
 
   /** get trace target file */
   val traceWriter = if (tcfg.writeTrace) {
@@ -54,13 +53,14 @@ class SocLiteTopUnitTester(
   // init
   var trace_line = if (tcfg.trace) Some(lines.get.next().split(" ").map(BigInt(_, 16))) else None
 
-  var lastTime:      Long = System.currentTimeMillis()
+  var lastTime:      Long   = System.currentTimeMillis()
   var lastDebugInfo: String = ""
 
-  var pc:    BigInt = peek(c.io.debug.wbPC)
-  var wen:   BigInt = peek(c.io.debug.wbRegFileWEn)
-  var wnum:  BigInt = peek(c.io.debug.wbRegFileWNum)
-  var wdata: BigInt = peek(c.io.debug.wbRegFileWData)
+  var lastNum: BigInt = peek(c.io.num.data)
+  var pc:      BigInt = peek(c.io.debug.wbPC)
+  var wen:     BigInt = peek(c.io.debug.wbRegFileWEn)
+  var wnum:    BigInt = peek(c.io.debug.wbRegFileWNum)
+  var wdata:   BigInt = peek(c.io.debug.wbRegFileWData)
 
   val pcEnd = BigInt("bfc00100", 16)
 
@@ -68,6 +68,7 @@ class SocLiteTopUnitTester(
   var iCount = 0
   var cCount = 1 // avoid divide 0
   var result = true
+  var errCount = 0
   if (tcfg.runAllPerf) {
     for (i <- 1 to 10) {
       info(s"${tcfg.perfMap(i)} started:")
@@ -107,12 +108,15 @@ class SocLiteTopUnitTester(
   }
 
   def reInit(): Unit = {
-    lastTime = System.currentTimeMillis()
+    lastTime      = System.currentTimeMillis()
     lastDebugInfo = ""
 
-    pc = peek(c.io.debug.wbPC)
-    wen = peek(c.io.debug.wbRegFileWEn)
-    wnum = peek(c.io.debug.wbRegFileWNum)
+    lastNum = peek(c.io.num.data)
+    errCount = 0
+
+    pc    = peek(c.io.debug.wbPC)
+    wen   = peek(c.io.debug.wbRegFileWEn)
+    wnum  = peek(c.io.debug.wbRegFileWNum)
     wdata = peek(c.io.debug.wbRegFileWData)
   }
 
@@ -125,7 +129,7 @@ class SocLiteTopUnitTester(
           err("Exit-wrong pc")
           return false
         }
-        iCount = iCount + 1
+        iCount        = iCount + 1
         lastDebugInfo = debugInfo
         if (current - lastTime > 5000) {
           log(s"running: $lastDebugInfo")
@@ -176,11 +180,12 @@ class SocLiteTopUnitTester(
   }
   def update(n: Int): Unit = {
     cCount = cCount + 1
-    pc = peek(c.io.debug.wbPC)
-    wen = peek(c.io.debug.wbRegFileWEn)
-    wnum = peek(c.io.debug.wbRegFileWNum)
-    wdata = peek(c.io.debug.wbRegFileWData)
+    pc     = peek(c.io.debug.wbPC)
+    wen    = peek(c.io.debug.wbRegFileWEn)
+    wnum   = peek(c.io.debug.wbRegFileWNum)
+    wdata  = peek(c.io.debug.wbRegFileWData)
     uartSimu()
+    if(!isPerf) numSimu()
     step(n)
   }
   def uartSimu(): Unit = {
@@ -191,11 +196,28 @@ class SocLiteTopUnitTester(
       }
     }
   }
+  def numSimu(): Unit = {
+    val nowNum = peek(c.io.num.data)
+    if(nowNum != lastNum && peek(c.io.num.monitor) != 0) {
+      // low 8 bits
+      if((nowNum & BigInt("ff", 16)) != ((lastNum & BigInt("ff", 16)) + 1)) {
+        err(s"$errCount, Occurred in number ${(nowNum >> 24) & BigInt("ff", 16)} Functional Test Point!")
+        errCount += 1
+      }
+      else if(((nowNum >> 24) & BigInt("ff", 16)) != (((lastNum >> 24) & BigInt("ff", 16)) + 1)){
+        err(s"$errCount, Unknown, Functional Test Point numbers are unequal!")
+        errCount += 1
+      } else {
+        info(s"---- Number ${(nowNum >> 24) & BigInt("ff", 16)} Functional Test Point Pass!!!")
+      }
+    }
+    lastNum = nowNum
+  }
 
   def printPerfLog(): Unit = {
     require(isPerf)
     val fileName = "./perfLog/perfLog.txt"
-    val path = Paths.get(fileName)
+    val path     = Paths.get(fileName)
     Files.createDirectories(path.getParent)
     if (!path.toFile.exists())
       Files.createFile(path)
