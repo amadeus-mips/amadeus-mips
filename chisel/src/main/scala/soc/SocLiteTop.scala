@@ -43,7 +43,6 @@ class SocLiteTop(implicit
     val uart  = new ValidIO(UInt(8.W))
     val num   = Output(new NumMonitorBundle)
     val debug = Output(new DebugBundle)
-    val num   = Output(new NumMonitorBundle)
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
   })

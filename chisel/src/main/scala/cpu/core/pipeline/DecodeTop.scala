@@ -69,10 +69,10 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   control.io.inst.imm16 := imm16
   control.io.inst.sel   := inst(2, 0)
 
-  control.io.signal       := decode.io.out
-  control.io.inExcept     := io.in.except
-  control.io.rsData       := hazard.io.ops(0).outData
-  control.io.rtData       := hazard.io.ops(1).outData
+  control.io.signal   := decode.io.out
+  control.io.inExcept := io.in.except
+  control.io.rsData   := hazard.io.ops(0).outData
+  control.io.rtData   := hazard.io.ops(1).outData
 
   branchDecode.io.inst := inst
   branchDecode.io.pc   := io.in.pc

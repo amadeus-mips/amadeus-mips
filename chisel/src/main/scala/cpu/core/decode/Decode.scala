@@ -8,19 +8,19 @@ import cpu.core.Constants._
 
 class SignalBundle extends Bundle {
   val instValid = Bool()
-  val op1Type = UInt(1.W) // may change
-  val op2Type = UInt(1.W) // ^
-  val instType = UInt(instTypeLen.W)
-  val operation = UInt(opLen.W)    // operation type
-  val wr = Bool()     // write to register-file
-  val wraType = UInt(2.W) // write register address type
-  val immType = UInt(3.W)
+  val op1Type   = UInt(1.W) // may change
+  val op2Type   = UInt(1.W) // ^
+  val instType  = UInt(instTypeLen.W)
+  val operation = UInt(opLen.W) // operation type
+  val wr        = Bool() // write to register-file
+  val wraType   = UInt(2.W) // write register address type
+  val immType   = UInt(3.W)
 }
 
 class Decode extends Module {
   val io = IO(new Bundle {
     val inst = Input(UInt(addrLen.W))
-    val out = Output(new SignalBundle)
+    val out  = Output(new SignalBundle)
   })
 
   // @formatter:off
@@ -120,11 +120,11 @@ class Decode extends Module {
   val csOpType :: (csWR: Bool) :: csWRType :: csIMMType :: Nil = cs0
 
   io.out.instValid := csInstValid
-  io.out.op1Type := csOP1Type
-  io.out.op2Type := csOP2Type
-  io.out.instType := csInstType
+  io.out.op1Type   := csOP1Type
+  io.out.op2Type   := csOP2Type
+  io.out.instType  := csInstType
   io.out.operation := csOpType
-  io.out.wr := csWR
-  io.out.wraType := csWRType
-  io.out.immType := csIMMType
+  io.out.wr        := csWR
+  io.out.wraType   := csWRType
+  io.out.immType   := csIMMType
 }

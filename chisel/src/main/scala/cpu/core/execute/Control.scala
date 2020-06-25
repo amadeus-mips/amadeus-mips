@@ -6,7 +6,6 @@ import chisel3._
 import chisel3.util.MuxLookup
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
-import shared.Util
 
 class Control extends Module {
   val io = IO(new Bundle {
@@ -45,6 +44,6 @@ class Control extends Module {
     )
   )
   io.outWrite.valid := io.inWrite.valid ||
-    Util.listHasElement(Seq(INST_ALU, INST_MV, INST_BR), io.instType)
+    VecInit(Seq(INST_ALU, INST_MV, INST_BR)).contains(io.instType)
 
 }
