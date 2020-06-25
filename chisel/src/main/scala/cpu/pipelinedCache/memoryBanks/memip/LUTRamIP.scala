@@ -1,4 +1,4 @@
-package cpu.pipelinedCache.memip
+package cpu.pipelinedCache.memoryBanks.memip
 
 import chisel3._
 import chisel3.util.log2Ceil
@@ -12,7 +12,7 @@ import chisel3.util.log2Ceil
   * @param byteWriteWidth : addressable size of write
   * @param numberOfLines  : how many **bits** there are in the memory
   */
-class LUTRam(dataWidth: Int, addrWidth: Int, byteWriteWidth: Int, numberOfLines: Int)
+class LUTRamIP(dataWidth: Int, addrWidth: Int, byteWriteWidth: Int, numberOfLines: Int)
   extends BlackBox(
     Map(
       "MEMORY_SIZE" -> numberOfLines * dataWidth,
@@ -49,7 +49,7 @@ class LUTRam(dataWidth: Int, addrWidth: Int, byteWriteWidth: Int, numberOfLines:
     val addra = Input(UInt(addrWidth.W))
     val addrb = Input(UInt(addrWidth.W))
 
-    val wea = Input(Vec((dataWidth / byteWriteWidth), Bool()))
+    val wea = Input(UInt((dataWidth / byteWriteWidth).W))
 
     val douta = Output(UInt(dataWidth.W))
     val doutb = Output(UInt(dataWidth.W))

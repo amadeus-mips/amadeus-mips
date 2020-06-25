@@ -1,4 +1,4 @@
-package cpu.pipelinedCache.memip
+package cpu.pipelinedCache.memoryBanks.memip
 
 import chisel3._
 import chisel3.util.log2Ceil
@@ -8,18 +8,18 @@ import chisel3.util.log2Ceil
   * i.e. the data out is the old value
   *
   * @param dataWidth       : the width of data in bits
-  * @param byteWriteWidth  : how many bits to write each bit in write mask (wea)
+  * @param byteWriteWidth  : how many bits to write each bit in write mask (wea), should default to 8
   * @param addrWidth       : the address of the width to address all locations
   * @param numberOfLines   : how wide is the address (to cover all lines)
   * @param memoryPrimitive : should I use auto, block ram or distributed ram
   */
-class SinglePortRam(
-                     dataWidth: Int = 32,
-                     byteWriteWidth: Int = 8,
-                     addrWidth: Int,
-                     numberOfLines: Int,
-                     memoryPrimitive: String = "auto"
-                   ) extends BlackBox(
+class SinglePortRamIP(
+                       dataWidth: Int = 32,
+                       byteWriteWidth: Int = 8,
+                       addrWidth: Int,
+                       numberOfLines: Int,
+                       memoryPrimitive: String = "auto"
+                     ) extends BlackBox(
   Map(
     "ADDR_WIDTH_A" -> addrWidth,
     "WRITE_DATA_WIDTH_A" -> dataWidth,
@@ -50,7 +50,7 @@ class SinglePortRam(
     val dina = Input(UInt(dataWidth.W))
     val ena = Input(Bool())
     val regcea = Input(Bool())
-    val wea = Input(Vec(dataWidth / byteWriteWidth, Bool()))
+    val wea = Input(UInt((dataWidth / byteWriteWidth).W))
     val douta = Output(UInt(dataWidth.W))
 
   })
