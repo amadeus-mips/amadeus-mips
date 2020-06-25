@@ -15,7 +15,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst = new NiseSramReadIO()
+    val rInst    = new NiseSramReadIO()
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
   })
@@ -27,12 +27,12 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val decodeTop  = Module(new DecodeTop)
   val executeTop = Module(new ExecuteTop)
   val memoryTop  = Module(new MemoryTop)
-  val wbTop = Module(new WbTop)
+  val wbTop      = Module(new WbTop)
 
-  val regFile    = Module(new RegFile)
-  val cp0        = Module(new CP0)
-  val hilo       = Module(new HILO)
-  val hazard     = Module(new Hazard)
+  val regFile = Module(new RegFile)
+  val cp0     = Module(new CP0)
+  val hilo    = Module(new HILO)
+  val hazard  = Module(new Hazard)
 
   // stages
   val if_id   = Module(new Stage(1, new IfIdBundle))
@@ -117,7 +117,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   mem_wb.io.stall := hazard.io.stall
   mem_wb.io.flush := hazard.io.flush
 
-  wbTop.io.in := mem_wb.io.out
+  wbTop.io.in    := mem_wb.io.out
   wbTop.io.rData := io.rChannel.data
 
   io.rInst.addr   := fetchTop.io.out.pc

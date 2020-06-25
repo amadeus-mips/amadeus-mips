@@ -11,16 +11,16 @@ import shared.Util
 class Control extends Module {
   val io = IO(new Bundle {
     val inst = Input(new Bundle() {
-      val rt = UInt(5.W)
-      val rd = UInt(5.W)
-      val sa = UInt(5.W)
+      val rt    = UInt(5.W)
+      val rd    = UInt(5.W)
+      val sa    = UInt(5.W)
       val imm16 = UInt(16.W)
-      val sel = UInt(3.W)
+      val sel   = UInt(3.W)
     })
-    val signal       = Input(new SignalBundle)
-    val instFetchExc = Input(Bool())
-    val rsData       = Input(UInt(dataLen.W)) // from Forward
-    val rtData       = Input(UInt(dataLen.W)) // ^
+    val signal   = Input(new SignalBundle)
+    val rsData   = Input(UInt(dataLen.W)) // from Forward
+    val rtData   = Input(UInt(dataLen.W)) // ^
+    val inExcept = Input(Vec(exceptAmount, Bool()))
 
     val op1   = Output(UInt(dataLen.W))
     val op2   = Output(UInt(dataLen.W))
@@ -28,7 +28,8 @@ class Control extends Module {
     val cp0   = Output(new CPBundle)
 
     val nextInstInDelaySlot = Output(Bool())
-    val except              = Output(Vec(exceptAmount, Bool()))
+
+    val except = Output(Vec(exceptAmount, Bool()))
   })
 
   val rt    = io.inst.rt
@@ -87,8 +88,7 @@ class Control extends Module {
 
   io.nextInstInDelaySlot := io.signal.instType === INST_BR
 
-  io.except                      := 0.U(exceptAmount.W).asBools()
-  io.except(EXCEPT_FETCH)        := io.instFetchExc
+  io.except                      := io.inExcept
   io.except(EXCEPT_ERET)         := io.signal.operation === EXC_ER
   io.except(EXCEPT_BREAK)        := io.signal.operation === EXC_BR
   io.except(EXCEPT_SYSCALL)      := io.signal.operation === EXC_SC
