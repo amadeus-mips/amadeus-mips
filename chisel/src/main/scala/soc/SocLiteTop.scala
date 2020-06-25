@@ -41,6 +41,7 @@ class SocLiteTop(implicit
   val io = IO(new Bundle {
     val gp    = new GPIO
     val uart  = new ValidIO(UInt(8.W))
+    val num   = Output(new NumMonitorBundle)
     val debug = Output(new DebugBundle)
     val num   = Output(new NumMonitorBundle)
 

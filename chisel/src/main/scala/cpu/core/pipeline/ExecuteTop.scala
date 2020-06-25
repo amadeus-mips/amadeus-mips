@@ -3,6 +3,7 @@
 package cpu.core.pipeline
 
 import chisel3._
+import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle}
@@ -10,7 +11,7 @@ import cpu.core.components.{Div, Mult}
 import cpu.core.execute.components._
 import shared.ValidBundle
 
-class ExecuteTop extends Module {
+class ExecuteTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val in = Input(new IdExeBundle)
 
@@ -68,6 +69,7 @@ class ExecuteTop extends Module {
   writeOther.io.op1       := io.in.op1
   writeOther.io.op2       := io.in.op2
   writeOther.io.operation := io.in.operation
+  writeOther.io.flush     := io.flush
   writeOther.io.inCP0     := io.in.cp0
   writeOther.io.mult      <> mult.io
   writeOther.io.div       <> div.io

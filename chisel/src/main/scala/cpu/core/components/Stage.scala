@@ -35,11 +35,11 @@ class Stage[+T <: Data](stageNumber: Int, gen: T) extends MultiIOModule {
   when(io.flush || stallEnd) {
     pipeReg := 0.U.asTypeOf(gen)
   }.elsewhen(notStalled) {
-      pipeReg <> io.in
+      pipeReg := io.in
     }
     .otherwise {
       // stalled, do nothing
     }
-  io.out <> pipeReg
+  io.out := pipeReg
 
 }

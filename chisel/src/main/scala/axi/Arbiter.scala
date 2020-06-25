@@ -60,7 +60,7 @@ class Arbiter(PORTS: Int = 4, TYPE: String = "PRIORITY", BLOCK: String = "NONE",
   masked.io.in.bits := io.request & mask_reg
 
   def rrHandle(encoder: PriorityEncoder) = {
-    grant_reg <> encoder.io.out
+    grant_reg := encoder.io.out
     mask_reg :=
       (if (LSB_PRIORITY == "LOW") Fill(PORTS, 1.U(1.W)) >> (PORTS.U - encoder.io.out.encoded)
       else Fill(PORTS, 1.U(1.W)) << (encoder.io.out.encoded + 1.U))
@@ -68,7 +68,7 @@ class Arbiter(PORTS: Int = 4, TYPE: String = "PRIORITY", BLOCK: String = "NONE",
 
   def validHandle() = {
     if (TYPE == "PRIORITY") { // priority
-      grant_reg <> inst.io.out
+      grant_reg := inst.io.out
     } else { // round robin
       when(masked.io.out.valid) {
         rrHandle(masked)
@@ -95,5 +95,5 @@ class Arbiter(PORTS: Int = 4, TYPE: String = "PRIORITY", BLOCK: String = "NONE",
     }
   }
 
-  io.grant <> grant_reg
+  io.grant := grant_reg
 }

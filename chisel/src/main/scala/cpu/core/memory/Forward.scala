@@ -19,8 +19,8 @@ class Forward(implicit cfg: CPUConfig) extends Module {
     val outTLBCP0       = Output(new TLBHandleBundle(cfg.tlbSize))
   })
 
-  io.outExceptionCP0 <> io.inExceptionCP0
-  io.outTLBCP0       <> io.inTLBCP0
+  io.outExceptionCP0 := io.inExceptionCP0
+  io.outTLBCP0       := io.inTLBCP0
   when(io.wbCP0.enable) {
     switch(io.wbCP0.addr) {
       is(con_Status.addr.U) {

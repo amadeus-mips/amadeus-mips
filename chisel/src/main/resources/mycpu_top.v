@@ -1,5 +1,5 @@
 module mycpu_top(
-    input wire[5:0]     int, //硬件中断信号
+    input wire[5:0]     ext_int, //硬件中断信号
     //AXI时钟与复位信号
     input wire          aclk,//AXI时钟
     input wire          aresetn,//AXI复位，低电平有效
@@ -60,7 +60,7 @@ module mycpu_top(
     CPUTop cpuTop(
         .clock    (aclk),
         .reset    (~aresetn),
-        .io_intr  (int),
+        .io_intr  (ext_int),
         .io_axi_ar_bits_id         (arid),
         .io_axi_ar_bits_addr       (araddr),
         .io_axi_ar_bits_len        (arlen),

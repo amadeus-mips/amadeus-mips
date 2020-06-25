@@ -40,7 +40,7 @@ class Hazard extends Module {
   when(io.flush) {
     branchBuffer.valid := false.B
   }.elsewhen(io.stall && inDelaySlot && io.in.branch.valid) {
-      branchBuffer <> io.in.branch
+      branchBuffer := io.in.branch
     }
     .elsewhen(!io.stall) {
       branchBuffer.valid := false.B
