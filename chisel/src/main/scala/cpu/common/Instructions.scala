@@ -2,6 +2,7 @@
 
 package cpu.common
 
+import chisel3._
 import chisel3.util.BitPat
 
 trait Instructions {
@@ -66,6 +67,13 @@ trait Instructions {
   def XOR         = BitPat("b000000???????????????00000100110") // Exclusive OR
   def XORI        = BitPat("b001110??????????????????????????") // Exclusive OR Immediate
   // @formatter:on
+
+  // BitPat can't use VecInit and contains
+  def isBranchInst(inst: UInt) = {
+    require(inst.getWidth == 32)
+    val bi = Seq(J, JAL, JR, JALR, BEQ, BNE, BGTZ, BLEZ, BGEZ, BGEZAL, BLTZ, BLTZAL)
+    bi.foldLeft(false.B)((r, e) => r || (e === inst))
+  }
 }
 
 trait unImpl {
