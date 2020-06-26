@@ -297,19 +297,23 @@ class newDCache(
   cacheContents := bankData(hitWayReg)(bankOffSetNextReg)
   // read data is only valid when read enable is asserted
   io.rChannel.valid := isIdle && isHit && io.rChannel.enable
-  io.rChannel.data  := cacheContents
+  io.rChannel.data := cacheContents
 
   // a write is successful the state is idle and write enable is asserted
   io.wChannel.valid := isIdle && isHit && io.wChannel.enable
 
+  val isSetNotFullReg = RegInit(false.B)
+  val emptyPtrReg = RegInit(0.U(log2Ceil(wayAmount).W))
+  val lruLineReg = RegInit(0.U(log2Ceil(wayAmount).W))
+  val lruSelWay = Mux(isSetNotFullReg, emptyPtrReg, lruLineReg)
 
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
   def beginRTransaction(): Unit = {
-    state                                 := sReFill
+    state := sReFill
     refillWriteMask.io.initPosition.valid := true.B
-    refillWriteMask.io.initPosition.bits  := bankOffsetReg
+    refillWriteMask.io.initPosition.bits := bankOffsetReg
     // the precise timing of this should happen at the first cycle of the r transaction
     // however, as it is put into the refill state ( because if you wait for R, then
     // you can't handle the first receive unless you put it into a reg, but that's kind
@@ -490,11 +494,14 @@ class newDCache(
         // write to each bank consequently
         bankOffsetReg := bankOffsetReg + 1.U
 
+        isSetNotFullReg := isSetNotFull
+        emptyPtrReg := emptyPtr
+        lruLineReg := lruLine
+
         //TODO: performance counter: how many writes will be issued?
         when(io.axi.r.bits.last) {
           // update the lru way register on the last cycle of refill
           // this will best reflect the LRU state
-          val lruSelWay = Mux(isSetNotFull, emptyPtr, lruLine)
           lruWayReg := lruSelWay
           when(dirty(indexReg)(lruSelWay)) {
             invalidateLine(lruSelWay, indexReg)
