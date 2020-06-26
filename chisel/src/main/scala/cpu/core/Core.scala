@@ -9,7 +9,6 @@ import cpu.core.Constants._
 import cpu.core.bundles.stages._
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
-import shared.Buffer
 
 class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
@@ -45,6 +44,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetchTop.io.stall   := hazard.io.stall(0)
   fetchTop.io.flush   := hazard.io.flush
   fetchTop.io.flushPC := hazard.io.flushPC
+  fetchTop.io.lastDS  := hazard.io.lastDS
 
   fetchTop.io.predict     := fetch1Top.io.predict
   fetchTop.io.branch      := executeTop.io.branch
@@ -55,19 +55,19 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   if_if1.io.in    := fetchTop.io.out
   if_if1.io.stall := hazard.io.stall
   if_if1.io.flush := hazard.io.flush ||
-    (!fetchTop.io.out.inDelaySlot && executeTop.io.branch.valid && !hazard.io.stall(4, 2).orR())
+    (executeTop.io.branch.valid && hazard.io.predictFailFlush(0))
 
-  fetch1Top.io.in := if_if1.io.out
+  fetch1Top.io.in     := if_if1.io.out
   fetch1Top.io.buffer := !hazard.io.flush && hazard.io.stall(0)
-  fetch1Top.io.inst := io.rInst.data
+  fetch1Top.io.inst   := io.rInst.data
 
   fetch1Top.io.predictUpdate := DontCare
   fetch1Top.io.predictTaken  := DontCare
 
-  if1_id.io.in := fetch1Top.io.out
+  if1_id.io.in    := fetch1Top.io.out
   if1_id.io.stall := hazard.io.stall
   if1_id.io.flush := hazard.io.flush ||
-    (!fetch1Top.io.out.inDelaySlot && executeTop.io.branch.valid && !hazard.io.stall(4, 3).orR())
+    (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
 
   decodeTop.io.in     := if1_id.io.out
   decodeTop.io.exeWR  := executeTop.io.out.write
@@ -121,6 +121,10 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   hazard.io.stallReq(2) := decodeTop.io.stallReq
   hazard.io.stallReq(3) := executeTop.io.stallReq
   hazard.io.stallReq(4) := memoryTop.io.stallReq
+
+  hazard.io.delaySlots(0) := fetchTop.io.out.inDelaySlot
+  hazard.io.delaySlots(1) := fetch1Top.io.out.inDelaySlot
+  hazard.io.delaySlots(2) := decodeTop.io.out.inDelaySlot
 
   mem_wb.io.in    := memoryTop.io.out
   mem_wb.io.stall := hazard.io.stall

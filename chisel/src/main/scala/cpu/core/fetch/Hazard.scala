@@ -7,6 +7,7 @@ class Hazard extends Module {
   val io = IO(new Bundle() {
     val flush = Input(Bool())
     val stall = Input(Bool())
+    val associateDS = Input(Bool())
 
     val in = Input(new Bundle() {
       val predict     = new ValidBundle()
@@ -17,9 +18,11 @@ class Hazard extends Module {
   })
 
   val predictBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
+  val branchBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
+
   when(io.flush) {
     predictBuffer.valid := false.B
-  }.elsewhen(io.in.predict.valid && io.stall) {
+  }.elsewhen(io.in.predict.valid && io.stall && !(io.in.branch.valid || branchBuffer.valid)) {
       predictBuffer := io.in.predict
     }
     .elsewhen(!io.stall) {
@@ -36,10 +39,9 @@ class Hazard extends Module {
 
   def inDelaySlot = io.in.inDelaySlot || inDSBuffer
 
-  val branchBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
   when(io.flush) {
     branchBuffer.valid := false.B
-  }.elsewhen(io.stall && inDelaySlot && io.in.branch.valid) {
+  }.elsewhen(io.stall && io.associateDS && io.in.branch.valid) {
       branchBuffer := io.in.branch
     }
     .elsewhen(!io.stall) {
@@ -50,7 +52,7 @@ class Hazard extends Module {
 
   io.out.predict.valid := predictValid
   io.out.predict.bits  := Mux(io.in.predict.valid, io.in.predict.bits, predictBuffer.bits)
-  io.out.branch.valid  := (!inDelaySlot && io.in.branch.valid) || (!io.stall && branchValid)
+  io.out.branch.valid  := (!io.associateDS && io.in.branch.valid) || (!io.stall && branchValid)
   io.out.branch.bits   := Mux(io.in.branch.valid, io.in.branch.bits, branchBuffer.bits)
   io.out.inDelaySlot   := inDelaySlot
 }

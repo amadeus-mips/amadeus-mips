@@ -7,10 +7,11 @@ import shared.ValidBundle
 
 class FetchTop extends Module {
   val io = IO(new Bundle {
-    // from ctrl module
+    // from hazard module
     val stall   = Input(Bool())
     val flush   = Input(Bool())
     val flushPC = Input(UInt(addrLen.W))
+    val lastDS  = Input(UInt(2.W))
 
     // from decode stage
     val inDelaySlot = Input(Bool())
@@ -34,6 +35,7 @@ class FetchTop extends Module {
 
   hazard.io.flush          := io.flush
   hazard.io.stall          := io.stall
+  hazard.io.associateDS    := io.lastDS === 0.U
   hazard.io.in.inDelaySlot := io.inDelaySlot
   hazard.io.in.branch      := io.branch
   hazard.io.in.predict     := io.predict
