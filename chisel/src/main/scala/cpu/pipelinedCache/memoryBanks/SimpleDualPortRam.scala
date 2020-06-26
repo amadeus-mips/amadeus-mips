@@ -24,7 +24,7 @@ class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implic
 
     val addrW = Input(UInt(addrLen.W))
     val enW = Input(Bool())
-    val writeVector = Input(UInt((width / 8).W))
+    val writeVector = Input(UInt((if (byteAddressable) width / 8 else 1).W))
     val dataW = Input(UInt(width.W))
   })
 
