@@ -5,12 +5,19 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
 
+/**
+  * AXI read port is an interface to AXI Bus
+  *
+  * @param addrReqWidth : how wide should the address request be
+  * @param AXIID        : what is the AXI ID for this port (hard coded)
+  * @param burstLen     : What's the address length for the axi port (hard coded)
+  */
 @chiselName
 class AXIReadPort(addrReqWidth: Int = 32, AXIID: Int, burstLen: Int) extends Module {
   val io = IO(new Bundle {
     val axi = AXIIO.master()
-    val addrReq = Decoupled(UInt(addrReqWidth.W))
-    val writeBackData = Valid(UInt(32.W))
+    val addrReq = Flipped(Decoupled(UInt(addrReqWidth.W)))
+    val transferData = Valid(UInt(32.W))
   })
 
   // requirements for the parameters
@@ -41,8 +48,8 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: Int, burstLen: Int) extends Mod
   io.axi.r.ready := readState === readTransfer
 
   io.addrReq.ready := readState === readIdle
-  io.writeBackData.valid := readState === readTransfer && io.axi.r.fire()
-  io.writeBackData.bits := io.axi.r.bits.data
+  io.transferData.valid := readState === readTransfer && io.axi.r.fire()
+  io.transferData.bits := io.axi.r.bits.data
 
   switch(readState) {
     is(readIdle) {
