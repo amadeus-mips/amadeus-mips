@@ -28,6 +28,7 @@ class LUTRamIP(dataWidth: Int, addrWidth: Int, byteWriteWidth: Int, numberOfLine
       "CLOCKING_MODE" -> "common_clock"
     )
   ) {
+  override def desiredName: String = "XPM_MEMORY_DPDISTRAM"
   require(addrWidth == log2Ceil(numberOfLines), "address width should be log 2 of number of lines to address all")
   require(
     dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,

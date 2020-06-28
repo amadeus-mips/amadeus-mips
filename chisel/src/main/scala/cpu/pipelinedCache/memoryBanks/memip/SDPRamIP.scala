@@ -32,6 +32,7 @@ class SDPRamIP(
     "WRITE_MODE_A" -> "write_first"
   )
 ) {
+  override def desiredName: String = "XPM_MEMORY_SDPRAM"
   require(addrWidth <= 20, "address width should be 1 to 20")
   require(
     dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,

@@ -37,6 +37,7 @@ class TDPRamIP(
     "WRITE_MODE_B" -> "write_first"
   )
 ) {
+  override def desiredName: String = "XPM_MEMORY_TDPRAM"
   require(
     dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,
     "data width should be a multiple of byte write width"

@@ -1,12 +1,22 @@
 package cpu.pipelinedCache.memoryBanks
 
 import chisel3._
+import chisel3.internal.naming.chiselName
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.memoryBanks.memip.SDPRamIP
 import firrtl.options.TargetDirAnnotation
 
+/**
+  * simple dual port ram, with a port for reading and a port for writing
+  *
+  * @param depth           how many lines there are in the ram
+  * @param width           how wide in bits each line is
+  * @param byteAddressable is it byte addressable?
+  * @param cpuCfg          the implicit configuration for simulation and elaboration
+  */
+@chiselName
 class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implicit
                                                                           cpuCfg: CPUConfig = CPUConfig.Build
 ) extends Module {
@@ -53,6 +63,7 @@ class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implic
     io.dataR := memory.io.doutb
   } else {
     assert(io.writeVector.orR || !io.enW, "when write port enable is high, write vector cannot be all 0")
+    assert(!(io.enR && io.enW && io.addrR === io.addrW), s"there should not have been an address collision, the address is ${io.addrR}")
     if (byteAddressable) {
       val bank = SyncReadMem(depth, Vec(width / 8, UInt(8.W)))
       when(io.enR) {
@@ -60,15 +71,6 @@ class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implic
       }
       when(io.enW) {
         bank.write(io.addrW, io.dataW.asTypeOf(Vec(width / 8, UInt(8.W))), io.writeVector.asBools)
-      }
-
-      when(io.enR && io.enW && io.addrR === io.addrW) {
-        val readWire = Wire(Vec(width / 8, UInt(8.W)))
-        readWire := bank(io.addrR)
-          .asTypeOf(Vec(width / 8, UInt(8.W)))
-          .zip(io.dataW.asTypeOf(Vec(width / 8, UInt(8.W))))
-          .zip(io.writeVector.asBools).map { case ((a: UInt, b: UInt), c: Bool) => Mux(c, a, b) }
-        io.dataR := readWire.asUInt()
       }
     } else {
       val bank = SyncReadMem(depth, UInt(width.W))
@@ -78,9 +80,6 @@ class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implic
       }
       when(io.enW) {
         bank(io.addrW) := io.dataW
-      }
-      when(io.enR && io.enW && io.addrR === io.addrW) {
-        io.dataR := io.dataW
       }
     }
   }

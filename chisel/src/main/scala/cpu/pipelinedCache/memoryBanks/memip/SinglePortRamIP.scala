@@ -31,6 +31,7 @@ class SinglePortRamIP(
     "WRITE_MODE_A" -> "read_first"
   )
 ) {
+  override def desiredName: String = "XPM_MEMORY_SPRAM"
   val io = IO(new Bundle {
     require(
       dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,

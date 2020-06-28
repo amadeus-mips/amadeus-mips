@@ -53,8 +53,8 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: Int, burstLen: Int) extends Mod
 
   switch(readState) {
     is(readIdle) {
-      when(io.addrReq.valid) {
-        readState := readWaitForAR
+      when(io.addrReq.fire) {
+        readState := Mux(io.axi.ar.fire, readTransfer, readWaitForAR)
         readAddressReg := io.addrReq.bits
       }
     }
