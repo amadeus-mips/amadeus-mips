@@ -21,16 +21,7 @@ class BranchDecode(implicit conf: CPUConfig) extends Module {
   })
 
   val isBr = isBranchInst(io.inst)
-  val isJ  = io.inst === J || io.inst === JAL
-  val isJR = io.inst === JR || io.inst === JALR
-  val imm16 = io.inst(15, 0)
-  val imm26 = io.inst(25, 0)
-
   val predictor = Module(new TwoBitPredictor())
-
-  val pcPlus4 = io.pc + 4.U
-  val BTarget = pcPlus4 + Cat(Util.signedExtend(imm16, to = 30), 0.U(2.W))
-  val JTarget = Cat(pcPlus4(31, 28), imm26, 0.U(2.W))
 
   predictor.io.pc := io.pc
   predictor.io.update := io.predUpdate

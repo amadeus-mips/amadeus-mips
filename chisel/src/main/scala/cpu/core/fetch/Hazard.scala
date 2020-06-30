@@ -20,9 +20,9 @@ class Hazard extends Module {
   val predictBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
   val branchBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
 
-  when(io.flush) {
+  when(io.flush || io.in.branch.valid || branchBuffer.valid) {
     predictBuffer.valid := false.B
-  }.elsewhen(io.in.predict.valid && io.stall && !(io.in.branch.valid || branchBuffer.valid)) {
+  }.elsewhen(io.in.predict.valid && io.stall) {
       predictBuffer := io.in.predict
     }
     .elsewhen(!io.stall) {
