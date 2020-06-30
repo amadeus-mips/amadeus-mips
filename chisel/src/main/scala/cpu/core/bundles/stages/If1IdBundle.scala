@@ -4,6 +4,7 @@ package cpu.core.bundles.stages
 
 import chisel3._
 import cpu.core.Constants._
+import shared.ValidBundle
 
 class If1IdBundle extends Bundle {
   val pc          = UInt(addrLen.W)
@@ -11,5 +12,5 @@ class If1IdBundle extends Bundle {
   val instValid   = Bool()
   val except      = Vec(exceptAmount, Bool())
   val inDelaySlot = Bool()
-  val brPredicted = Bool()
+  val brPredict   = new ValidBundle()
 }

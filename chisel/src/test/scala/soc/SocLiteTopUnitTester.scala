@@ -65,9 +65,9 @@ class SocLiteTopUnitTester(
   val pcEnd = BigInt("bfc00100", 16)
 
   // start run
-  var iCount = 0
-  var cCount = 1 // avoid divide 0
-  var result = true
+  var iCount   = 0
+  var cCount   = 1 // avoid divide 0
+  var result   = true
   var errCount = 0
   if (tcfg.runAllPerf) {
     for (i <- 1 to 10) {
@@ -76,11 +76,13 @@ class SocLiteTopUnitTester(
       reInit()
       result &= run()
       info(s"${tcfg.perfMap(i)} finished.")
+      afterRun()
     }
   } else {
     resetConfreg()
     reInit()
     result &= run()
+    afterRun()
   }
   if (tcfg.needAssert) require(result)
   step(5)
@@ -111,7 +113,7 @@ class SocLiteTopUnitTester(
     lastTime      = System.currentTimeMillis()
     lastDebugInfo = ""
 
-    lastNum = peek(c.io.num.data)
+    lastNum  = peek(c.io.num.data)
     errCount = 0
 
     pc    = peek(c.io.debug.wbPC)
@@ -155,6 +157,22 @@ class SocLiteTopUnitTester(
     true
   }
 
+  def afterRun(): Unit = {
+    val predSuccess  = peek(c.io.branchPerf.total.success)
+    val predFail     = peek(c.io.branchPerf.total.fail)
+    val predJSuccess = peek(c.io.branchPerf.j.success)
+    val predJFail    = peek(c.io.branchPerf.j.fail)
+    val predBSuccess = peek(c.io.branchPerf.b.success)
+    val predBFail    = peek(c.io.branchPerf.b.fail)
+    info(branchPredictMessage(predSuccess, predFail, "total"))
+    log(branchPredictMessage(predJSuccess, predJFail, "J"))
+    log(branchPredictMessage(predBSuccess, predBFail, "B"))
+  }
+
+  def branchPredictMessage(success: BigInt, fail: BigInt, description: String): String = {
+    s"prediction $description: success--$success, fail--$fail" + (if(fail+success!=0) s", rate ${success.toDouble / (success+fail).toDouble}" else "")
+  }
+
   /**
     * Only for perf test, make sure the pc is not in the segment of "print"
     */
@@ -185,7 +203,7 @@ class SocLiteTopUnitTester(
     wnum   = peek(c.io.debug.wbRegFileWNum)
     wdata  = peek(c.io.debug.wbRegFileWData)
     uartSimu()
-    if(!isPerf) numSimu()
+    if (!isPerf) numSimu()
     step(n)
   }
   def uartSimu(): Unit = {
@@ -198,13 +216,12 @@ class SocLiteTopUnitTester(
   }
   def numSimu(): Unit = {
     val nowNum = peek(c.io.num.data)
-    if(nowNum != lastNum && peek(c.io.num.monitor) != 0) {
+    if (nowNum != lastNum && peek(c.io.num.monitor) != 0) {
       // low 8 bits
-      if((nowNum & BigInt("ff", 16)) != ((lastNum & BigInt("ff", 16)) + 1)) {
+      if ((nowNum & BigInt("ff", 16)) != ((lastNum & BigInt("ff", 16)) + 1)) {
         err(s"$errCount, Occurred in number ${(nowNum >> 24) & BigInt("ff", 16)} Functional Test Point!")
         errCount += 1
-      }
-      else if(((nowNum >> 24) & BigInt("ff", 16)) != (((lastNum >> 24) & BigInt("ff", 16)) + 1)){
+      } else if (((nowNum >> 24) & BigInt("ff", 16)) != (((lastNum >> 24) & BigInt("ff", 16)) + 1)) {
         err(s"$errCount, Unknown, Functional Test Point numbers are unequal!")
         errCount += 1
       } else {

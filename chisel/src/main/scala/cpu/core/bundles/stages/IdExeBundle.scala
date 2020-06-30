@@ -5,6 +5,7 @@ package cpu.core.bundles.stages
 import chisel3._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, WriteBundle}
+import shared.ValidBundle
 
 class IdExeBundle extends Bundle {
   val instType    = UInt(instTypeLen.W)
@@ -17,5 +18,5 @@ class IdExeBundle extends Bundle {
   val imm26       = UInt(26.W)
   val pc          = UInt(addrLen.W)
   val inDelaySlot = Bool()
-  val brPredicted = Bool()
+  val brPredict   = new ValidBundle()
 }

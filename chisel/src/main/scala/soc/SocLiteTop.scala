@@ -26,7 +26,9 @@ package soc
 import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import chisel3.util.ValidIO
+import chisel3.util.experimental.BoringUtils
 import confreg.{Confreg, NumMonitorBundle}
+import cpu.core.pipeline.BrPrPerfBundle
 import cpu.performance.SocPerformanceIO
 import cpu.{CPUConfig, CPUTop}
 import ram.AXIRamRandomWrap
@@ -45,6 +47,11 @@ class SocLiteTop(implicit
     val debug = Output(new DebugBundle)
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
+    val branchPerf = Output(new Bundle{
+      val total = new BrPrPerfBundle
+      val j = new BrPrPerfBundle
+      val b = new BrPrPerfBundle
+    })
   })
 
   implicit val cpuCfg = new CPUConfig(build = false)
@@ -73,4 +80,10 @@ class SocLiteTop(implicit
   if (socCfg.performanceMonitor) {
     io.performance.get.cpu := cpu.io.performance.get
   }
+
+  io.branchPerf := DontCare
+  // performance monitor
+  BoringUtils.bore(cpu.core.executeTop.brPrTotal, Seq(io.branchPerf.total))
+  BoringUtils.bore(cpu.core.executeTop.brPrB, Seq(io.branchPerf.b))
+  BoringUtils.bore(cpu.core.executeTop.brPrJ, Seq(io.branchPerf.j))
 }

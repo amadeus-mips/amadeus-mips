@@ -7,12 +7,10 @@ import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stages.{IdExeBundle, If1IdBundle}
-import cpu.core.fetch.BranchDecode
-import shared.ValidBundle
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val in   = Input(new If1IdBundle)
+    val in = Input(new If1IdBundle)
 
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
@@ -28,9 +26,9 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
 
   val inst = io.in.inst
 
-  val hazard       = Module(new cpu.core.decode.Hazard)
-  val decode       = Module(new cpu.core.decode.Decode)
-  val control      = Module(new cpu.core.decode.Control)
+  val hazard  = Module(new cpu.core.decode.Hazard)
+  val decode  = Module(new cpu.core.decode.Decode)
+  val control = Module(new cpu.core.decode.Control)
 
   val rs    = inst(25, 21)
   val rt    = inst(20, 16)
@@ -77,7 +75,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := io.in.pc
   io.out.imm26       := imm26
   io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.brPredicted := io.in.brPredicted
+  io.out.brPredict   := io.in.brPredict
 
   io.stallReq := hazard.io.stallReq
 

@@ -1,10 +1,11 @@
 package cpu.core.pipeline
 
 import chisel3._
+import chisel3.util.ValidIO
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.{If1IdBundle, IfIf1Bundle}
-import cpu.core.fetch.BranchDecode
+import cpu.core.fetch.{BrPrUpdateBundle, BranchDecode}
 import shared.{Buffer, ValidBundle}
 
 class Fetch1Top(implicit conf: CPUConfig) extends Module {
@@ -13,8 +14,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
     val buffer = Input(Bool())
     val inst = Input(UInt(dataLen.W))
 
-    val predictUpdate = Input(Bool())
-    val predictTaken = Input(Bool())
+    val predUpdate = Flipped(ValidIO(new BrPrUpdateBundle))
 
     val out = Output(new If1IdBundle)
 
@@ -33,19 +33,20 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   branchDecode.io.inst := inst
   branchDecode.io.pc := io.in.pc
 
-  branchDecode.io.predictTaken := io.predictTaken
-  branchDecode.io.predictUpdate := io.predictUpdate
+  branchDecode.io.predUpdate := io.predUpdate
 
   io.out.pc := io.in.pc
   io.out.inDelaySlot := io.in.inDelaySlot
   io.out.except := io.in.except
   io.out.instValid := io.in.instValid
   io.out.inst := inst
-  io.out.brPredicted := branchDecode.io.predict.valid
+  io.out.brPredict := branchDecode.io.predict
+
 
   io.stallReq := false.B
 
   io.predict := branchDecode.io.predict
+  io.predict.valid := branchDecode.io.predict.valid && io.in.instValid && !io.in.except.asUInt().orR()
 
   io.nextInstInDelaySlot := branchDecode.io.isBr
 }

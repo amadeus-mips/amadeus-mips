@@ -61,8 +61,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetch1Top.io.buffer := !hazard.io.flush && hazard.io.stall(0)
   fetch1Top.io.inst   := io.rInst.data
 
-  fetch1Top.io.predictUpdate := DontCare
-  fetch1Top.io.predictTaken  := DontCare
+  fetch1Top.io.predUpdate := executeTop.io.predUpdate
 
   if1_id.io.in    := fetch1Top.io.out
   if1_id.io.stall := hazard.io.stall
