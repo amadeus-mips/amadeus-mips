@@ -2,44 +2,49 @@ package cpu.pipelinedCache.components
 
 import chisel3._
 import chisel3.internal.naming.chiselName
-import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
+import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.memoryBanks.LUTRam
-import firrtl.options.TargetDirAnnotation
 
-class TagValidBundle extends Bundle {
-  val tag = UInt(20.W)
+class TagValidBundle(implicit cacheConfig: CacheConfig) extends Bundle {
+  val tag = UInt(cacheConfig.tagLen.W)
   val valid = Bool()
+
+  override def cloneType: this.type = (new TagValidBundle).asInstanceOf[this.type]
 }
 
-class ReadOnlyPort(numOfSets: Int) extends Bundle {
-  val addr = Input(UInt(log2Ceil(numOfSets).W))
-  val data = Output(new TagValidBundle)
+class ReadOnlyPort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
+  val addr = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
+  val data = Output(gen)
+
+  override def cloneType = (new ReadOnlyPort(gen)).asInstanceOf[this.type]
 }
 
-class ReadWritePort(numOfSets: Int) extends Bundle {
-  val addr = Input(UInt(log2Ceil(numOfSets).W))
+class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
+  val addr = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
   val writeEnable = Input(Bool())
-  val writeData = Input(new TagValidBundle)
-  val readData = Output(new TagValidBundle)
+  val writeData = Input(gen)
+  val readData = Output(gen)
+
+  override def cloneType = (new ReadWritePort(gen)).asInstanceOf[this.type]
 }
 
 /**
   * all the tag and valid data are in here, stored in LUTRam
   *
-  * @param numOfSets how many sets are in the cache
-  * @param numOfWays how many ways are in the cache
   */
 @chiselName
-class TagValidBanks(numOfSets: Int, numOfWays: Int = 4) extends Module {
+class TagValidBanks(implicit CacheC: CacheConfig) extends Module {
+  val numOfSets: Int = CacheC.numOfSets
+  val numOfWays: Int = CacheC.numOfWays
   require(isPow2(numOfSets))
   val io = IO(new Bundle {
     // has multiple banks to write to, select before hand
     val way = Vec(
       numOfWays,
       new Bundle {
-        val portA = new ReadOnlyPort(numOfSets)
-        val portB = new ReadWritePort(numOfSets)
+        val portA = new ReadOnlyPort(new TagValidBundle)
+        val portB = new ReadWritePort(new TagValidBundle)
       }
     )
   })
@@ -51,14 +56,7 @@ class TagValidBanks(numOfSets: Int, numOfWays: Int = 4) extends Module {
 
     bank.io.writeAddr := io.way(i).portB.addr
     bank.io.writeEnable := io.way(i).portB.writeEnable
-    bank.io.writeData := io.way(i).portB.writeData.asTypeOf(UInt(21.W))
+    bank.io.writeData := io.way(i).portB.writeData.asTypeOf(bank.io.writeData)
     io.way(i).portB.readData := bank.io.writeOutput.asTypeOf(new TagValidBundle)
   }
-}
-
-object TagValidBanksElaborate extends App {
-  (new ChiselStage).execute(
-    Array(),
-    Seq(ChiselGeneratorAnnotation(() => new TagValidBanks(32, 4)), TargetDirAnnotation("generation"))
-  )
 }

@@ -1,4 +1,7 @@
 # non-module hardware in chisel
+
+## This is **DEPRECATED** now, please use methods in companion objects
+
 ## chisel.util.Counter example
 an example from the official library
 ```scala

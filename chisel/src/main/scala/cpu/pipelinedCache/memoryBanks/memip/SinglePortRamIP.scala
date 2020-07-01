@@ -18,7 +18,8 @@ class SinglePortRamIP(
                        byteWriteWidth: Int = 8,
                        addrWidth: Int,
                        numberOfLines: Int,
-                       memoryPrimitive: String = "auto"
+                       memoryPrimitive: String = "auto",
+                       latency: Int = 1
                      ) extends BlackBox(
   Map(
     "ADDR_WIDTH_A" -> addrWidth,
@@ -31,7 +32,12 @@ class SinglePortRamIP(
     "WRITE_MODE_A" -> "read_first"
   )
 ) {
+  require(
+    (latency == 0 && (memoryPrimitive == "auto" || memoryPrimitive == "distributed")) || (latency == 1 && (memoryPrimitive == "auto" || memoryPrimitive == "block"))
+  )
+
   override def desiredName: String = "XPM_MEMORY_SPRAM"
+
   val io = IO(new Bundle {
     require(
       dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,
