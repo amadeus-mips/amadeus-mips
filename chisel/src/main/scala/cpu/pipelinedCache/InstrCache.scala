@@ -20,6 +20,8 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Valid(UInt(32.W))
+
+    /** flush the stage 2 information */
     val flush = Input(Bool())
     val axi = AXIIO.master()
   })
@@ -31,13 +33,19 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
   val refillBuffer = Module(new ReFillBuffer(false))
   val lru = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
 
-  val hitWire = WireDefault(comparator.io.bankHitWay.valid || comparator.io.hitInRefillBuffer)
+  /** if the whole pipeline can proceed */
+  val hitWire = WireDefault(
+    comparator.io.bankHitWay.valid ||
+      comparator.io.hitInRefillBuffer ||
+      io.flush ||
+      fetch_query.io.out.invalid
+  )
   val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
   val hitInRefillBuffer = WireDefault(comparator.io.hitInRefillBuffer)
   val newMiss = WireDefault(mshr.io.missAddr.fire)
 
   // when there is a stall caused by a miss or the cache is performing writeback
-  io.addr.ready := !hitWire || !mshr.io.writeBack
+  io.addr.ready := hitWire && !mshr.io.writeBack
 
   io.axi <> axi.io.axi
 
@@ -92,7 +100,8 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
   refillBuffer.io.inputData := axi.io.transferData
   refillBuffer.io.finish := axi.io.finishTransfer
 
-  mshr.io.missAddr.valid := !io.flush && !hitWire && !fetch_query.io.in.invalid
+  /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
+  mshr.io.missAddr.valid := !io.flush && !hitWire && !fetch_query.io.out.invalid
   mshr.io.missAddr.bits.tag := fetch_query.io.out.phyTag
   mshr.io.missAddr.bits.index := fetch_query.io.out.index
   mshr.io.missAddr.bits.bankIndex := fetch_query.io.out.bankIndex
@@ -103,7 +112,7 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
     lru.update(index = fetch_query.io.out.index, way = comparator.io.bankHitWay.bits)
   }
 
-  io.data.valid := hitWire && !io.flush
+  io.data.valid := hitWire && !io.flush && !fetch_query.io.out.invalid
   // note: this is quite expensive, because there are too many banks, wiring cost grow high
   io.data.bits := Mux(
     comparator.io.hitInRefillBuffer,
