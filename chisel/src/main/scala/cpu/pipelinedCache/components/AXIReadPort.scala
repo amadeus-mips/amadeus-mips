@@ -6,6 +6,7 @@ import chisel3.internal.naming.chiselName
 import chisel3.util._
 
 //TODO: outstanding AXI requests
+//TODO: optimize away the writeback stage
 /**
   * AXI read port is an interface to AXI Bus
   *
@@ -26,7 +27,7 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt, burstLen: Int = 16) exten
   require(addrReqWidth <= 32, "address should be less than 32 bits wide")
   require(burstLen <= 16, "burst length should not be larger than 16 in axi3")
 
-  val readIdle :: readWaitForAR :: readTransfer :: Nil = Enum(3)
+  val readIdle :: readWaitForAR :: readTransfer :: readWB :: Nil = Enum(4)
   val readState = RegInit(readIdle)
 
   io.axi.aw := DontCare
@@ -69,8 +70,11 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt, burstLen: Int = 16) exten
     }
     is(readTransfer) {
       when(io.axi.r.fire && io.axi.r.bits.last) {
-        readState := readIdle
+        readState := readWB
       }
+    }
+    is(readWB) {
+      readState := readIdle
     }
   }
 }

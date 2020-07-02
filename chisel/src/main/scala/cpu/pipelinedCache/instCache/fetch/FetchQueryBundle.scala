@@ -9,7 +9,7 @@ class FetchQueryBundle(implicit cacheConfig: CacheConfig) extends Bundle {
   val phyTag = UInt(cacheConfig.tagLen.W)
   val index = UInt(cacheConfig.indexLen.W)
   val bankIndex = UInt(cacheConfig.bankIndexLen.W)
-  val invalid = Bool()
+  val valid = Bool()
 
   override def cloneType = (new FetchQueryBundle).asInstanceOf[this.type]
 }

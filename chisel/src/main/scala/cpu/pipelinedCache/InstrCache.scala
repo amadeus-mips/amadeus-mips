@@ -78,7 +78,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   fetch_query.io.in.tagValid := fetch.io.tagValid
   fetch_query.io.in.phyTag := fetch.io.phyTag
   fetch_query.io.in.bankIndex := fetch.io.bankIndex
-  fetch_query.io.in.invalid := !io.addr.valid
+  fetch_query.io.in.valid := io.addr.valid
 
   //-----------------------------------------------------------------------------
   //------------------modules and connections for query--------------------------
@@ -86,7 +86,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   hit := hitInBank & comparator.io.hitInRefillBuffer
   hitInBank := comparator.io.bankHitWay.valid
   newMiss := mshr.io.missAddr.fire
-  passThrough := fetch_query.io.out.invalid || io.flush
+  passThrough := !fetch_query.io.out.valid || io.flush
 
   comparator.io.tagValid := fetch_query.io.out.tagValid
   comparator.io.phyTag := fetch_query.io.out.phyTag
