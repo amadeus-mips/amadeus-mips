@@ -3,6 +3,7 @@ package cpu.pipelinedCache.components
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.memoryBanks.LUTRam
 
@@ -34,7 +35,7 @@ class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) exten
   *
   */
 @chiselName
-class TagValidBanks(implicit CacheC: CacheConfig) extends Module {
+class TagValidBanks(implicit CacheC: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val numOfSets: Int = CacheC.numOfSets
   val numOfWays: Int = CacheC.numOfWays
   require(isPow2(numOfSets))

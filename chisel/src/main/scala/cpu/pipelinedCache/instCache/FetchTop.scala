@@ -3,6 +3,7 @@ package cpu.pipelinedCache.instCache
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.TagValidBundle
 import cpu.pipelinedCache.instCache.fetch.TagValid
@@ -11,7 +12,7 @@ import cpu.pipelinedCache.instCache.fetch.TagValid
   * fetch top that fetches tags, valid, and do address translation
   */
 @chiselName
-class FetchTop(implicit cacheConfig: CacheConfig) extends Module {
+class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val addr = Input(UInt(32.W))
     val writeTagValid = Flipped(Valid(new Bundle {

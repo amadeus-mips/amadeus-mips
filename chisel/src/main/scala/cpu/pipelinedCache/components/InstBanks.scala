@@ -2,6 +2,7 @@ package cpu.pipelinedCache.components
 
 import chisel3._
 import chisel3.internal.naming.chiselName
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.memoryBanks.SinglePortBRam
 
@@ -10,7 +11,7 @@ import cpu.pipelinedCache.memoryBanks.SinglePortBRam
   * The IP is repurposed to fulfill this request ( 1 write port always disabled )
   */
 @chiselName
-class InstBanks(implicit cacheConfig: CacheConfig) extends Module {
+class InstBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val numOfWays: Int = cacheConfig.numOfWays
   val numOfSets: Int = cacheConfig.numOfSets
   val numOfBanks: Int = cacheConfig.numOfBanks

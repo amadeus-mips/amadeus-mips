@@ -3,6 +3,7 @@ package cpu.pipelinedCache.instCache.fetch
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.{TagValidBanks, TagValidBundle}
 
@@ -12,7 +13,7 @@ import cpu.pipelinedCache.components.{TagValidBanks, TagValidBundle}
   * @param cacheConfig implicit configuration that governs whole Cache
   */
 @chiselName
-class TagValid(implicit cacheConfig: CacheConfig) extends Module {
+class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val address = Input(UInt(cacheConfig.indexLen.W))
     val write = Flipped(Valid(new Bundle {

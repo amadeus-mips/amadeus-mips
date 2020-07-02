@@ -5,6 +5,7 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.components._
 import cpu.pipelinedCache.instCache.fetch.FetchQueryBundle
 import cpu.pipelinedCache.instCache.{FetchTop, MSHR}
@@ -16,7 +17,7 @@ import shared.LRU.PLRUMRUNM
 //TODO: optional enable for most banks
 
 @chiselName
-class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
+class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Valid(UInt(32.W))
@@ -33,6 +34,7 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
   val refillBuffer = Module(new ReFillBuffer(false))
   val lru = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val fetch_query = Module(new CachePipelineStage(new FetchQueryBundle))
+  val instrBanks = Module(new InstBanks)
 
   /** if there is a hit in either bank or refill buffer */
   val hit = Wire(Bool())
@@ -55,19 +57,16 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
   fetch.io.writeTagValid.bits.tagValid.valid := true.B
   fetch.io.writeTagValid.bits.waySelection := lru.getLRU(mshr.io.mshrInfo.index)
 
-  val instrFetchData = Wire(Vec(4, UInt((cacheConfig.bankWidth * 8).W)))
+  val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 
-  val instrBanks = Module(new InstBanks)
   for (i <- 0 until cacheConfig.numOfWays) {
     for (j <- 0 until cacheConfig.numOfBanks) {
       instrBanks.io.way_bank(i)(j).addr := Mux(mshr.io.writeBack, mshr.io.mshrInfo.index, fetch.io.index)
       instrBanks.io.way_bank(i)(j).writeEnable :=
         mshr.io.writeBack && i.U === lru.getLRU(mshr.io.mshrInfo.index)
       instrBanks.io.way_bank(i)(j).writeData := refillBuffer.io.allData(j)
-      when(j.U === fetch_query.io.out.bankIndex) {
-        instrFetchData(i) := instrBanks.io.way_bank(i)(j).readData
-      }
     }
+    instrFetchData(i) := instrBanks.io.way_bank(i)(fetch_query.io.out.bankIndex).readData
   }
 
   //-----------------------------------------------------------------------------
@@ -130,6 +129,7 @@ class InstrCache(implicit cacheConfig: CacheConfig) extends Module {
 
 object ICacheElaborate extends App {
   implicit val cacheConfig = new CacheConfig
+  implicit val CPUConfig = new CPUConfig(build = false)
   (new ChiselStage).execute(
     Array(),
     Seq(ChiselGeneratorAnnotation(() => new InstrCache()), TargetDirAnnotation("generation"))

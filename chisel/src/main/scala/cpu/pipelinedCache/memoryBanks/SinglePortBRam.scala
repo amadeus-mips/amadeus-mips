@@ -10,7 +10,7 @@ import firrtl.options.TargetDirAnnotation
 
 @chiselName
 class SinglePortBRam(depth: Int, width: Int = 32, byteAddressable: Boolean)(implicit
-                                                                            cpuCfg: CPUConfig = CPUConfig.Build
+                                                                            cpuCfg: CPUConfig = new CPUConfig(build = false)
 ) extends Module {
   require(isPow2(depth))
   require(
