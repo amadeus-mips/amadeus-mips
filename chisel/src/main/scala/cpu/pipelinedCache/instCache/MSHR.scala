@@ -29,11 +29,12 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
     val mshrInfo = Output(new MSHREntry())
   })
   val missEntryReg = RegInit(0.U.asTypeOf(new MSHREntry))
-
-  val sIdle :: sTransfer :: sWriteback :: Nil = Enum(3)
+  val wbNext = RegInit(false.B)
+  wbNext := false.B
+  val sIdle :: sTransfer :: Nil = Enum(2)
   val state = RegInit(sIdle)
 
-  io.writeBack := state === sWriteback
+  io.writeBack := wbNext
   io.mshrInfo := missEntryReg
   io.missAddr.ready := state === sIdle
 
@@ -46,11 +47,9 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
     }
     is(sTransfer) {
       when(io.readyForWB) {
-        state := sWriteback
+        wbNext := true.B
+        state := sIdle
       }
-    }
-    is(sWriteback) {
-      state := sIdle
     }
   }
 
