@@ -23,7 +23,7 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends Module {
   bankHitVec := io.tagValid.map {
     case (tagValidBundle: TagValidBundle) => tagValidBundle.valid && tagValidBundle.tag === io.phyTag
   }
-  io.bankHitWay.valid := bankHitVec.contains(false.B)
+  io.bankHitWay.valid := bankHitVec.contains(true.B)
   io.bankHitWay.bits := bankHitVec.indexWhere(hit => hit === true.B)
 
   /**
@@ -31,8 +31,7 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends Module {
     * and valid must be returned
     */
   io.hitInRefillBuffer :=
-    io.mshr.valid &&
-      io.phyTag === io.mshr.bits.tag &&
+    io.phyTag === io.mshr.bits.tag &&
       io.index === io.mshr.bits.index &&
       io.refillBufferValid
 }
