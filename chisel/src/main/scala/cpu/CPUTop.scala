@@ -39,10 +39,9 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
 
   core.io.intr := io.intr
   // assume instructions are always cached
-  core.io.rInst.data.bits  := iCache.io.data.bits
-  core.io.rInst.data.valid := iCache.io.data.valid
-  iCache.io.addr           <> core.io.rInst.addr
-  iCache.io.flush          := core.io.rInst.change
+  core.io.rInst.data <> iCache.io.data
+  iCache.io.addr     <> core.io.rInst.addr
+  iCache.io.flush    := core.io.rInst.change
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
