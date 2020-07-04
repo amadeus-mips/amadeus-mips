@@ -31,7 +31,7 @@ class ReFillBuffer(writeEnable: Boolean = false)(implicit cacheConfig: CacheConf
 
   val writePtr = Reg(UInt(log2Ceil(cacheConfig.numOfBanks).W))
 
-  io.queryResult.valid := bufferValidMask(io.addr.bits) && state =/= sIdle
+  io.queryResult.valid := bufferValidMask(io.addr.bits)
   io.queryResult.bits := buffer(io.addr.bits)
 
   io.allData := buffer
@@ -58,9 +58,8 @@ class ReFillBuffer(writeEnable: Boolean = false)(implicit cacheConfig: CacheConf
     is(sWriteBack) {
       assert(bufferValidMask.asUInt.andR, "valid mask should all be true")
       state := sIdle
-      bufferValidMask := 0.U.asTypeOf(bufferValidMask)
     }
   }
-  assert((io.addr.valid && state === sIdle) || (state =/= sIdle && !io.addr.valid))
-  assert((io.inputData.valid && state === sTransfer) || (state =/= sTransfer && !io.inputData.valid))
+  //  assert((io.addr.valid && state === sIdle) || (state =/= sIdle && !io.addr.valid))
+  //  assert((io.inputData.valid && state === sTransfer) || (state =/= sTransfer && !io.inputData.valid))
 }

@@ -50,11 +50,11 @@ class LUTRam(depth: Int, width: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Buil
     bank.io.addrb := io.readAddr
     io.readData   := bank.io.doutb
   } else {
-    assert(
-      !(io.writeEnable && io.readAddr === io.writeAddr),
-      s"there has been an address collision, the address is ${io.readAddr}"
-    )
-    val bank = SyncReadMem(depth, UInt(width.W))
+//    assert(
+//      !(io.writeEnable && io.readAddr === io.writeAddr),
+//      s"there has been an address collision, the address is ${io.readAddr}"
+//    )
+val bank = SyncReadMem(depth, UInt(width.W))
     io.readData    := bank(io.readAddr)
     io.writeOutput := DontCare
     when(io.writeEnable) {
