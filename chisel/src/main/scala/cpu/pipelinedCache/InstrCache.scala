@@ -21,7 +21,7 @@ import verification.VeriAXIRam
 class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
-    val data = Valid(UInt(32.W))
+    val data = Decoupled(UInt(32.W))
 
     /** flush the stage 2 information */
     val flush = Input(Bool())
@@ -44,11 +44,13 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   val hitInBank = Wire(Bool())
   val newMiss = Wire(Bool())
 
+  val stage2Free = Wire(Bool())
+
   /** pass through control signal */
   val passThrough = Wire(Bool())
 
   // when there is a stall caused by a miss or the cache is performing writeback
-  io.addr.ready := (hit || passThrough) && !mshr.io.writeBack
+  io.addr.ready := stage2Free && !mshr.io.writeBack
 
   io.axi <> axi.io.axi
 
@@ -74,7 +76,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   //-------------pipeline register seperating metadata fetching and query--------
   //-----------------------------------------------------------------------------
 
-  fetch_query.io.stall := !hit && !passThrough
+  fetch_query.io.stall := !stage2Free
   fetch_query.io.in.index := fetch.io.index
   fetch_query.io.in.tagValid := fetch.io.tagValid
   fetch_query.io.in.phyTag := fetch.io.phyTag
@@ -124,6 +126,8 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   when(hitInBank) {
     lru.update(index = fetch_query.io.out.index, way = comparator.io.bankHitWay.bits)
   }
+
+  stage2Free := (hit && io.data.fire) || passThrough
 
   io.data.valid := hit && !passThrough
   io.data.bits := Mux(
