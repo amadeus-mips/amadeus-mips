@@ -18,6 +18,7 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     val address = Input(UInt(cacheConfig.indexLen.W))
     val write = Flipped(Valid(new Bundle {
       val waySelection = UInt(log2Ceil(cacheConfig.numOfWays).W)
+      val indexSelection = UInt(cacheConfig.indexLen.W)
       val tagValid = new TagValidBundle
     }))
     val tagValid = Output(Vec(cacheConfig.numOfWays, new TagValidBundle))
@@ -32,7 +33,7 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     io.tagValid(i) := tagValidBanks.io.way(i).portA.data
 
     // write if required
-    tagValidBanks.io.way(i).portB.addr := io.address
+    tagValidBanks.io.way(i).portB.addr := io.write.bits.indexSelection
     tagValidBanks.io.way(i).portB.writeEnable := io.write.valid && io.write.bits.waySelection === i.U
     tagValidBanks.io.way(i).portB.writeData := io.write.bits.tagValid
   }

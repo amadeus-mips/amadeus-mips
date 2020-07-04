@@ -17,6 +17,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     val addr = Input(UInt(32.W))
     val writeTagValid = Flipped(Valid(new Bundle {
       val waySelection = UInt(log2Ceil(cacheConfig.numOfWays).W)
+      val indexAddr = UInt(cacheConfig.indexLen.W)
       val tagValid = new TagValidBundle
     }))
     val index = Output(UInt(cacheConfig.indexLen.W))
@@ -32,7 +33,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   val bankIndex = io.addr(cacheConfig.bankOffsetLen - 1 + cacheConfig.bankIndexLen, cacheConfig.bankOffsetLen)
 
   io.index := index
-  tagValid.io.address := index
+  tagValid.io.address := io.writeTagValid.bits.indexAddr
   tagValid.io.write := io.writeTagValid
   io.tagValid := tagValid.io.tagValid
   io.bankIndex := bankIndex
