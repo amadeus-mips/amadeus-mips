@@ -21,7 +21,7 @@ class ReFillBuffer(writeEnable: Boolean = false)(implicit cacheConfig: CacheConf
   })
   require(!writeEnable, "don't enable write for now")
 
-  val sIdle :: sTransfer :: sWriteBack :: Nil = Enum(3)
+  val sIdle :: sTransfer :: Nil = Enum(2)
   val state = RegInit(sIdle)
 
   val buffer = Reg(
@@ -52,12 +52,8 @@ class ReFillBuffer(writeEnable: Boolean = false)(implicit cacheConfig: CacheConf
         buffer(writePtr) := io.inputData.bits
       }
       when(io.finish) {
-        state := sWriteBack
+        state := sIdle
       }
-    }
-    is(sWriteBack) {
-      assert(bufferValidMask.asUInt.andR, "valid mask should all be true")
-      state := sIdle
     }
   }
   //  assert((io.addr.valid && state === sIdle) || (state =/= sIdle && !io.addr.valid))
