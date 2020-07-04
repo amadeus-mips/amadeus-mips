@@ -127,7 +127,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
     lru.update(index = fetch_query.io.out.index, way = comparator.io.bankHitWay.bits)
   }
 
-  stage2Free := (hit && io.data.fire) || passThrough
+  stage2Free := io.data.fire || passThrough
 
   io.data.valid := hit && !passThrough
   io.data.bits := Mux(
