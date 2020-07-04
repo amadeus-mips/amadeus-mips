@@ -42,6 +42,7 @@ class ReFillBuffer(writeEnable: Boolean = false)(implicit cacheConfig: CacheConf
         writePtr := io.addr.bits
         buffer := 0.U.asTypeOf(buffer)
         state := sTransfer
+        bufferValidMask := 0.U.asTypeOf(bufferValidMask)
       }
     }
     is(sTransfer) {

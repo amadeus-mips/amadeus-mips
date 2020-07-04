@@ -12,6 +12,7 @@ import cpu.pipelinedCache.instCache.{FetchTop, MSHR}
 import firrtl.options.TargetDirAnnotation
 import shared.Constants._
 import shared.LRU.PLRUMRUNM
+import verification.VeriAXIRam
 
 //TODO: refactor non-module to objects
 //TODO: optional enable for most banks
@@ -97,8 +98,13 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 
   axi.io.addrReq.bits := Mux(
     newMiss,
-    Cat(fetch_query.io.out.phyTag, fetch_query.io.out.index, fetch_query.io.out.bankIndex),
-    mshr.io.mshrInfo.asUInt
+    Cat(
+      fetch_query.io.out.phyTag,
+      fetch_query.io.out.index,
+      fetch_query.io.out.bankIndex,
+      0.U(cacheConfig.bankOffsetLen.W)
+    ),
+    Cat(mshr.io.mshrInfo.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
   )
   axi.io.addrReq.valid := newMiss || !mshr.io.missAddr.ready
 
@@ -130,8 +136,25 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 object ICacheElaborate extends App {
   implicit val cacheConfig = new CacheConfig
   implicit val CPUConfig = new CPUConfig(build = false)
+
+  class ICacheVeri() extends Module {
+    val io = IO(new Bundle {
+      val addr = Flipped(Decoupled(UInt(32.W)))
+      val data = Valid(UInt(32.W))
+
+      /** flush the stage 2 information */
+      val flush = Input(Bool())
+    })
+    val insCache = Module(new InstrCache)
+    val ram = Module(new VeriAXIRam)
+    insCache.io.axi <> ram.io.axi
+    insCache.io.addr <> io.addr
+    insCache.io.data <> io.data
+    insCache.io.flush <> io.flush
+  }
+
   (new ChiselStage).execute(
     Array(),
-    Seq(ChiselGeneratorAnnotation(() => new InstrCache()), TargetDirAnnotation("generation"))
+    Seq(ChiselGeneratorAnnotation(() => new ICacheVeri()), TargetDirAnnotation("generation"))
   )
 }
