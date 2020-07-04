@@ -12,7 +12,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle() {
     val in = Input(new IfIf1Bundle)
     val buffer = Input(Bool())
-    val inst = Input(UInt(dataLen.W))
+    val inst = Flipped(ValidIO(UInt(dataLen.W)))
 
     val predUpdate = Flipped(ValidIO(new BrPrUpdateBundle))
 
@@ -25,8 +25,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
     val nextInstInDelaySlot = Output(Bool()) // to Fetch
   })
 
-  val inInst = Buffer(in = io.inst, en = io.buffer).io.out
-  val inst = Mux(io.in.except.asUInt().orR() || !io.in.instValid, 0.U, inInst)
+  val inst = Mux(io.in.except.asUInt().orR() || !io.in.instValid, 0.U, io.inst.bits)
 
   val branchDecode = Module(new BranchDecode())
 
@@ -43,7 +42,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   io.out.brPredict := branchDecode.io.predict
 
 
-  io.stallReq := false.B
+  io.stallReq := io.in.instValid && !io.inst.valid
 
   io.predict := branchDecode.io.predict
   io.predict.valid := branchDecode.io.predict.valid && io.in.instValid && !io.in.except.asUInt().orR()

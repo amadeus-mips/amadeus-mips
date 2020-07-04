@@ -3,6 +3,7 @@
 package cpu.core
 
 import chisel3._
+import chisel3.util.Decoupled
 import cpu.CPUConfig
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
@@ -14,9 +15,14 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst    = new NiseSramReadIO()
+    val rInst = new Bundle{
+      val addr = Decoupled(UInt(addrLen.W))
+      val data = Flipped(Decoupled(UInt(dataLen.W)))
+      val change = Output(Bool())
+    }
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
+
   })
 
   /**
@@ -50,7 +56,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetchTop.io.branch      := executeTop.io.branch
   fetchTop.io.inDelaySlot := fetch1Top.io.nextInstInDelaySlot
 
-  fetchTop.io.instValid := io.rInst.valid
+  fetchTop.io.instValid := io.rInst.addr.ready
 
   if_if1.io.in    := fetchTop.io.out
   if_if1.io.stall := hazard.io.stall
@@ -58,8 +64,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
     (executeTop.io.branch.valid && hazard.io.predictFailFlush(0))
 
   fetch1Top.io.in     := if_if1.io.out
-  fetch1Top.io.buffer := !hazard.io.flush && hazard.io.stall(0)
-  fetch1Top.io.inst   := io.rInst.data
+  fetch1Top.io.buffer := hazard.io.stall(0)
+  fetch1Top.io.inst.bits   := io.rInst.data.bits
+  fetch1Top.io.inst.valid := io.rInst.data.valid
 
   fetch1Top.io.predUpdate := executeTop.io.predUpdate
 
@@ -132,9 +139,12 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   wbTop.io.in    := mem_wb.io.out
   wbTop.io.rData := io.rChannel.data
 
-  io.rInst.addr   := fetchTop.io.out.pc
-  io.rInst.enable := fetchTop.io.pcValid
+  io.rInst.addr.bits  := fetchTop.io.out.pc
+  io.rInst.addr.valid := fetchTop.io.pcValid
+  io.rInst.data.ready := true.B
 
   io.rChannel <> memoryTop.io.rData
   io.wChannel <> memoryTop.io.wData
+
+  io.rInst.change := fetchTop.io.pcChange
 }

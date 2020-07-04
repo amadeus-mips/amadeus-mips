@@ -157,6 +157,7 @@ class SocLiteTopUnitTester(
     if (isPerf) {
       perfAllRes += new PerfResult(perfRes.toString())
       printPerfLog()
+      branchPerformanceMonitor()
     }
     if (tcfg.performanceMonitorEnable) {
       log(
@@ -165,7 +166,6 @@ class SocLiteTopUnitTester(
           s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
       )
     }
-    branchPerformanceMonitor()
   }
 
   def afterAllRun(): Unit = {

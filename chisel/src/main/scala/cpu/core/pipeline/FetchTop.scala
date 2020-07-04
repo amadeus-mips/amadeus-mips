@@ -25,13 +25,16 @@ class FetchTop extends Module {
     // to IFID
     val out = Output(new IfIf1Bundle)
     // to ram
-    val pcValid = Output(Bool())
+    val pcValid  = Output(Bool())
+    val pcChange = Output(Bool())
     // to ctrl
     val stallReq = Output(Bool())
   })
 
   val hazard = Module(new cpu.core.fetch.Hazard)
   val pcMux  = Module(new cpu.core.fetch.PCMux(n = 4))
+
+  val except = io.out.except.asUInt().orR()
 
   hazard.io.flush          := io.flush
   hazard.io.stall          := io.stall
@@ -41,17 +44,18 @@ class FetchTop extends Module {
   hazard.io.in.predict     := io.predict
 
   pcMux.io.ins(0) := ValidBundle(io.flush, io.flushPC)
-  pcMux.io.ins(1) := hazard.io.out.branch
+  pcMux.io.ins(1) := io.branch
   pcMux.io.ins(2) := ValidBundle(io.stall, pcMux.io.pc)
   pcMux.io.ins(3) := hazard.io.out.predict
 
   io.out.pc          := pcMux.io.pc
-  io.out.instValid   := io.instValid
+  io.out.instValid   := io.instValid && !except
   io.out.inDelaySlot := hazard.io.out.inDelaySlot
 
   io.out.except               := DontCare
   io.out.except(EXCEPT_FETCH) := pcMux.io.pcNotAligned
 
-  io.pcValid  := !io.out.except.asUInt().orR()
-  io.stallReq := !io.instValid && !io.out.except.asUInt().orR()
+  io.pcValid  := !except
+  io.pcChange := io.branch.valid || io.flush // priority higher than stall pc
+  io.stallReq := !io.instValid && !except
 }

@@ -30,11 +30,13 @@ class Hazard extends Module {
   io.stall := MuxCase(
     0.U,
     Array(
-      hasExcept -> 0.U
-    ) ++ io.stallReq.zipWithIndex.reverse.map(zip => {
-      val (sr, i) = zip
-      sr -> Fill(i + 2, true.B)
-    })
+      hasExcept -> 0.U,
+      io.stallReq(4) -> "b111111".U,
+      io.stallReq(3) -> "b011111".U,
+      io.stallReq(2) -> "b001111".U,
+      io.stallReq(1) -> "b000111".U,
+      io.stallReq(0) -> "b000011".U
+    )
   )
 
   val lastDS = WireInit(0.U(2.W))

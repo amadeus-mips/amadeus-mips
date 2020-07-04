@@ -5,9 +5,10 @@ package cpu
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{ICache, UnCachedUnit, newDCache}
+import cpu.cache.{newDCache, UnCachedUnit}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
+import cpu.pipelinedCache.{CacheConfig, InstrCache}
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
 
@@ -20,28 +21,28 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
   val io = IO(new Bundle {
 
     /** hardware interrupt */
-    val intr = Input(UInt(6.W))
-    val axi = AXIIO.master()
+    val intr  = Input(UInt(6.W))
+    val axi   = AXIIO.master()
     val debug = Output(new DebugBundle)
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
+  implicit val cacheConfig = new CacheConfig
 
   val axiArbiter = Module(new AXIArbiter())
 
-  val iCache   = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
+  val iCache   = Module(new InstrCache())
   val dCache   = Module(new newDCache)
   val unCached = Module(new UnCachedUnit)
 
   val core = Module(new Core_ls)
 
-  // hook up the performance monitor wires
-  if (performanceMonitorEnable) {
-    io.performance.get.cache := iCache.io.performanceMonitorIO.get
-  }
   core.io.intr := io.intr
   // assume instructions are always cached
-  core.io.rInst <> iCache.io.rInst
+  core.io.rInst.data.bits  := iCache.io.data.bits
+  core.io.rInst.data.valid := iCache.io.data.valid
+  iCache.io.addr           <> core.io.rInst.addr
+  iCache.io.flush          := core.io.rInst.change
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
@@ -72,7 +73,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
   }
   core.io.rChannel.data := Mux(useDCache, dCache.io.rChannel.data, unCached.io.rChannel.data)
 
-  iCache.io.axi  := DontCare
+  iCache.io.axi           := DontCare
   axiArbiter.io.slaves(0) <> dCache.io.axi
   axiArbiter.io.slaves(1) <> unCached.io.axi
   axiArbiter.io.slaves(2) <> iCache.io.axi
@@ -91,7 +92,6 @@ object elaborateCPU extends App {
   implicit val cpuCfg = new CPUConfig(build = true)
   (new ChiselStage).execute(
     Array(),
-    Seq(ChiselGeneratorAnnotation(() => new CPUTop()),
-      TargetDirAnnotation("generation"))
+    Seq(ChiselGeneratorAnnotation(() => new CPUTop()), TargetDirAnnotation("generation"))
   )
 }
