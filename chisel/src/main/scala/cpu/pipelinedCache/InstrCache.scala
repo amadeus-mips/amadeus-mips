@@ -58,7 +58,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   fetch.io.writeTagValid.valid := mshr.io.writeBack
   fetch.io.writeTagValid.bits.tagValid.tag := mshr.io.mshrInfo.tag
   fetch.io.writeTagValid.bits.tagValid.valid := true.B
-  fetch.io.writeTagValid.bits.indexAddr := mshr.io.mshrInfo.index
+  fetch.io.writeTagValid.bits.indexSelection := mshr.io.mshrInfo.index
   fetch.io.writeTagValid.bits.waySelection := lru.getLRU(mshr.io.mshrInfo.index)
 
   val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))

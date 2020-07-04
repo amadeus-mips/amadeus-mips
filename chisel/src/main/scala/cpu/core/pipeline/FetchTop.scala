@@ -55,7 +55,7 @@ class FetchTop extends Module {
   io.out.except               := DontCare
   io.out.except(EXCEPT_FETCH) := pcMux.io.pcNotAligned
 
-  io.pcValid  := !except
-  io.pcChange := io.branch.valid || io.flush // priority higher than stall pc
+  io.pcValid  := !except && !(io.branch.valid || io.flush)
+  io.pcChange := false.B// priority higher than stall pc
   io.stallReq := !io.instValid && !except
 }

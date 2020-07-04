@@ -141,7 +141,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   io.rInst.addr.bits  := fetchTop.io.out.pc
   io.rInst.addr.valid := fetchTop.io.pcValid
-  io.rInst.data.ready := !VecInit(hazard.io.stallReq.tail).asUInt().orR()
+  io.rInst.data.ready := !VecInit(hazard.io.stallReq.tail.tail).asUInt().orR()
 
   io.rChannel <> memoryTop.io.rData
   io.wChannel <> memoryTop.io.wData
