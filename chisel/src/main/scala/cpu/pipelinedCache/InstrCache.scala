@@ -16,6 +16,7 @@ import verification.VeriAXIRam
 
 //TODO: refactor non-module to objects
 //TODO: optional enable for most banks
+//TODO: flush refill buffer now that we have read buffer
 
 @chiselName
 class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
@@ -25,24 +26,27 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 
     /** flush the stage 2 information */
     val flush = Input(Bool())
-    val axi = AXIIO.master()
+    val axi   = AXIIO.master()
   })
 
-  val fetch = Module(new FetchTop)
-  val mshr = Module(new MSHR)
-  val comparator = Module(new MissComparator)
-  val axi = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID, burstLen = 16))
+  val fetch        = Module(new FetchTop)
+  val mshr         = Module(new MSHR)
+  val comparator   = Module(new MissComparator)
+  val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID, burstLen = 16))
   val refillBuffer = Module(new ReFillBuffer(false))
-  val lru = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val fetch_query = Module(new CachePipelineStage(new FetchQueryBundle))
-  val instrBanks = Module(new InstBanks)
+  val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val fetch_query  = Module(new CachePipelineStage(new FetchQueryBundle))
+  val instrBanks   = Module(new InstBanks)
+  val readHolder   = Module(new ReadHolder)
 
   /** if there is a hit in either bank or refill buffer */
   val hit = Wire(Bool())
 
+  val validData = Wire(Bool())
+
   /** if there is a hit in the bank */
   val hitInBank = Wire(Bool())
-  val newMiss = Wire(Bool())
+  val newMiss   = Wire(Bool())
 
   val stage2Free = Wire(Bool())
 
@@ -54,12 +58,12 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 
   io.axi <> axi.io.axi
 
-  fetch.io.addr := io.addr.bits
-  fetch.io.writeTagValid.valid := mshr.io.writeBack
-  fetch.io.writeTagValid.bits.tagValid.tag := mshr.io.mshrInfo.tag
+  fetch.io.addr                              := io.addr.bits
+  fetch.io.writeTagValid.valid               := mshr.io.writeBack
+  fetch.io.writeTagValid.bits.tagValid.tag   := mshr.io.mshrInfo.tag
   fetch.io.writeTagValid.bits.tagValid.valid := true.B
   fetch.io.writeTagValid.bits.indexSelection := mshr.io.mshrInfo.index
-  fetch.io.writeTagValid.bits.waySelection := lru.getLRU(mshr.io.mshrInfo.index)
+  fetch.io.writeTagValid.bits.waySelection   := lru.getLRU(mshr.io.mshrInfo.index)
 
   val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 
@@ -77,26 +81,26 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   //-------------pipeline register seperating metadata fetching and query--------
   //-----------------------------------------------------------------------------
 
-  fetch_query.io.stall := !stage2Free
-  fetch_query.io.in.index := fetch.io.index
-  fetch_query.io.in.tagValid := fetch.io.tagValid
-  fetch_query.io.in.phyTag := fetch.io.phyTag
+  fetch_query.io.stall        := !stage2Free
+  fetch_query.io.in.index     := fetch.io.index
+  fetch_query.io.in.tagValid  := fetch.io.tagValid
+  fetch_query.io.in.phyTag    := fetch.io.phyTag
   fetch_query.io.in.bankIndex := fetch.io.bankIndex
-  fetch_query.io.in.valid := io.addr.fire
+  fetch_query.io.in.valid     := io.addr.fire
 
   //-----------------------------------------------------------------------------
   //------------------modules and connections for query--------------------------
   //-----------------------------------------------------------------------------
-  hit := hitInBank || comparator.io.hitInRefillBuffer
-  hitInBank := comparator.io.bankHitWay.valid
-  newMiss := mshr.io.missAddr.fire
+  hit         := hitInBank || comparator.io.hitInRefillBuffer
+  hitInBank   := comparator.io.bankHitWay.valid
+  newMiss     := mshr.io.missAddr.fire
   passThrough := !fetch_query.io.out.valid || io.flush
 
-  comparator.io.tagValid := fetch_query.io.out.tagValid
-  comparator.io.phyTag := fetch_query.io.out.phyTag
-  comparator.io.index := fetch_query.io.out.index
-  comparator.io.mshr.bits := mshr.io.mshrInfo
-  comparator.io.mshr.valid := !mshr.io.missAddr.ready
+  comparator.io.tagValid          := fetch_query.io.out.tagValid
+  comparator.io.phyTag            := fetch_query.io.out.phyTag
+  comparator.io.index             := fetch_query.io.out.index
+  comparator.io.mshr.bits         := mshr.io.mshrInfo
+  comparator.io.mshr.valid        := !mshr.io.missAddr.ready
   comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
 
   axi.io.addrReq.bits := Mux(
@@ -112,35 +116,46 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   axi.io.addrReq.valid := newMiss || !mshr.io.missAddr.ready
 
   refillBuffer.io.addr.valid := newMiss
-  refillBuffer.io.addr.bits := fetch_query.io.out.bankIndex
-  refillBuffer.io.inputData := axi.io.transferData
-  refillBuffer.io.finish := axi.io.finishTransfer
+  refillBuffer.io.addr.bits  := fetch_query.io.out.bankIndex
+  refillBuffer.io.inputData  := axi.io.transferData
+  refillBuffer.io.finish     := axi.io.finishTransfer
+
+  readHolder.io.input.valid := validData && !io.data.ready
+  readHolder.io.input.bits := MuxCase(
+    readHolder.io.output.bits,
+    Seq(
+      comparator.io.hitInRefillBuffer                                 -> refillBuffer.io.queryResult.bits,
+      (comparator.io.bankHitWay.valid && !readHolder.io.output.valid) -> instrFetchData(comparator.io.bankHitWay.bits)
+    )
+  )
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.missAddr.valid := !hit && !passThrough
-  mshr.io.missAddr.bits.tag := fetch_query.io.out.phyTag
-  mshr.io.missAddr.bits.index := fetch_query.io.out.index
+  mshr.io.missAddr.valid          := !hit && !passThrough
+  mshr.io.missAddr.bits.tag       := fetch_query.io.out.phyTag
+  mshr.io.missAddr.bits.index     := fetch_query.io.out.index
   mshr.io.missAddr.bits.bankIndex := fetch_query.io.out.bankIndex
-  mshr.io.readyForWB := axi.io.finishTransfer
+  mshr.io.readyForWB              := axi.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {
     lru.update(index = fetch_query.io.out.index, way = comparator.io.bankHitWay.bits)
   }
-
+  validData  := hit && !passThrough
   stage2Free := io.data.fire || passThrough
 
-  io.data.valid := hit && !passThrough
-  io.data.bits := Mux(
-    comparator.io.hitInRefillBuffer,
-    refillBuffer.io.queryResult.bits,
-    instrFetchData(comparator.io.bankHitWay.bits)
+  io.data.valid := validData
+  io.data.bits := MuxCase(
+    instrFetchData(comparator.io.bankHitWay.bits),
+    Seq(
+      readHolder.io.output.valid      -> readHolder.io.output.bits,
+      comparator.io.hitInRefillBuffer -> refillBuffer.io.queryResult.bits
+    )
   )
 }
 
 object ICacheElaborate extends App {
   implicit val cacheConfig = new CacheConfig
-  implicit val CPUConfig = new CPUConfig(build = false)
+  implicit val CPUConfig   = new CPUConfig(build = false)
 
   class ICacheVeri() extends Module {
     val io = IO(new Bundle {
@@ -151,10 +166,10 @@ object ICacheElaborate extends App {
       val flush = Input(Bool())
     })
     val insCache = Module(new InstrCache)
-    val ram = Module(new VeriAXIRam)
-    insCache.io.axi <> ram.io.axi
-    insCache.io.addr <> io.addr
-    insCache.io.data <> io.data
+    val ram      = Module(new VeriAXIRam)
+    insCache.io.axi   <> ram.io.axi
+    insCache.io.addr  <> io.addr
+    insCache.io.data  <> io.data
     insCache.io.flush <> io.flush
   }
 
