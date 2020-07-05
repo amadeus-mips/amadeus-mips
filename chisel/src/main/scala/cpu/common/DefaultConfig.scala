@@ -5,7 +5,7 @@ package cpu.common
 import scala.math.log
 
 trait DefaultWireLength {
-  val cpuStallLen = 6
+  val cpuStallLen = 7
   val addrLen = 32
   val dataLen = 32
 

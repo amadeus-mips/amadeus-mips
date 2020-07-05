@@ -5,10 +5,11 @@ package cpu
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{newDCache, ICache, UnCachedUnit}
+import cpu.cache.{newDCache, UnCachedUnit}
 import cpu.core.Core_ls
 import cpu.mmu.MMU
 import cpu.performance.CPUTopPerformanceIO
+import cpu.pipelinedCache.{CacheConfig, InstrCache}
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
 
@@ -28,10 +29,11 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
+  implicit val cacheConfig = new CacheConfig
 
   val axiArbiter = Module(new AXIArbiter())
 
-  val iCache   = Module(new ICache(performanceMonitorEnable = performanceMonitorEnable))
+  val iCache   = Module(new InstrCache())
   val dCache   = Module(new newDCache)
   val unCached = Module(new UnCachedUnit)
 
@@ -39,10 +41,6 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   val core = Module(new Core_ls)
 
-  // hook up the performance monitor wires
-  if (performanceMonitorEnable) {
-    io.performance.get.cache := iCache.io.performanceMonitorIO.get
-  }
   core.io.intr := io.intr
 
   core.io.tlb <> mmu.io.core
@@ -53,6 +51,10 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   // assume instructions are always cached
   iCache.io.rInst <> mmu.io.out.rInst
+  // TODO
+  core.io.rInst.data <> iCache.io.data
+  iCache.io.addr     <> core.io.rInst.addr
+  iCache.io.flush    := core.io.rInst.change
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted

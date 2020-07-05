@@ -3,17 +3,16 @@
 package cpu.core.pipeline
 
 import chisel3._
+import chisel3.util.experimental.loadMemoryFromFile
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
-import cpu.core.bundles.stages.{IdExeBundle, IfIdBundle}
-import cpu.core.decode.BranchDecode
-import shared.ValidBundle
+import cpu.core.bundles.stages.{IdExeBundle, If1IdBundle}
+import firrtl.annotations.MemoryLoadFileType
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val in   = Input(new IfIdBundle)
-    val inst = Input(UInt(dataLen.W))
+    val in = Input(new If1IdBundle)
 
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
@@ -22,24 +21,16 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     val rsData = Input(UInt(dataLen.W)) // from register-file
     val rtData = Input(UInt(dataLen.W)) // ^
 
-    val predictorUpdate = Input(Bool())
-    val predictorTaken  = Input(Bool())
-
     val out = Output(new IdExeBundle)
 
     val stallReq = Output(Bool()) // to pipeLine control
-
-    val predict = Output(new ValidBundle) // to Fetch
-
-    val nextInstInDelaySlot = Output(Bool()) // to Fetch
   })
 
-  val inst = Mux(io.in.except.asUInt().andR() || !io.in.instValid, 0.U, io.inst)
+  val inst = io.in.inst
 
-  val hazard       = Module(new cpu.core.decode.Hazard)
-  val decode       = Module(new cpu.core.decode.Decode)
-  val control      = Module(new cpu.core.decode.Control)
-  val branchDecode = Module(new BranchDecode())
+  val hazard  = Module(new cpu.core.decode.Hazard)
+  val decode  = Module(new cpu.core.decode.Decode)
+  val control = Module(new cpu.core.decode.Control)
 
   val rs    = inst(25, 21)
   val rt    = inst(20, 16)
@@ -74,12 +65,6 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   control.io.rsData   := hazard.io.ops(0).outData
   control.io.rtData   := hazard.io.ops(1).outData
 
-  branchDecode.io.inst := inst
-  branchDecode.io.pc   := io.in.pc
-
-  branchDecode.io.predictTaken  := io.predictorUpdate
-  branchDecode.io.predictUpdate := io.predictorTaken
-
   io.out.instType  := decode.io.out.instType
   io.out.operation := decode.io.out.operation
 
@@ -92,12 +77,16 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := io.in.pc
   io.out.imm26       := imm26
   io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.brPredicted := branchDecode.io.predict.valid
-
-  io.predict := branchDecode.io.predict
+  io.out.brPredict   := io.in.brPredict
 
   io.stallReq := hazard.io.stallReq
 
-  io.nextInstInDelaySlot := branchDecode.io.isBr
-
+  if (!conf.build) {
+    val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
+    loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)
+    when (!(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))) {
+      printf(p"the address is ${io.in.pc}, the wrong instruction is ${io.in.inst}, the correct instruction should be ${veriMem.read(io.in.pc(19, 2))}")
+    }
+    assert(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))
+  }
 }

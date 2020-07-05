@@ -3,11 +3,12 @@
 package cpu.core.pipeline
 
 import chisel3._
+import chisel3.util.ValidIO
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle}
-import cpu.core.components.{Div, Mult}
+import cpu.core.components.{BrPrUpdateBundle, Div, Mult}
 import cpu.core.execute.components._
 import shared.ValidBundle
 
@@ -31,6 +32,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
     val out      = Output(new ExeMemBundle)
     val branch   = Output(new ValidBundle) // back to `Fetch`
+    val predUpdate = ValidIO(new BrPrUpdateBundle)
     val stallReq = Output(Bool())
   })
 
@@ -106,9 +108,48 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
 
+  val brPrFail =
+    (branch.io.branch.valid ^ io.in.brPredict.valid) || (branch.io.branch.valid && branch.io.branch.bits =/= io.in.brPredict.bits)
+
   io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
-  io.branch.valid := branch.io.branch.valid ^ io.in.brPredicted
+  io.branch.valid := brPrFail
+
+  io.predUpdate.valid       := brPrFail
+  io.predUpdate.bits.pc     := io.in.pc
+  io.predUpdate.bits.target := branch.io.branch.bits
+  io.predUpdate.bits.taken  := branch.io.branch.valid
 
   io.stallReq := writeOther.io.stallReq || (io.in.operation === MV_MFC0 &&
     (VecInit(Seq(TLB_R, TLB_P)).contains(io.memOp) || VecInit(Seq(TLB_R, TLB_P)).contains(io.wbOp)))
+
+  // performance
+  val brPrTotal = RegInit(0.U.asTypeOf(new BrPrPerfBundle))
+  val brPrJ     = RegInit(0.U.asTypeOf(new BrPrPerfBundle))
+  val brPrB     = RegInit(0.U.asTypeOf(new BrPrPerfBundle))
+
+  val pcReg = RegInit(0.U(addrLen.W))
+  when(io.in.instType === INST_BR && pcReg =/= io.in.pc) {
+    val isJ = VecInit(Seq(BR_JR, BR_JALR, BR_J, BR_JAL)).contains(io.in.operation)
+    pcReg := io.in.pc
+    when(io.branch.valid) {
+      brPrTotal.fail := brPrTotal.fail + 1.U
+      when(isJ) {
+        brPrJ.fail := brPrJ.fail + 1.U
+      }.otherwise {
+        brPrB.fail := brPrB.fail + 1.U
+      }
+    }.otherwise {
+      brPrTotal.success := brPrTotal.success + 1.U
+      when(isJ) {
+        brPrJ.success := brPrJ.success + 1.U
+      }.otherwise {
+        brPrB.success := brPrB.success + 1.U
+      }
+    }
+  }
+}
+
+class BrPrPerfBundle extends Bundle {
+  val success = UInt(64.W)
+  val fail    = UInt(64.W)
 }

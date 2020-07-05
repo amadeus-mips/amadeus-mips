@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import chisel3.iotesters.PeekPokeTester
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.io.Source
 
@@ -21,10 +22,14 @@ class SocLiteTopUnitTester(
 
   tcfg.check(perfNumber)
 
+  val baseOutputPath = s"./out/"
+
   val writeTraceFile =
     if (tcfg.writeTrace) Some(s"./src/test/resources/loongson/perf/${tcfg.perfMap(perfNumber)}/cmp.txt") else None
 
   val perfLog = ArrayBuffer('p', 'e', 'r', 'f', 'l', 'o', 'g', '\n')
+  val perfRes = new mutable.StringBuilder()
+  val perfAllRes = ArrayBuffer[PerfResult]()
 
   import chisel3._
 
@@ -65,9 +70,9 @@ class SocLiteTopUnitTester(
   val pcEnd = BigInt("bfc00100", 16)
 
   // start run
-  var iCount = 0
-  var cCount = 1 // avoid divide 0
-  var result = true
+  var iCount   = 0
+  var cCount   = 1 // avoid divide 0
+  var result   = true
   var errCount = 0
   if (tcfg.runAllPerf) {
     for (i <- 1 to 10) {
@@ -76,24 +81,17 @@ class SocLiteTopUnitTester(
       reInit()
       result &= run()
       info(s"${tcfg.perfMap(i)} finished.")
+      afterRun()
     }
   } else {
     resetConfreg()
     reInit()
     result &= run()
+    afterRun()
   }
   if (tcfg.needAssert) require(result)
   step(5)
-  info("Finished!")
-  info(s"run $cCount cycles, $iCount instructions")
-  info(s"IPC is ${iCount.toFloat / cCount}")
-  if (tcfg.performanceMonitorEnable) {
-    log(
-      s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
-        s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
-        s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
-    )
-  }
+  afterAllRun()
 
   /**
     *
@@ -108,10 +106,13 @@ class SocLiteTopUnitTester(
   }
 
   def reInit(): Unit = {
+    if(isPerf){
+      perfRes.clear()
+    }
     lastTime      = System.currentTimeMillis()
     lastDebugInfo = ""
 
-    lastNum = peek(c.io.num.data)
+    lastNum  = peek(c.io.num.data)
     errCount = 0
 
     pc    = peek(c.io.debug.wbPC)
@@ -149,10 +150,71 @@ class SocLiteTopUnitTester(
       }
       update(1)
     }
-    if (isPerf) {
-      printPerfLog()
-    }
     true
+  }
+
+  def afterRun(): Unit = {
+    if (isPerf) {
+      perfAllRes += new PerfResult(perfRes.toString())
+      printPerfLog()
+      branchPerformanceMonitor()
+    }
+    if (tcfg.performanceMonitorEnable) {
+      log(
+        s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
+          s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
+          s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
+      )
+    }
+  }
+
+  def afterAllRun(): Unit = {
+    info("Finished!")
+    info(s"run $cCount cycles, $iCount instructions")
+    info(s"IPC is ${iCount.toFloat / cCount}")
+    printPerfRes()
+  }
+
+  def printPerfRes(): Unit = {
+    if(isPerf){
+      val averageScore = Math.pow(perfAllRes.map(_.score).product, 1.0/perfAllRes.length)
+      val resStr = "{" + s""""score": $averageScore,"perfs":""" + "[" +  perfAllRes.map(_.toString).mkString(",") + "]}"
+
+      val prefix = if(tcfg.runAllPerf) "all" else tcfg.perfMap(perfNumber)
+      val currentTime = System.currentTimeMillis()
+      val path = Paths.get(baseOutputPath + s"perf-res/$prefix$currentTime.json")
+      Files.createDirectories(path.getParent)
+      if(!path.toFile.exists())
+        Files.createFile(path)
+      val printer = new PrintWriter(path.toFile)
+      printer.print(resStr)
+      printer.close()
+    }
+  }
+
+  def branchPerformanceMonitor(): Unit = {
+    val predSuccess  = peek(c.io.branchPerf.total.success)
+    val predFail     = peek(c.io.branchPerf.total.fail)
+    val predJSuccess = peek(c.io.branchPerf.j.success)
+    val predJFail    = peek(c.io.branchPerf.j.fail)
+    val predBSuccess = peek(c.io.branchPerf.b.success)
+    val predBFail    = peek(c.io.branchPerf.b.fail)
+
+    info(branchPredictMessage(predSuccess, predFail, "total"))
+    log(branchPredictMessage(predJSuccess, predJFail, "J"))
+    log(branchPredictMessage(predBSuccess, predBFail, "B"))
+
+    val res = perfAllRes.reverse.head
+    res.add("predSuccess", predSuccess)
+    res.add("predFail", predFail)
+    res.add("predJSuccess", predJSuccess)
+    res.add("predJFail", predJFail)
+    res.add("predBSuccess", predBSuccess)
+    res.add("predBFail", predBFail)
+  }
+
+  def branchPredictMessage(success: BigInt, fail: BigInt, description: String): String = {
+    s"prediction $description: success--$success, fail--$fail" + (if(fail+success!=0) s", rate ${success.toDouble / (success+fail).toDouble}" else "")
   }
 
   /**
@@ -178,6 +240,7 @@ class SocLiteTopUnitTester(
     }
     true
   }
+
   def update(n: Int): Unit = {
     cCount = cCount + 1
     pc     = peek(c.io.debug.wbPC)
@@ -185,26 +248,28 @@ class SocLiteTopUnitTester(
     wnum   = peek(c.io.debug.wbRegFileWNum)
     wdata  = peek(c.io.debug.wbRegFileWData)
     uartSimu()
-    if(!isPerf) numSimu()
+    if (!isPerf) numSimu()
     step(n)
   }
+
   def uartSimu(): Unit = {
     if (peek(c.io.uart.valid) != 0) {
-      print(peek(c.io.uart.bits).toChar)
+      val ch = peek(c.io.uart.bits).toChar
+      print(ch)
       if (isPerf) {
-        perfLog += peek(c.io.uart.bits).toChar
+        perfLog += ch
+        perfRes += ch
       }
     }
   }
   def numSimu(): Unit = {
     val nowNum = peek(c.io.num.data)
-    if(nowNum != lastNum && peek(c.io.num.monitor) != 0) {
+    if (nowNum != lastNum && peek(c.io.num.monitor) != 0) {
       // low 8 bits
-      if((nowNum & BigInt("ff", 16)) != ((lastNum & BigInt("ff", 16)) + 1)) {
+      if ((nowNum & BigInt("ff", 16)) != ((lastNum & BigInt("ff", 16)) + 1)) {
         err(s"$errCount, Occurred in number ${(nowNum >> 24) & BigInt("ff", 16)} Functional Test Point!")
         errCount += 1
-      }
-      else if(((nowNum >> 24) & BigInt("ff", 16)) != (((lastNum >> 24) & BigInt("ff", 16)) + 1)){
+      } else if (((nowNum >> 24) & BigInt("ff", 16)) != (((lastNum >> 24) & BigInt("ff", 16)) + 1)) {
         err(s"$errCount, Unknown, Functional Test Point numbers are unequal!")
         errCount += 1
       } else {
