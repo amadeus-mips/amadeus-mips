@@ -54,7 +54,7 @@ class LUTRam(depth: Int, width: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Buil
 //      !(io.writeEnable && io.readAddr === io.writeAddr),
 //      s"there has been an address collision, the address is ${io.readAddr}"
 //    )
-val bank = SyncReadMem(depth, UInt(width.W))
+val bank = RegInit(VecInit(Seq.fill(depth)(0.U(width.W))))
     io.readData    := bank(io.readAddr)
     io.writeOutput := DontCare
     when(io.writeEnable) {

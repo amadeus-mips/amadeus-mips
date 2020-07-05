@@ -19,7 +19,7 @@ class VeriAXIRam extends Module {
   val aw = io.axi.aw
   val w = io.axi.w
   val b = io.axi.b
-  val mem = Mem(BigInt("FFFC", 16), UInt(32.W))
+  val mem = Mem(BigInt("FFF", 16), UInt(32.W))
   checkAddrChannel()
   val wrapMap = Seq(
     1.U -> 3.U,

@@ -145,7 +145,7 @@ object ICacheElaborate extends App {
   class ICacheVeri() extends Module {
     val io = IO(new Bundle {
       val addr = Flipped(Decoupled(UInt(32.W)))
-      val data = Valid(UInt(32.W))
+      val data = Decoupled(UInt(32.W))
 
       /** flush the stage 2 information */
       val flush = Input(Bool())
