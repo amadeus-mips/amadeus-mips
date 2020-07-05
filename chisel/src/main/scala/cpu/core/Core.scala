@@ -15,9 +15,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst = new Bundle{
-      val addr = Decoupled(UInt(addrLen.W))
-      val data = Flipped(Decoupled(UInt(dataLen.W)))
+    val rInst = new Bundle {
+      val addr   = Decoupled(UInt(addrLen.W))
+      val data   = Flipped(Decoupled(UInt(dataLen.W)))
       val change = Output(Bool())
     }
     val rChannel = new NiseSramReadIO()
@@ -63,9 +63,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   if_if1.io.flush := hazard.io.flush ||
     (executeTop.io.branch.valid && hazard.io.predictFailFlush(0))
 
-  fetch1Top.io.in     := if_if1.io.out
-  fetch1Top.io.buffer := hazard.io.stall(0)
-  fetch1Top.io.inst.bits   := io.rInst.data.bits
+  fetch1Top.io.in         := if_if1.io.out
+  fetch1Top.io.itReady    := !VecInit(hazard.io.stallReq.tail.tail).asUInt().orR()
+  fetch1Top.io.inst.bits  := io.rInst.data.bits
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
   fetch1Top.io.predUpdate := executeTop.io.predUpdate
@@ -141,7 +141,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   io.rInst.addr.bits  := fetchTop.io.out.pc
   io.rInst.addr.valid := fetchTop.io.pcValid
-  io.rInst.data.ready := !VecInit(hazard.io.stallReq.tail.tail).asUInt().orR()
+  io.rInst.data       <> fetch1Top.io.inst
 
   io.rChannel <> memoryTop.io.rData
   io.wChannel <> memoryTop.io.wData
