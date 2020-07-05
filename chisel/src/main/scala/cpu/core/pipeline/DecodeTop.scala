@@ -3,10 +3,12 @@
 package cpu.core.pipeline
 
 import chisel3._
+import chisel3.util.experimental.loadMemoryFromFile
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
 import cpu.core.bundles.stages.{IdExeBundle, If1IdBundle}
+import firrtl.annotations.MemoryLoadFileType
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
@@ -69,14 +71,20 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.op1    := control.io.op1
   io.out.op2    := control.io.op2
   io.out.write  := control.io.write
-  io.out.cp0    := control.io.cp0
+  io.out.cp0 := control.io.cp0
   io.out.except := control.io.except
 
-  io.out.pc          := io.in.pc
-  io.out.imm26       := imm26
+  io.out.pc := io.in.pc
+  io.out.imm26 := imm26
   io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.brPredict   := io.in.brPredict
+  io.out.brPredict := io.in.brPredict
 
   io.stallReq := hazard.io.stallReq
 
+  if (!conf.build) {
+    val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
+    loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)
+    assert(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)),
+      s"the address is ${io.in.pc}, the wrong instruction is ${io.in.inst}, the correct instruction should be ${veriMem.read(io.in.pc(19, 2))}")
+  }
 }
