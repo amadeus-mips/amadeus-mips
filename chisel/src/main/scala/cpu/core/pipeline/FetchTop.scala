@@ -1,11 +1,14 @@
 package cpu.core.pipeline
 
 import chisel3._
+import chisel3.util.ValidIO
+import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.IfIf1Bundle
+import cpu.core.components.{BrPrUpdateBundle, TwoBitPredictor}
 import shared.ValidBundle
 
-class FetchTop extends Module {
+class FetchTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
     // from hazard module
     val stall   = Input(Bool())
@@ -17,7 +20,8 @@ class FetchTop extends Module {
     val inDelaySlot = Input(Bool())
     val predict     = Input(new ValidBundle)
     // from execute stage
-    val branch = Input(new ValidBundle)
+    val branch     = Input(new ValidBundle)
+    val predUpdate = Flipped(ValidIO(new BrPrUpdateBundle))
 
     // from ram
     val instValid = Input(Bool())
@@ -30,11 +34,15 @@ class FetchTop extends Module {
     // to ctrl
     val stallReq = Output(Bool())
   })
+  val branchPredictor = Module(new TwoBitPredictor())
 
   val hazard = Module(new cpu.core.fetch.Hazard)
   val pcMux  = Module(new cpu.core.fetch.PCMux(n = 4))
 
   val except = io.out.except.asUInt().orR()
+
+  branchPredictor.io.update := io.predUpdate
+  branchPredictor.io.pc     := pcMux.io.pc
 
   hazard.io.flush          := io.flush
   hazard.io.stall          := io.stall
@@ -51,11 +59,14 @@ class FetchTop extends Module {
   io.out.pc          := pcMux.io.pc
   io.out.instValid   := io.instValid && !except
   io.out.inDelaySlot := hazard.io.out.inDelaySlot
+  io.out.brPredict   := branchPredictor.io.prediction
+
+  io.out.brPredict.valid := branchPredictor.io.prediction.valid && io.out.instValid
 
   io.out.except               := DontCare
   io.out.except(EXCEPT_FETCH) := pcMux.io.pcNotAligned
 
   io.pcValid  := !except && !(io.branch.valid || io.flush)
-  io.pcChange := false.B// priority higher than stall pc
+  io.pcChange := false.B // priority higher than stall pc
   io.stallReq := !io.instValid && !except
 }

@@ -8,9 +8,8 @@ import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle}
-import cpu.core.components.{Div, Mult}
+import cpu.core.components.{BrPrUpdateBundle, Div, Mult}
 import cpu.core.execute.components._
-import cpu.core.fetch.BrPrUpdateBundle
 import shared.ValidBundle
 
 class ExecuteTop(implicit conf: CPUConfig) extends Module {
@@ -106,7 +105,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
 
-  val brPrFail = (branch.io.branch.valid ^ io.in.brPredict.valid) || (branch.io.branch.valid && branch.io.branch.bits =/= io.in.brPredict.bits)
+  val brPrFail =
+    (branch.io.branch.valid ^ io.in.brPredict.valid) || (branch.io.branch.valid && branch.io.branch.bits =/= io.in.brPredict.bits)
 
   io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
   io.branch.valid := brPrFail
