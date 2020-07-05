@@ -14,29 +14,29 @@ import chisel3.util.log2Ceil
   * @param memoryPrimitive : should I use auto, block ram or distributed ram
   */
 class SinglePortRamIP(
-                       dataWidth: Int = 32,
-                       byteWriteWidth: Int = 8,
-                       addrWidth: Int,
-                       numberOfLines: Int,
-                       memoryPrimitive: String = "auto",
-                       latency: Int = 1
-                     ) extends BlackBox(
-  Map(
-    "ADDR_WIDTH_A" -> addrWidth,
-    "WRITE_DATA_WIDTH_A" -> dataWidth,
-    "READ_DATA_WIDTH_A" -> dataWidth,
-    "BYTE_WRITE_WIDTH_A" -> byteWriteWidth,
-    "READ_LATENCY_A" -> 1,
-    "MEMORY_SIZE" -> numberOfLines * dataWidth,
-    "MEMORY_PRIMITIVE" -> memoryPrimitive,
-    "WRITE_MODE_A" -> "read_first"
-  )
-) {
+  dataWidth:       Int    = 32,
+  byteWriteWidth:  Int    = 8,
+  addrWidth:       Int,
+  numberOfLines:   Int,
+  memoryPrimitive: String = "block",
+  latency:         Int    = 1
+) extends BlackBox(
+      Map(
+        "ADDR_WIDTH_A"       -> addrWidth,
+        "WRITE_DATA_WIDTH_A" -> dataWidth,
+        "READ_DATA_WIDTH_A"  -> dataWidth,
+        "BYTE_WRITE_WIDTH_A" -> byteWriteWidth,
+        "READ_LATENCY_A"     -> 1,
+        "MEMORY_SIZE"        -> numberOfLines * dataWidth,
+        "MEMORY_PRIMITIVE"   -> memoryPrimitive,
+        "WRITE_MODE_A"       -> "read_first"
+      )
+    ) {
   require(
     (latency == 0 && (memoryPrimitive == "auto" || memoryPrimitive == "distributed")) || (latency == 1 && (memoryPrimitive == "auto" || memoryPrimitive == "block"))
   )
 
-  override def desiredName: String = "XPM_MEMORY_SPRAM"
+  override def desiredName: String = "xpm_memory_spram"
 
   val io = IO(new Bundle {
     require(
@@ -53,12 +53,12 @@ class SinglePortRamIP(
     val clka = Input(Clock())
     val rsta = Input(Reset())
 
-    val addra = Input(UInt(addrWidth.W))
-    val dina = Input(UInt(dataWidth.W))
-    val ena = Input(Bool())
+    val addra  = Input(UInt(addrWidth.W))
+    val dina   = Input(UInt(dataWidth.W))
+    val ena    = Input(Bool())
     val regcea = Input(Bool())
-    val wea = Input(UInt((dataWidth / byteWriteWidth).W))
-    val douta = Output(UInt(dataWidth.W))
+    val wea    = Input(UInt((dataWidth / byteWriteWidth).W))
+    val douta  = Output(UInt(dataWidth.W))
 
   })
 }
