@@ -26,7 +26,6 @@ package soc
 import axi.{AXIInterconnect, AXIInterconnectConfig}
 import chisel3._
 import chisel3.util.ValidIO
-import chisel3.util.experimental.BoringUtils
 import confreg.{Confreg, NumMonitorBundle}
 import cpu.core.pipeline.BrPrPerfBundle
 import cpu.performance.SocPerformanceIO
@@ -47,14 +46,14 @@ class SocLiteTop(implicit
     val debug = Output(new DebugBundle)
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
-    val branchPerf = Output(new Bundle{
+    val branchPerf = Output(new Bundle {
       val total = new BrPrPerfBundle
       val j = new BrPrPerfBundle
       val b = new BrPrPerfBundle
     })
   })
 
-  implicit val cpuCfg = new CPUConfig(build = false)
+  implicit val cpuCfg = new CPUConfig(build = false, memoryFile = socCfg.memFile)
 
   val cpu = Module(new CPUTop(socCfg.performanceMonitor))
 
@@ -72,7 +71,7 @@ class SocLiteTop(implicit
 
   io.gp    <> confreg.io.gp
   io.uart  <> confreg.io.uart
-  io.num   := confreg.io.num
+  io.num := confreg.io.num
   io.debug := cpu.io.debug
 
   ram.io.ramRandomMask := confreg.io.ram_random_mask
@@ -82,8 +81,8 @@ class SocLiteTop(implicit
   }
 
   io.branchPerf := DontCare
-  // performance monitor
-  BoringUtils.bore(cpu.core.executeTop.brPrTotal, Seq(io.branchPerf.total))
-  BoringUtils.bore(cpu.core.executeTop.brPrB, Seq(io.branchPerf.b))
-  BoringUtils.bore(cpu.core.executeTop.brPrJ, Seq(io.branchPerf.j))
+  //  // performance monitor
+  //  BoringUtils.bore(cpu.core.executeTop.brPrTotal, Seq(io.branchPerf.total))
+  //  BoringUtils.bore(cpu.core.executeTop.brPrB, Seq(io.branchPerf.b))
+  //  BoringUtils.bore(cpu.core.executeTop.brPrJ, Seq(io.branchPerf.j))
 }

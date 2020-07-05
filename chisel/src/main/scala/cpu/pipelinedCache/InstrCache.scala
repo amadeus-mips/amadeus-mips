@@ -82,7 +82,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   fetch_query.io.in.tagValid := fetch.io.tagValid
   fetch_query.io.in.phyTag := fetch.io.phyTag
   fetch_query.io.in.bankIndex := fetch.io.bankIndex
-  fetch_query.io.in.valid := io.addr.valid
+  fetch_query.io.in.valid := io.addr.fire
 
   //-----------------------------------------------------------------------------
   //------------------modules and connections for query--------------------------

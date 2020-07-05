@@ -22,7 +22,7 @@ class FuncNoVcdTest extends ChiselFlatSpec {
   * The simulation option will disable the random delay of ram and so the instructions will be execute more crowded. */
 class FuncWithVcdTest extends ChiselFlatSpec {
   /** soc config */
-  implicit val socCfg = SocConfig.funcConfig(simulation = false)
+  implicit val socCfg = SocConfig.funcConfig(simulation = true)
   /** test config */
   implicit val tcfg = new TestConfig(trace = true, vcdOn = true)
 
