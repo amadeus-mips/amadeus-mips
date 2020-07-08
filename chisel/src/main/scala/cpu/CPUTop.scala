@@ -50,11 +50,9 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   mmu.io.in.wChannel <> core.io.wChannel
 
   // assume instructions are always cached
-  iCache.io.rInst <> mmu.io.out.rInst
-  // TODO
-  core.io.rInst.data <> iCache.io.data
-  iCache.io.addr     <> core.io.rInst.addr
-  iCache.io.flush    := core.io.rInst.change
+  iCache.io.addr  <> mmu.io.out.rInst.addr
+  iCache.io.data  <> mmu.io.out.rInst.data
+  iCache.io.flush := mmu.io.out.rInst.change
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted

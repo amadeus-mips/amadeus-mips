@@ -7,20 +7,22 @@ import chisel3.util.Decoupled
 import cpu.CPUConfig
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.stages._
 import cpu.core.bundles.TLBOpIO
+import cpu.core.bundles.stages._
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
+
+class InstFetchIO extends Bundle {
+  val addr   = Decoupled(UInt(addrLen.W))
+  val data   = Flipped(Decoupled(UInt(dataLen.W)))
+  val change = Output(Bool())
+}
 
 class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst = new Bundle {
-      val addr   = Decoupled(UInt(addrLen.W))
-      val data   = Flipped(Decoupled(UInt(dataLen.W)))
-      val change = Output(Bool())
-    }
+    val rInst    = new InstFetchIO
     val rChannel = new NiseSramReadIO()
     val wChannel = new NiseSramWriteIO()
     val tlb      = new TLBOpIO(conf.tlbSize)
@@ -61,7 +63,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   fetchTop.io.instValid := io.rInst.addr.ready
 
-  fetchTop.io.tlbExcept.refill := io.tlb.except.inst.refill
+  fetchTop.io.tlbExcept.refill  := io.tlb.except.inst.refill
   fetchTop.io.tlbExcept.invalid := io.tlb.except.inst.invalid
 
   if_if1.io.in    := fetchTop.io.out
