@@ -24,7 +24,10 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
 
   val inst = Mux(io.in.except.asUInt().orR() || !io.in.instValid, 0.U, io.inst.bits)
 
+  val predictValid = isBranchInst(inst) && io.inst.fire()
+
   io.predict := io.in.brPredict
+  io.predict.valid := io.in.brPredict.valid && predictValid
 
   io.out.pc          := io.in.pc
   io.out.inDelaySlot := io.in.inDelaySlot
@@ -32,6 +35,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   io.out.instValid   := io.in.instValid
   io.out.inst        := inst
   io.out.brPredict   := io.in.brPredict
+  io.out.brPredict.valid := io.in.brPredict.valid && predictValid
 
   io.inst.ready := io.itReady
 
