@@ -1,7 +1,7 @@
 package cpu
 
 class CPUConfig(val build: Boolean, val memoryFile: String = "") {
-  val branchPredictorAddrLen = 20
+  val branchPredictorAddrLen = 10
   val branchPredictorTableEntryNum = 64
   require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
 }
