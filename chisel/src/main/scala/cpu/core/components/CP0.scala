@@ -56,6 +56,7 @@ class CP0(tlbSize: Int = 32) extends Module {
   val random   = new RandomCP0(tlbSize)
   val entryLo0 = new EntryLoCP0(lo = 0)
   val entryLo1 = new EntryLoCP0(lo = 1)
+  val context  = new ContextCP0
   val pageMask = new PageMaskCP0
   val wired    = new WiredCP0(tlbSize)
   val badVAddr = new BadVAddrCP0
@@ -64,8 +65,9 @@ class CP0(tlbSize: Int = 32) extends Module {
   val status   = new StatusCP0
   val cause    = new CauseCP0
   val epc      = new EPCCP0
+  val ebase    = new EBaseCP0
 
-  val cp0Seq = Seq(index, random, entryLo0, entryLo1, pageMask, wired, badVAddr, count, entryHi, status, cause, epc)
+  val cp0Seq = Seq(index, random, entryLo0, entryLo1, context, pageMask, wired, badVAddr, count, entryHi, status, cause, epc, ebase)
 
   // soft write
   when(io.cp0Write.enable) {

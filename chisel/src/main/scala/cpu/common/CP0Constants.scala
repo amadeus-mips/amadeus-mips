@@ -1,7 +1,7 @@
 package cpu.common
 
 import chisel3._
-import chisel3.util.{log2Ceil, MuxLookup}
+import chisel3.util.{MuxLookup, log2Ceil}
 
 trait CP0Constants {
   val con_Index    = CP0Struct(0)
@@ -70,6 +70,8 @@ trait BaseCP0 {
   val writeMask: UInt = WriteMask(index)
   val sel:       Int  = 0
   def index:     Int  = addr * 8 + sel
+
+  require(reg.getWidth == 32, "cp0 register should have a width of 32")
 }
 
 class IndexBundle(tlbSize: Int) extends Bundle {
@@ -203,9 +205,9 @@ class EntryHiCP0 extends BaseCP0 {
   //noinspection DuplicatedCode
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
-    reg     := from.asTypeOf(new EntryHiBundle)
+    reg       := from.asTypeOf(new EntryHiBundle)
     reg.vpn2x := reg.vpn2x
-    reg.non := reg.non
+    reg.non   := reg.non
   }
 }
 
@@ -300,4 +302,49 @@ class EPCCP0 extends BaseCP0 {
     super.softWrite(from)
     reg := from
   }
+}
+
+class EBaseBundle extends Bundle {
+
+  /** fixed mapping to kseg0 */
+  val upper  = UInt(2.W)
+  val ebase  = UInt(18.W)
+  val zero   = UInt(2.W)
+  val CPUNum = UInt(10.W)
+}
+
+class EBaseCP0 extends BaseCP0 {
+  override val addr: Int = 15
+  override val sel = 1
+  override val reg = RegInit({
+    val bundle = WireInit(0.U(32.W).asTypeOf(new EBaseBundle))
+    bundle.upper := "10".U(2.W)
+    bundle.zero  := 0.U(2.W)
+    bundle
+  })
+
+  override def softWrite(from: UInt): Unit = {
+    super.softWrite(from)
+    reg       := from.asTypeOf(new EBaseBundle)
+    reg.upper := "10".U(2.W)
+    reg.zero  := 0.U(2.W)
+  }
+}
+
+class ContextBundle extends Bundle {
+  val pteBase      = UInt(9.W)
+  val badVPN2      = UInt(19.W)
+  val trailingZero = UInt(4.W)
+}
+
+class ContextCP0 extends BaseCP0 {
+  override val addr = 4
+  override val reg  = RegInit(0.U.asTypeOf(new ContextBundle))
+
+  override def softWrite(from: UInt): Unit = {
+    super.softWrite(from)
+    reg := from.asTypeOf(new ContextBundle)
+    reg.trailingZero := 0.U(4.W)
+  }
+
 }
