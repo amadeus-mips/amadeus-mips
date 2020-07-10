@@ -8,6 +8,9 @@ import cpu.pipelinedCache.CacheConfig
 class ICacheController(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
+    /** is in a miss? */
+    val inMiss = Input(Bool())
+
     /** flush request */
     val flushReq = Input(Bool())
 
@@ -20,6 +23,9 @@ class ICacheController(implicit cacheConfig: CacheConfig) extends Module {
     /** ready for next instruction */
     val reqReady = Output(Bool())
 
+    /** ready for next invalidate instruction */
+    val invalidateReady = Output(Bool())
+
     /** write enable for instruction banks, for fetch stage */
     val writeEnable = Output(Bool())
 
@@ -30,4 +36,7 @@ class ICacheController(implicit cacheConfig: CacheConfig) extends Module {
   io.reqReady    := io.stage2Free && !io.writeBack
   io.flush       := io.flushReq
   io.writeEnable := io.writeBack
+
+  /** invalidate ready requires that it is neither in a miss nor preparing for a write back */
+  io.invalidateReady := !io.inMiss && !io.writeBack
 }

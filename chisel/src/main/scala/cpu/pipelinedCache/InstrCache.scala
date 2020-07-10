@@ -21,6 +21,9 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Decoupled(UInt(32.W))
 
+    /** invalidate the icache at index */
+    val invalidateIndex = Flipped(Decoupled(UInt(cacheConfig.indexLen.W)))
+
     /** flush the stage 2 information */
     val flush = Input(Bool())
     val axi   = AXIIO.master()
@@ -32,14 +35,20 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   val instrBanks  = Module(new InstBanks)
   val controller  = Module(new ICacheController)
 
-  io.addr.ready := controller.io.reqReady
+  io.addr.ready            := controller.io.reqReady && !io.invalidateIndex.fire
+  io.invalidateIndex.ready := controller.io.invalidateReady
 
   fetch.io.addr                              := io.addr.bits
-  fetch.io.writeTagValid.valid               := controller.io.writeEnable
+  fetch.io.writeTagValid.valid               := controller.io.writeEnable || io.invalidateIndex.fire
   fetch.io.writeTagValid.bits.tagValid.tag   := query.io.writeBundle.writeTag
-  fetch.io.writeTagValid.bits.tagValid.valid := true.B
-  fetch.io.writeTagValid.bits.indexSelection := query.io.writeBundle.writeIndex
-  fetch.io.writeTagValid.bits.waySelection   := query.io.writeBundle.writeWay
+  fetch.io.writeTagValid.bits.tagValid.valid := !io.invalidateIndex.fire
+  fetch.io.writeTagValid.bits.indexSelection := Mux(
+    io.invalidateIndex.fire,
+    io.invalidateIndex.bits,
+    query.io.writeBundle.writeIndex
+  )
+  fetch.io.writeTagValid.bits.waySelection := query.io.writeBundle.writeWay
+  fetch.io.writeTagValid.bits.writeAllWays := io.invalidateIndex.fire
 
   val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 
@@ -81,6 +90,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   controller.io.flushReq   := io.flush
   controller.io.stage2Free := query.io.ready
   controller.io.writeBack  := query.io.writeBundle.writeEnable
+  controller.io.inMiss     := query.io.inAMiss
 
 }
 

@@ -5,7 +5,7 @@ package cpu
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{newDCache, UnCachedUnit}
+import cpu.cache.{UnCachedUnit, newDCache}
 import cpu.core.Core_ls
 import cpu.performance.CPUTopPerformanceIO
 import cpu.pipelinedCache.{CacheConfig, InstrCache}
@@ -39,9 +39,11 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit cpuCfg: CPUConf
 
   core.io.intr := io.intr
   // assume instructions are always cached
-  core.io.rInst.data <> iCache.io.data
-  iCache.io.addr     <> core.io.rInst.addr
-  iCache.io.flush    := core.io.rInst.change
+  core.io.rInst.data              <> iCache.io.data
+  iCache.io.addr                  <> core.io.rInst.addr
+  iCache.io.flush                 := core.io.rInst.change
+  iCache.io.invalidateIndex.valid := false.B
+  iCache.io.invalidateIndex.bits  := DontCare
 
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
