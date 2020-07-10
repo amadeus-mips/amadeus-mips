@@ -317,7 +317,7 @@ class EBaseCP0 extends BaseCP0 {
   override val sel = 1
   override val reg = RegInit({
     val bundle = WireInit(0.U(32.W).asTypeOf(new EBaseBundle))
-    bundle.upper := "10".U(2.W)
+    bundle.upper := "b10".U(2.W)
     bundle.zero  := 0.U(2.W)
     bundle
   })
@@ -325,7 +325,7 @@ class EBaseCP0 extends BaseCP0 {
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
     reg       := from.asTypeOf(new EBaseBundle)
-    reg.upper := "10".U(2.W)
+    reg.upper := "b10".U(2.W)
     reg.zero  := 0.U(2.W)
   }
 }
@@ -342,7 +342,7 @@ class ContextCP0 extends BaseCP0 {
 
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
-    reg := from.asTypeOf(new ContextBundle)
+    reg              := from.asTypeOf(new ContextBundle)
     reg.trailingZero := 0.U(4.W)
   }
 
