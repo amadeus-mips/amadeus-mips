@@ -71,7 +71,6 @@ trait BaseCP0 {
   val sel:       Int  = 0
   def index:     Int  = addr * 8 + sel
 
-  require(reg.getWidth == 32, "cp0 register should have a width of 32")
 }
 
 class IndexBundle(tlbSize: Int) extends Bundle {
