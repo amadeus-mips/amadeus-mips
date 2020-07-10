@@ -4,7 +4,7 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver}
 
 class FuncNoVcdTest extends ChiselFlatSpec {
   /** soc config */
-  implicit val socCfg = SocConfig.funcConfig(simulation = false, performanceMonitor = true)
+  implicit val socCfg = SocConfig.funcConfig(simulation = false, performanceMonitor = false)
   /** test config */
   implicit val tcfg = new TestConfig(trace = true, performanceMonitorEnable = true)
 

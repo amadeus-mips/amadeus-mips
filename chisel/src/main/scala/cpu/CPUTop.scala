@@ -53,7 +53,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   iCache.io.addr  <> mmu.io.out.rInst.addr
   iCache.io.data  <> mmu.io.out.rInst.data
   iCache.io.flush := mmu.io.out.rInst.change
-
+  iCache.io.invalidateIndex.valid := false.B
+  iCache.io.invalidateIndex.bits  := DontCare
   // buffer the read data
   // write doesn't have this problem because write valid is asserted
   // in the same cycle

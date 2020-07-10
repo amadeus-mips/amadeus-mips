@@ -8,15 +8,12 @@ import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.components._
 import cpu.pipelinedCache.instCache.fetch.FetchQueryBundle
-import cpu.pipelinedCache.instCache.{FetchTop, MSHR}
+import cpu.pipelinedCache.instCache.{FetchTop, ICacheController, QueryTop}
 import firrtl.options.TargetDirAnnotation
-import shared.Constants._
-import shared.LRU.PLRUMRUNM
 import verification.VeriAXIRam
 
 //TODO: refactor non-module to objects
 //TODO: optional enable for most banks
-//TODO: flush refill buffer now that we have read buffer
 
 @chiselName
 class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
@@ -24,55 +21,47 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Decoupled(UInt(32.W))
 
+    /** invalidate the icache at index */
+    val invalidateIndex = Flipped(Decoupled(UInt(cacheConfig.indexLen.W)))
+
     /** flush the stage 2 information */
     val flush = Input(Bool())
     val axi   = AXIIO.master()
   })
 
-  val fetch        = Module(new FetchTop)
-  val mshr         = Module(new MSHR)
-  val comparator   = Module(new MissComparator)
-  val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID, burstLen = 16))
-  val refillBuffer = Module(new ReFillBuffer(false))
-  val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val fetch_query  = Module(new CachePipelineStage(new FetchQueryBundle))
-  val instrBanks   = Module(new InstBanks)
-  val readHolder   = Module(new ReadHolder)
+  val fetch       = Module(new FetchTop)
+  val fetch_query = Module(new CachePipelineStage(new FetchQueryBundle))
+  val query       = Module(new QueryTop)
+  val instrBanks  = Module(new InstBanks)
+  val controller  = Module(new ICacheController)
 
-  /** if there is a hit in either bank or refill buffer */
-  val hit = Wire(Bool())
-
-  val validData = Wire(Bool())
-
-  /** if there is a hit in the bank */
-  val hitInBank = Wire(Bool())
-  val newMiss   = Wire(Bool())
-
-  val stage2Free = Wire(Bool())
-
-  /** pass through control signal */
-  val passThrough = Wire(Bool())
-
-  // when there is a stall caused by a miss or the cache is performing writeback
-  io.addr.ready := stage2Free && !mshr.io.writeBack
-
-  io.axi <> axi.io.axi
+  io.addr.ready            := controller.io.reqReady && !io.invalidateIndex.fire
+  io.invalidateIndex.ready := controller.io.invalidateReady
 
   fetch.io.addr                              := io.addr.bits
-  fetch.io.writeTagValid.valid               := mshr.io.writeBack
-  fetch.io.writeTagValid.bits.tagValid.tag   := mshr.io.mshrInfo.tag
-  fetch.io.writeTagValid.bits.tagValid.valid := true.B
-  fetch.io.writeTagValid.bits.indexSelection := mshr.io.mshrInfo.index
-  fetch.io.writeTagValid.bits.waySelection   := lru.getLRU(mshr.io.mshrInfo.index)
+  fetch.io.writeTagValid.valid               := controller.io.writeEnable || io.invalidateIndex.fire
+  fetch.io.writeTagValid.bits.tagValid.tag   := query.io.writeBundle.writeTag
+  fetch.io.writeTagValid.bits.tagValid.valid := !io.invalidateIndex.fire
+  fetch.io.writeTagValid.bits.indexSelection := Mux(
+    io.invalidateIndex.fire,
+    io.invalidateIndex.bits,
+    query.io.writeBundle.writeIndex
+  )
+  fetch.io.writeTagValid.bits.waySelection := query.io.writeBundle.writeWay
+  fetch.io.writeTagValid.bits.writeAllWays := io.invalidateIndex.fire
 
   val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 
   for (i <- 0 until cacheConfig.numOfWays) {
     for (j <- 0 until cacheConfig.numOfBanks) {
-      instrBanks.io.way_bank(i)(j).addr := Mux(mshr.io.writeBack, mshr.io.mshrInfo.index, fetch.io.index)
+      instrBanks.io.way_bank(i)(j).addr := Mux(
+        controller.io.writeEnable,
+        query.io.writeBundle.writeIndex,
+        fetch.io.index
+      )
       instrBanks.io.way_bank(i)(j).writeEnable :=
-        mshr.io.writeBack && i.U === lru.getLRU(mshr.io.mshrInfo.index)
-      instrBanks.io.way_bank(i)(j).writeData := refillBuffer.io.allData(j)
+        controller.io.writeEnable && i.U === query.io.writeBundle.writeWay
+      instrBanks.io.way_bank(i)(j).writeData := query.io.writeBundle.writeData(j)
     }
     instrFetchData(i) := instrBanks.io.way_bank(i)(fetch_query.io.out.bankIndex).readData
   }
@@ -81,7 +70,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   //-------------pipeline register seperating metadata fetching and query--------
   //-----------------------------------------------------------------------------
 
-  fetch_query.io.stall        := !stage2Free
+  fetch_query.io.stall        := !controller.io.stage2Free
   fetch_query.io.in.index     := fetch.io.index
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.phyTag    := fetch.io.phyTag
@@ -91,66 +80,18 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
   //-----------------------------------------------------------------------------
   //------------------modules and connections for query--------------------------
   //-----------------------------------------------------------------------------
-  hit         := hitInBank || comparator.io.hitInRefillBuffer
-  hitInBank   := comparator.io.bankHitWay.valid
-  newMiss     := mshr.io.missAddr.fire
-  passThrough := !fetch_query.io.out.valid || io.flush
 
-  comparator.io.tagValid          := fetch_query.io.out.tagValid
-  comparator.io.phyTag            := fetch_query.io.out.phyTag
-  comparator.io.index             := fetch_query.io.out.index
-  comparator.io.mshr.bits         := mshr.io.mshrInfo
-  comparator.io.mshr.valid        := !mshr.io.missAddr.ready
-  comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
+  query.io.flush      := controller.io.flush
+  query.io.fetchQuery := fetch_query.io.out
+  query.io.bankData   := instrFetchData
+  query.io.data       <> io.data
+  query.io.axi        <> io.axi
 
-  axi.io.addrReq.bits := Mux(
-    newMiss,
-    Cat(
-      fetch_query.io.out.phyTag,
-      fetch_query.io.out.index,
-      fetch_query.io.out.bankIndex,
-      0.U(cacheConfig.bankOffsetLen.W)
-    ),
-    Cat(mshr.io.mshrInfo.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
-  )
-  axi.io.addrReq.valid := newMiss || !mshr.io.missAddr.ready
+  controller.io.flushReq   := io.flush
+  controller.io.stage2Free := query.io.ready
+  controller.io.writeBack  := query.io.writeBundle.writeEnable
+  controller.io.inMiss     := query.io.inAMiss
 
-  refillBuffer.io.addr.valid := newMiss
-  refillBuffer.io.addr.bits  := fetch_query.io.out.bankIndex
-  refillBuffer.io.inputData  := axi.io.transferData
-  refillBuffer.io.finish     := axi.io.finishTransfer
-
-  readHolder.io.input.valid := validData && !io.data.ready
-  readHolder.io.input.bits := MuxCase(
-    readHolder.io.output.bits,
-    Seq(
-      comparator.io.hitInRefillBuffer                                 -> refillBuffer.io.queryResult.bits,
-      (comparator.io.bankHitWay.valid && !readHolder.io.output.valid) -> instrFetchData(comparator.io.bankHitWay.bits)
-    )
-  )
-
-  /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.missAddr.valid          := !hit && !passThrough
-  mshr.io.missAddr.bits.tag       := fetch_query.io.out.phyTag
-  mshr.io.missAddr.bits.index     := fetch_query.io.out.index
-  mshr.io.missAddr.bits.bankIndex := fetch_query.io.out.bankIndex
-  mshr.io.readyForWB              := axi.io.finishTransfer
-
-  // update the LRU when there is a hit in the banks, don't update otherwise
-  when(hitInBank) {
-    lru.update(index = fetch_query.io.out.index, way = comparator.io.bankHitWay.bits)
-  }
-  validData  := hit && !passThrough
-  stage2Free := io.data.fire || passThrough
-
-  io.data.valid := validData
-  io.data.bits := MuxCase(
-    instrFetchData(comparator.io.bankHitWay.bits),
-    Seq(
-      readHolder.io.output.valid      -> readHolder.io.output.bits,
-      comparator.io.hitInRefillBuffer -> refillBuffer.io.queryResult.bits
-    )
-  )
 }
 
 object ICacheElaborate extends App {
