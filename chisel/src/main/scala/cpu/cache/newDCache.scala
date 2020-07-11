@@ -272,7 +272,7 @@ class newDCache(
   io.axi.aw.bits.prot  := 0.U
   io.axi.aw.bits.lock  := 0.U
 
-  io.axi.aw.bits.addr := writeAddrReg
+  io.axi.aw.bits.addr := Cat(0.U(3.W), writeAddrReg(28,0))
 
   // aw handshake has not taken place, and is in the transfer state
   //TODO: this is kind of out of sync with the states

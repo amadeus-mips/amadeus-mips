@@ -40,5 +40,5 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.tagValid         := tagValid.io.tagValid
   io.bankIndex        := bankIndex
   //TODO: TLB here
-  io.phyTag := virtualTag
+  io.phyTag := Cat(0.U(3.W), virtualTag(cacheConfig.tagLen-4, 0))
 }
