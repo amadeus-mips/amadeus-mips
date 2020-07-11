@@ -21,7 +21,7 @@ class Except extends Module {
 
   /** interrupt happen */
   val intrExcept = (io.cp0Status(1, 0) === "b01".U) &&
-    (io.cp0Status(15, 8) =/= 0.U) && (io.cp0Cause(15, 8) =/= 0.U)
+    ((io.cp0Status(15, 8) & io.cp0Cause(15, 8)) =/= 0.U)
   io.outExcept := io.inExcept
   when(intrExcept) { io.outExcept(EXCEPT_INTR) := true.B }
 
