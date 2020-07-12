@@ -5,7 +5,7 @@ import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.{TagValidBanks, TagValidBundle}
+import cpu.pipelinedCache.components.{MetaBanks, TagValidBundle}
 
 /**
   * fetch the tag and valid bits for all ways
@@ -15,7 +15,7 @@ import cpu.pipelinedCache.components.{TagValidBanks, TagValidBundle}
 @chiselName
 class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val address = Input(UInt(cacheConfig.indexLen.W))
+    val index = Input(UInt(cacheConfig.indexLen.W))
     val write = Flipped(Valid(new Bundle {
       val waySelection   = UInt(log2Ceil(cacheConfig.numOfWays).W)
       val indexSelection = UInt(cacheConfig.indexLen.W)
@@ -25,12 +25,12 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     val tagValid = Output(Vec(cacheConfig.numOfWays, new TagValidBundle))
   })
 
-  val tagValidBanks = Module(new TagValidBanks)
+  val tagValidBanks = Module(new MetaBanks)
 
   //TODO: this currently uses a dual port LUT, change to single port in the future
   for (i <- 0 until cacheConfig.numOfWays) {
     // read tags and valid from tag valid banks
-    tagValidBanks.io.way(i).portA.addr := io.address
+    tagValidBanks.io.way(i).portA.addr := io.index
     io.tagValid(i)                     := tagValidBanks.io.way(i).portA.data
 
     // write if required

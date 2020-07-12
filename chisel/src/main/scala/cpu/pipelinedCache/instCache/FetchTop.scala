@@ -19,8 +19,9 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
       val waySelection   = UInt(log2Ceil(cacheConfig.numOfWays).W)
       val indexSelection = UInt(cacheConfig.indexLen.W)
       val tagValid       = new TagValidBundle
+
       /** when write all ways is true, instructions at 4 ways in index is invalidated */
-      val writeAllWays       = Bool()
+      val writeAllWays = Bool()
     }))
     val index     = Output(UInt(cacheConfig.indexLen.W))
     val tagValid  = Output(Vec(cacheConfig.numOfWays, new TagValidBundle))
@@ -31,14 +32,17 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   val tagValid = Module(new TagValid)
 
   val virtualTag = io.addr(31, 32 - cacheConfig.tagLen)
-  val index      = io.addr(31 - cacheConfig.tagLen, 32 - cacheConfig.tagLen - cacheConfig.indexLen)
-  val bankIndex  = io.addr(cacheConfig.bankOffsetLen - 1 + cacheConfig.bankIndexLen, cacheConfig.bankOffsetLen)
+  val index = io.addr(
+    cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen + cacheConfig.indexLen - 1,
+    cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen
+  )
+  val bankIndex = io.addr(cacheConfig.bankOffsetLen - 1 + cacheConfig.bankIndexLen, cacheConfig.bankOffsetLen)
 
-  io.index            := index
-  tagValid.io.address := index
-  tagValid.io.write   := io.writeTagValid
-  io.tagValid         := tagValid.io.tagValid
-  io.bankIndex        := bankIndex
+  io.index          := index
+  tagValid.io.index := index
+  tagValid.io.write := io.writeTagValid
+  io.tagValid       := tagValid.io.tagValid
+  io.bankIndex      := bankIndex
   //TODO: TLB here
-  io.phyTag := Cat(0.U(3.W), virtualTag(cacheConfig.tagLen-4, 0))
+  io.phyTag := Cat(0.U(3.W), virtualTag(cacheConfig.tagLen - 4, 0))
 }
