@@ -28,7 +28,7 @@ class Control extends Module {
   val addrL2 = io.addr(1,0)
   val cutAddr = Cat(io.addr(dataLen-1, 2), 0.U(2.W))
 
-  io.rData.addr := cutAddr
+  io.rData.addr := io.addr
   io.rData.enable := !io.except && opIsLoad(io.operation)
   io.wData.addr := cutAddr
   io.wData.enable := !io.except && opIsStore(io.operation)
