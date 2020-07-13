@@ -3,9 +3,9 @@ package cpu.pipelinedCache
 import chisel3.util._
 
 class CacheConfig {
-  val numOfSets: Int = 256
+  val numOfSets: Int = 64
   val numOfWays: Int = 4
-  val numOfBanks: Int = 2
+  val numOfBanks: Int = 16
   val bankWidth: Int = 4 // bytes per bank
   val tagLen: Int = 20
   val indexLen: Int = log2Ceil(numOfSets)
@@ -16,5 +16,5 @@ class CacheConfig {
   require(isPow2(numOfWays))
   require(isPow2(numOfBanks))
   require(isPow2(bankWidth))
-//  require(tagLen + indexLen + bankIndexLen + bankOffsetLen == 32)
+  require(tagLen + indexLen + bankIndexLen + bankOffsetLen == 32)
 }
