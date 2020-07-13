@@ -110,7 +110,7 @@ class CP0 extends Module {
     /* 21:16  0   */  0.U(6.W),
     /* 15:8   IM7...IM0 */  wtf(con_Status, (15, 8)),
     /* 7:2    0   */  0.U(6.W),
-    /* 1      EXL */  wtf(con_Status, 1),
+    /* 1      EXL */  Mux(except, Mux(!io.except(EXCEPT_ERET), true.B, false.B), wtf(con_Status, 1)),
     /* 0      IE  */  wtf(con_Status, 0),
   )
 
@@ -126,7 +126,7 @@ class CP0 extends Module {
   )
 
   epc := Mux(
-    except,
+    except && !io.except(EXCEPT_ERET) && !status(1),
     Mux(io.inDelaySlot, io.pc - 4.U, io.pc),
     wtf(con_EPC, (31, 0))
   )
