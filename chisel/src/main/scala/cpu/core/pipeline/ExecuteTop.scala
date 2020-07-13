@@ -60,6 +60,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   alu.io.op1       := io.in.op1
   alu.io.op2       := io.in.op2
   alu.io.operation := io.in.operation
+  alu.io.lo        := writeOther.io.outHILO.lo.bits
 
   move.io.operation := io.in.operation
   move.io.hilo      := forward.io.outHILO

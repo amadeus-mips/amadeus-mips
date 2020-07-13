@@ -8,11 +8,13 @@ import cpu.core.Constants._
 
 class ALU extends Module {
   val io = IO(new Bundle {
-    val op1 = Input(UInt(dataLen.W))
-    val op2 = Input(UInt(dataLen.W))
+    val op1       = Input(UInt(dataLen.W))
+    val op2       = Input(UInt(dataLen.W))
     val operation = Input(UInt(opLen.W))
-    val result = Output(UInt(dataLen.W))
-    val overflow = Output(Bool())
+    val result    = Output(UInt(dataLen.W))
+    val overflow  = Output(Bool())
+
+    val lo = Input(UInt(dataLen.W))
   })
 
   val add_result = io.op1 + io.op2
@@ -27,7 +29,9 @@ class ALU extends Module {
     )
   )
 
-  io.result := MuxLookup(io.operation, 0.U,
+  io.result := MuxLookup(
+    io.operation,
+    0.U,
     Array(
       // @formatter:off
       OP_N    -> 0.U,
@@ -43,7 +47,8 @@ class ALU extends Module {
       ALU_ADD  -> add_result,
       ALU_ADDU -> add_result,
       ALU_SUB  -> sub_result,
-      ALU_SUBU -> sub_result
+      ALU_SUBU -> sub_result,
+      ALU_MUL  -> io.lo
       // @formatter:on
     )
   )

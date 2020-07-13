@@ -81,6 +81,7 @@ trait opConstants {
   val EXC_SC    = 44.U(opLen.W)   // syscall 系统调用
   val EXC_ER    = 45.U(opLen.W)   // eret 返回
   val EXC_BR    = 46.U(opLen.W)   // break 中断
+  val ALU_MUL   = 47.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {

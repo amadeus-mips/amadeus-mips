@@ -68,6 +68,7 @@ class Decode extends Module {
       ADDU      -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_ADDU, WR_Y  , WRA_T1 , IMM_N  ),
       SUB       -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_SUB , WR_Y  , WRA_T1 , IMM_N  ),
       SUBU      -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_SUBU, WR_Y  , WRA_T1 , IMM_N  ),
+      MUL       -> List(Y , OPn_RF , OPn_RF,  INST_ALU, ALU_MUL , WR_Y  , WRA_T1 , IMM_N  ),
       MULT      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULT , WR_N  , WRA_X  , IMM_N  ),
       MULTU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULTU, WR_N  , WRA_X  , IMM_N  ),
       DIV       -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIV  , WR_N  , WRA_X  , IMM_N  ),

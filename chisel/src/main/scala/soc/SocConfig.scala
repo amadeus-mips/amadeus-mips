@@ -33,27 +33,28 @@ object SocConfig {
 
   def funcConfig(
     simulation:         Boolean,
-    performanceMonitor: Boolean = false,
-    delayType:          DelayType = DelayType.RandomDelay
+    performanceMonitor: Boolean   = false,
+    delayType:          DelayType = DelayType.RandomDelay,
+    memFile:            String    = "./src/test/resources/loongson/func/inst_ram.coe"
   ): SocConfig = {
     new SocConfig(
       simulation,
-      memFile = "./src/test/resources/loongson/func/inst_ram.coe",
+      memFile,
       performanceMonitor,
-      if(simulation) DelayType.NoDelay else delayType
+      if (simulation) DelayType.NoDelay else delayType
     )
   }
 
   def perfConfig(
     simulation:         Boolean,
-    performanceMonitor: Boolean = false,
+    performanceMonitor: Boolean   = false,
     delayType:          DelayType = DelayType.StaticDelay
   ): SocConfig = {
     new SocConfig(
       simulation,
       memFile = "./src/test/resources/loongson/perf/axi_ram.coe",
       performanceMonitor,
-      if(simulation) DelayType.NoDelay else delayType
+      if (simulation) DelayType.NoDelay else delayType
     )
   }
 }
