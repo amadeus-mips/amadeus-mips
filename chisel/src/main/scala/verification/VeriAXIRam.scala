@@ -8,7 +8,6 @@ import shared.{Constants, Util}
 
 @chiselName
 class VeriAXIRam extends Module {
-  val size = 1 << 32 // in byte
   val INCR = 1.U
   val WRAP = 2.U
   val io = IO(new Bundle() {

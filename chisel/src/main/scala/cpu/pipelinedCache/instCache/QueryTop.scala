@@ -36,7 +36,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   // declare all the modules
   val mshr         = Module(new MSHR)
   val comparator   = Module(new MissComparator)
-  val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID, burstLen = 16))
+  val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID, burstLen = cacheConfig.numOfBanks))
   val refillBuffer = Module(new ReFillBuffer(false))
   val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val readHolder   = Module(new ReadHolder)
