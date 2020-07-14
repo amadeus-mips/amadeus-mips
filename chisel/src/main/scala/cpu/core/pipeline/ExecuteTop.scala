@@ -105,6 +105,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := io.in.pc
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
+  io.out.instValid   := io.in.instValid
 
   val brPrFail =
     (branch.io.branch.valid ^ io.in.brPredict.valid) || (branch.io.branch.valid && branch.io.branch.bits =/= io.in.brPredict.bits)

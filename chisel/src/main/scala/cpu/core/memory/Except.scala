@@ -10,6 +10,8 @@ class Except extends Module {
     val pc   = Input(UInt(addrLen.W))
     val addr = Input(UInt(addrLen.W))
 
+    val instValid = Input(Bool())
+
     val cp0Status = Input(UInt(dataLen.W))
     val cp0Cause  = Input(UInt(dataLen.W))
 
@@ -21,7 +23,7 @@ class Except extends Module {
 
   /** interrupt happen */
   val intrExcept = (io.cp0Status(1, 0) === "b01".U) &&
-    ((io.cp0Status(15, 8) & io.cp0Cause(15, 8)) =/= 0.U)
+    ((io.cp0Status(15, 8) & io.cp0Cause(15, 8)) =/= 0.U) && io.instValid
   io.outExcept := io.inExcept
   when(intrExcept) { io.outExcept(EXCEPT_INTR) := true.B }
 

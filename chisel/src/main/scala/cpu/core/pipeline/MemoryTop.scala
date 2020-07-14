@@ -46,6 +46,7 @@ class MemoryTop extends Module {
 
   except.io.pc        := io.in.pc
   except.io.addr      := io.in.memAddr
+  except.io.instValid := io.in.instValid
   except.io.cp0Status := forward.io.outCP0.status
   except.io.cp0Cause  := forward.io.outCP0.cause
   except.io.inExcept  := io.in.except

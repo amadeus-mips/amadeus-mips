@@ -16,4 +16,5 @@ class ExeMemBundle extends Bundle {
   val pc          = UInt(addrLen.W)
   val memAddr     = UInt(addrLen.W)
   val memData     = UInt(dataLen.W)
+  val instValid   = Bool()
 }
