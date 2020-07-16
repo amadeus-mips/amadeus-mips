@@ -34,11 +34,12 @@ object SocConfig {
   def funcConfig(
     simulation:         Boolean,
     performanceMonitor: Boolean   = false,
-    delayType:          DelayType = DelayType.RandomDelay
+    delayType:          DelayType = DelayType.RandomDelay,
+    memFile:            String    = "./src/test/resources/loongson/func/inst_ram.coe"
   ): SocConfig = {
     new SocConfig(
       simulation,
-      memFile = "./src/test/resources/loongson/func/inst_ram.coe",
+      memFile,
       performanceMonitor,
       if (simulation) DelayType.NoDelay else delayType
     )

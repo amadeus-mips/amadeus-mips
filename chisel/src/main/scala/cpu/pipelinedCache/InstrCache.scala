@@ -108,10 +108,12 @@ object ICacheElaborate extends App {
     })
     val insCache = Module(new InstrCache)
     val ram      = Module(new VeriAXIRam)
-    insCache.io.axi   <> ram.io.axi
-    insCache.io.addr  <> io.addr
-    insCache.io.data  <> io.data
-    insCache.io.flush <> io.flush
+    insCache.io.axi                   <> ram.io.axi
+    insCache.io.addr                  <> io.addr
+    insCache.io.data                  <> io.data
+    insCache.io.flush                 <> io.flush
+    insCache.io.invalidateIndex.bits  := DontCare
+    insCache.io.invalidateIndex.valid := false.B
   }
 
   (new ChiselStage).execute(

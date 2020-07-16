@@ -161,7 +161,7 @@ class CP0(tlbSize: Int = 32) extends Module {
   cause.reg.ipHard  := io.intr
   cause.reg.excCode := excCode
 
-  when(except) {
+  when(except && !io.except(EXCEPT_ERET) && !status.reg.exl) {
     epc.reg := Mux(io.inDelaySlot, io.pc - 4.U, io.pc)
   }
 

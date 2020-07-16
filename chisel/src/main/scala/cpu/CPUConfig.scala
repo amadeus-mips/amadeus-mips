@@ -8,7 +8,7 @@ class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: In
 
   val branchPredictorAddrLen = 10
   val branchPredictorTableEntryNum = 64
-  require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
+//  require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
 }
 
 object CPUConfig{

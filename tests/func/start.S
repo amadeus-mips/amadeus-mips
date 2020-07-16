@@ -2,7 +2,7 @@
 #include <regdef.h>
 #include <cpu_cde.h>
 
-#define TEST_NUM 89
+#define TEST_NUM 90
 
 
 ##s0, number
@@ -223,9 +223,9 @@ int_ex:
     bne  k0, s4, ex_finish
     nop
     addiu k0, k0, 8
-    mtc0  k0, c0_epc   //epc+8
+    mtc0  k0, c0_epc   #epc+8
     disable_trace_cmp_s
-    mfc0 k0, c0_cause  //don't compare cause.bd
+    mfc0 k0, c0_cause  #don't compare cause.bd
     enable_trace_cmp_s
     andi k0, k0, 0x7c # 6..2 exc code
     li   k1, 0x00 # 000_0000
@@ -648,6 +648,10 @@ kseg0_kseg1:
     jal wait_1s
     nop
     jal n89_jalr_ds_ex_test     #jalr ds ex
+    nop
+    jal wait_1s
+    nop
+    jal n90_mul_test
     nop
     jal wait_1s
     nop

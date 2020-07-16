@@ -63,6 +63,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   alu.io.op1       := io.in.op1
   alu.io.op2       := io.in.op2
   alu.io.operation := io.in.operation
+  alu.io.lo        := writeOther.io.outHILO.lo.bits
 
   move.io.operation := io.in.operation
   move.io.hilo      := forward.io.outHILO
@@ -107,6 +108,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := io.in.pc
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
+  io.out.instValid   := io.in.instValid
 
   val brPrFail =
     (branch.io.branch.valid ^ io.in.brPredict.valid) || (branch.io.branch.valid && branch.io.branch.bits =/= io.in.brPredict.bits)

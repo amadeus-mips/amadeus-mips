@@ -29,13 +29,13 @@ import shared.Constants._
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
 class newDCache(
-  setAmount:                Int = 64,
-  wayAmount:                Int = 4,
-  bankAmount:               Int = 16,
+  setAmount:                Int     = 64,
+  wayAmount:                Int     = 4,
+  bankAmount:               Int     = 16,
   performanceMonitorEnable: Boolean = false
 ) extends Module {
   val io = IO(new Bundle {
-    val axi = AXIIO.master()
+    val axi      = AXIIO.master()
     val rChannel = Flipped(new NiseSramReadIO)
     val wChannel = Flipped(new NiseSramWriteIO)
     //TODO: customize performance IO for D-cache
@@ -49,10 +49,10 @@ class newDCache(
   //----------------------------------------------------------------
   //------------------set up the cache parameters-------------------
   //----------------------------------------------------------------
-  val indexLen = log2Ceil(setAmount) // index宽度
-  val bankSize = 32 / 8 // 每bank字节数
+  val indexLen  = log2Ceil(setAmount) // index宽度
+  val bankSize  = 32 / 8 // 每bank字节数
   val blockSize = bankAmount * bankSize // 每块字节数
-  val tagLen = 32 - indexLen - log2Ceil(blockSize) // tag宽度
+  val tagLen    = 32 - indexLen - log2Ceil(blockSize) // tag宽度
 
   //------------------------------------------------------------------------------------
   //------------------check if the generator parameters meeet requirements--------------
@@ -110,7 +110,7 @@ class newDCache(
   // no lookup during rWriteBack
   // hit in the reFill buffer during refill stage
   val rChannelReg = RegNext(io.axi.r.bits.data)
-  val rValidReg = RegInit(false.B)
+  val rValidReg   = RegInit(false.B)
 
   // hit under miss in d-cache, set this register
   // hit in the D-cache during reFill stage
@@ -119,7 +119,7 @@ class newDCache(
   // records if the current set is full
   // this is to make sure empty lines are filled ahead of LRU
   val isSetNotFull = WireDefault(false.B)
-  val emptyPtr = WireDefault(0.U(log2Ceil(wayAmount).W))
+  val emptyPtr     = WireDefault(0.U(log2Ceil(wayAmount).W))
 
   // keep track of whether there has been an aw handshake yet
   // true means still waiting, false means that the handshake has finished
@@ -147,8 +147,8 @@ class newDCache(
   //-------------------------------------------------------------------------------
   val addr = io.rChannel.addr
 
-  val tag = addr(dataLen - 1, dataLen - tagLen)
-  val index = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
+  val tag        = addr(dataLen - 1, dataLen - tagLen)
+  val index      = addr(dataLen - tagLen - 1, dataLen - tagLen - indexLen)
   val bankOffset = addr(log2Ceil(blockSize) - 1, log2Ceil(bankSize))
 
   //-------------------------------------------------------------------------------
@@ -185,9 +185,9 @@ class newDCache(
   // check what state we are in
   //TODO: notice this does not precisely imply the state, as it state update happens
   // within the cycle
-  val isIdle = state === sIdle
+  val isIdle      = state === sIdle
   val isWaitForAR = state === sWaitForAR
-  val isReFill = state === sReFill
+  val isReFill    = state === sReFill
   val isWriteBack = state === sWriteBack
 
   // check if there is a hit and the line that got the hit if there is a hit
@@ -196,8 +196,8 @@ class newDCache(
   val isHit = WireDefault(false.B)
 
   // check during reFill whether tag and index are the same as old
-  val isTagSameAsOld = tag === tagReg
-  val isIndexSameAsOld = index === indexReg
+  val isTagSameAsOld        = tag === tagReg
+  val isIndexSameAsOld      = index === indexReg
   val isBankOffsetSameAsOld = bankOffset === bankOffsetReg
 
   // check which is the lru line
@@ -209,11 +209,11 @@ class newDCache(
 
   // check across all ways in the desired set
   isSetNotFull := valid(indexReg).contains(false.B)
-  emptyPtr := valid(indexReg).indexWhere(isWayValid => !isWayValid)
+  emptyPtr     := valid(indexReg).indexWhere(isWayValid => !isWayValid)
   val tagCheckVec = Wire(Vec(wayAmount, Bool()))
-  tagCheckVec := (tagData.map( _ === tag) zip valid(index)).map{case (tagMatch, isValid) => tagMatch && isValid}
-  hitWay := tagCheckVec.indexWhere(tagMatchAndValid => tagMatchAndValid  === true.B)
-  isHit := tagCheckVec.contains(true.B)
+  tagCheckVec := (tagData.map(_ === tag).zip(valid(index))).map { case (tagMatch, isValid) => tagMatch && isValid }
+  hitWay      := tagCheckVec.indexWhere(tagMatchAndValid => tagMatchAndValid === true.B)
+  isHit       := tagCheckVec.contains(true.B)
 
   //-----------------------------------------------------------------------------
   //------------------initialize default IO--------------------------------
@@ -233,7 +233,10 @@ class newDCache(
 
   io.axi.ar.bits.id := DATA_ID
   io.axi.ar.bits.addr :=
-    Mux(state === sIdle, addr, Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W)))
+    Cat(
+      0.U(3.W),
+      Mux(state === sIdle, Cat(addr(28, 2), 0.U(2.W)), Cat(tagReg, indexReg, bankOffsetReg, 0.U(2.W))(28, 0))
+    )
 
   io.axi.ar.bits.len   := (bankAmount - 1).U(4.W)
   io.axi.ar.bits.size  := "b010".U(3.W) // 4 Bytes
@@ -266,7 +269,7 @@ class newDCache(
   io.axi.aw.bits.prot  := 0.U
   io.axi.aw.bits.lock  := 0.U
 
-  io.axi.aw.bits.addr := writeAddrReg
+  io.axi.aw.bits.addr := Cat(0.U(3.W), writeAddrReg(28, 0))
 
   // aw handshake has not taken place, and is in the transfer state
   //TODO: this is kind of out of sync with the states
@@ -285,35 +288,35 @@ class newDCache(
   io.axi.b.ready := state === sWriteFinish
 
   // the contents for a read
-  val cacheContents = Wire(UInt(dataLen.W))
-  val hitWayReg = RegNext(hitWay)
+  val cacheContents     = Wire(UInt(dataLen.W))
+  val hitWayReg         = RegNext(hitWay)
   val bankOffSetNextReg = RegNext(bankOffset)
   cacheContents := bankData(hitWayReg)(bankOffSetNextReg)
   // read data is only valid when read enable is asserted
   io.rChannel.valid := isIdle && isHit && io.rChannel.enable
-  io.rChannel.data := cacheContents
+  io.rChannel.data  := cacheContents
 
   // a write is successful the state is idle and write enable is asserted
   io.wChannel.valid := isIdle && isHit && io.wChannel.enable
 
   val isSetNotFullReg = RegInit(false.B)
-  val emptyPtrReg = RegInit(0.U(log2Ceil(wayAmount).W))
-  val lruLineReg = RegInit(0.U(log2Ceil(wayAmount).W))
-  val lruSelWay = Mux(isSetNotFullReg, emptyPtrReg, lruLineReg)
+  val emptyPtrReg     = RegInit(0.U(log2Ceil(wayAmount).W))
+  val lruLineReg      = RegInit(0.U(log2Ceil(wayAmount).W))
+  val lruSelWay       = Mux(isSetNotFullReg, emptyPtrReg, lruLineReg)
 
   //-----------------------------------------------------------------------------
   //------------------transaction as functions-----------------------------------
   //-----------------------------------------------------------------------------
   def beginRTransaction(): Unit = {
-    state := sReFill
+    state                                 := sReFill
     refillWriteMask.io.initPosition.valid := true.B
-    refillWriteMask.io.initPosition.bits := bankOffsetReg
+    refillWriteMask.io.initPosition.bits  := bankOffsetReg
     // the precise timing of this should happen at the first cycle of the r transaction
     // however, as it is put into the refill state ( because if you wait for R, then
     // you can't handle the first receive unless you put it into a reg, but that's kind
     // of ugly
-    refillWriteVec := 0.U.asTypeOf(refillWriteVec)
-    reFillBuffer   := 0.U.asTypeOf(reFillBuffer)
+    refillWriteVec      := 0.U.asTypeOf(refillWriteVec)
+    reFillBuffer        := 0.U.asTypeOf(reFillBuffer)
     refillWriteVecDirty := false.B
     // don't invalidate this line
   }
@@ -366,7 +369,7 @@ class newDCache(
     waitForAWHandshake := true.B
     writeDataBuffer    := bankData(waySelect)
     writeBufferCounter := 0.U
-    writeAddrReg := Cat(tagData(waySelect), indexReg, 0.U((log2Ceil(bankAmount) + 2).W))
+    writeAddrReg       := Cat(tagData(waySelect), indexReg, 0.U((log2Ceil(bankAmount) + 2).W))
     assert(Cat(tagData(waySelect), indexReg, 0.U((log2Ceil(bankAmount) + 2).W)).getWidth == 32)
   }
 
@@ -387,32 +390,33 @@ class newDCache(
   val tagBanks = for (i <- 0 until wayAmount) yield {
     val bank = Module(new SinglePortBank(setAmount, tagLen, syncRead = false))
     bank.suggestName(s"tagBank_way_${i}")
-    bank.io.we := tagWe(i)
-    bank.io.addr := Mux(isReFill && io.axi.r.bits.last, indexReg, indexWire)
+    bank.io.we     := tagWe(i)
+    bank.io.addr   := Mux(isReFill && io.axi.r.bits.last, indexReg, indexWire)
     bank.io.inData := tagReg
-    tagData(i) := bank.io.outData
+    tagData(i)     := bank.io.outData
   }
 
   /**
     * check if there is a hit in the refill buffer
     */
   def checkRefillBufferHit(): Unit = {
+
     /** if the reFill buffer could have a hit */
     when(refillWriteVec(bankOffset) && isTagSameAsOld && isIndexSameAsOld) {
       // if it is a read hit, buffer the result, assert read valid
       when(io.rChannel.enable) {
         // if the hit occurs in the refill buffer
         io.rChannel.valid := true.B
-        rChannelReg := reFillBuffer(bankOffset).asUInt
-        rValidReg := true.B
+        rChannelReg       := reFillBuffer(bankOffset).asUInt
+        rValidReg         := true.B
       }.elsewhen(io.wChannel.enable) {
         // if it is a write hit, write into reFill buffer
-        for ( i <- 0 until 4 ) {
+        for (i <- 0 until 4) {
           when(io.wChannel.sel(i)) {
             reFillBuffer(bankOffset)(i) := io.wChannel.data(i * 8 + 7, i * 8)
           }
         }
-        io.wChannel.valid := true.B
+        io.wChannel.valid   := true.B
         refillWriteVecDirty := true.B
       }
     }
@@ -474,7 +478,6 @@ class newDCache(
 
       checkRefillBufferHit()
 
-
       // with every successful transaction, increment the bank offset register to reflect the new value
       when(io.axi.r.fire) {
         // update the write mask
@@ -489,8 +492,8 @@ class newDCache(
         bankOffsetReg := bankOffsetReg + 1.U
 
         isSetNotFullReg := isSetNotFull
-        emptyPtrReg := emptyPtr
-        lruLineReg := lruLine
+        emptyPtrReg     := emptyPtr
+        lruLineReg      := lruLine
 
         //TODO: performance counter: how many writes will be issued?
         when(io.axi.r.bits.last) {
@@ -543,11 +546,10 @@ class newDCache(
         // when all line has been evicted
         when(writeBufferCounter === (bankAmount - 1).U) {
           io.axi.w.bits.last := true.B
-          state := sWriteFinish
+          state              := sWriteFinish
           // let's handle the b channel there
         }
       }
-
 
     }
     is(sWriteFinish) {
@@ -573,12 +575,12 @@ class newDCache(
     bank.suggestName(s"dbank_way${i}_bankOffset${j}")
     // read and write share the address
     bank.io.addr := indexWire
-    bank.io.we := we(i)(j)
+    bank.io.we   := we(i)(j)
     // if during the write back stage, then only write the refill buffer back.
     // otherwise (during idle stage) write the data from wChannel
     bank.io.writeData := Mux(isWriteBack, reFillBuffer(j).asUInt, io.wChannel.data)
     bank.io.writeMask := Mux(isWriteBack, 15.U(4.W), io.wChannel.sel)
-    bankData(i)(j) := bank.io.readData
+    bankData(i)(j)    := bank.io.readData
     bank.desiredName
   }
 
@@ -586,7 +588,7 @@ class newDCache(
     when(isHit) {
       when(io.rChannel.enable) {
         io.rChannel.valid := true.B
-        rDCacheHitReg := true.B
+        rDCacheHitReg     := true.B
         LRU.update(index, hitWay)
       }.elsewhen(io.wChannel.enable) {
         //TODO: check this and get it out of the critical path
@@ -603,7 +605,7 @@ class newDCache(
   if (performanceMonitorEnable) {
     // performance counter to count how many misses and how many hits are there
     val missCycleCounter = RegInit(0.U(64.W))
-    val hitCycleCounter = RegInit(0.U(64.W))
+    val hitCycleCounter  = RegInit(0.U(64.W))
     val idleCycleCounter = RegInit(0.U(64.W))
     when(io.rChannel.valid) {
       hitCycleCounter := hitCycleCounter + 1.U

@@ -1290,3 +1290,12 @@
     mtc0 v1, c0_cause; \
     1: b 1b; \
     nop
+
+/* 90 */
+#define TEST_MUL(in_a, in_b, ref) \
+    LI (t0, in_a); \
+    LI (t1, in_b); \
+    LI (v1, ref); \
+    mul v0, t0, t1; \
+    bne v0, v1, inst_error; \
+    nop

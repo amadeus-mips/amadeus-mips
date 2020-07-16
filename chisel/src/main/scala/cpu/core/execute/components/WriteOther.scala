@@ -51,7 +51,7 @@ class WriteOther extends Module {
   io.div.flush   := io.flush
   io.div.signed  := io.operation === WO_DIV
   io.stallReq    := false.B
-  when(io.operation === WO_MULT || io.operation === WO_MULTU) {
+  when(io.operation === WO_MULT || io.operation === WO_MULTU || io.operation === ALU_MUL) {
     io.mult.enable := !io.mult.result.hi.valid
     io.stallReq    := !io.mult.result.hi.valid && !io.flush
     io.outHILO     := io.mult.result
