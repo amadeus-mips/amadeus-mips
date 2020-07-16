@@ -1,4 +1,4 @@
-package cpu.pipelinedCache.instCache
+package cpu.pipelinedCache.components
 
 import chisel3._
 import chisel3.internal.naming.chiselName

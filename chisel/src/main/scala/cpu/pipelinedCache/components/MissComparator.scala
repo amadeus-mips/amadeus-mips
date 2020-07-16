@@ -3,7 +3,7 @@ package cpu.pipelinedCache.components
 import chisel3._
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.instCache.MSHREntry
+import cpu.pipelinedCache.components.metaBanks.TagValidBundle
 
 class MissComparator(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {

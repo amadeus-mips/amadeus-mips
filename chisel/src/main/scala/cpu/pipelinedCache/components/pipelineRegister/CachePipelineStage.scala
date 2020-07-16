@@ -1,4 +1,4 @@
-package cpu.pipelinedCache.components
+package cpu.pipelinedCache.components.pipelineRegister
 
 import chisel3._
 import chisel3.internal.naming.chiselName

@@ -1,12 +1,13 @@
-package cpu.pipelinedCache.instCache
+package cpu.pipelinedCache.instCache.query
 
 import axi.AXIIO
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.{AXIReadPort, MissComparator, ReFillBuffer, ReadHolder}
-import cpu.pipelinedCache.instCache.fetch.FetchQueryBundle
+import cpu.pipelinedCache.components.AXIPorts.AXIReadPort
+import cpu.pipelinedCache.components.{MSHR, MissComparator, ReFillBuffer, ReadHolder}
+import cpu.pipelinedCache.instCache.fetch.{ICacheFetchQueryBundle, WriteTagValidBundle}
 import shared.Constants.INST_ID
 import shared.LRU.PLRUMRUNM
 
@@ -17,17 +18,14 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     val flush = Input(Bool())
     val ready = Output(Bool())
     // datapath IO
-    val fetchQuery = Input(new FetchQueryBundle)
+    val fetchQuery = Input(new ICacheFetchQueryBundle)
     val bankData   = Input(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
     val data       = Decoupled(UInt(32.W))
     // also data path, just write to instruction banks
-    val writeBundle = Output(new Bundle {
-      val writeEnable = Bool()
-      val writeWay    = UInt(log2Ceil(cacheConfig.numOfWays).W)
-      val writeIndex  = UInt(log2Ceil(cacheConfig.numOfSets).W)
-      val writeTag    = UInt(cacheConfig.tagLen.W)
-      val writeData   = Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W))
-    })
+    val write = Valid(new WriteTagValidBundle)
+
+    val instructionWriteBack = Output(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
+
     /** is query handling a miss and preparing for write back? */
     val inAMiss = Output(Bool())
     // axi port wiring
@@ -73,19 +71,20 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   io.inAMiss := !mshr.io.missAddr.ready
 
-  io.writeBundle.writeEnable := mshr.io.writeBack
-  io.writeBundle.writeWay    := lru.getLRU(mshr.io.mshrInfo.index)
-  io.writeBundle.writeIndex  := mshr.io.mshrInfo.index
-  io.writeBundle.writeTag    := mshr.io.mshrInfo.tag
-  io.writeBundle.writeData   := refillBuffer.io.allData
+  io.write.valid               := mshr.io.writeBack
+  io.write.bits.waySelection   := lru.getLRU(mshr.io.mshrInfo.index)
+  io.write.bits.indexSelection := mshr.io.mshrInfo.index
+  io.write.bits.tagValid.tag   := mshr.io.mshrInfo.tag
+  io.write.bits.tagValid.valid := true.B
+  io.instructionWriteBack      := refillBuffer.io.allData
 
   io.axi := DontCare
   io.axi <> axi.io.axi
 
-  comparator.io.tagValid          := io.fetchQuery.tagValid
-  comparator.io.phyTag            := io.fetchQuery.phyTag
-  comparator.io.index             := io.fetchQuery.index
-  comparator.io.mshr.bits         := mshr.io.mshrInfo
+  comparator.io.tagValid  := io.fetchQuery.tagValid
+  comparator.io.phyTag    := io.fetchQuery.phyTag
+  comparator.io.index     := io.fetchQuery.index
+  comparator.io.mshr.bits := mshr.io.mshrInfo
   // is the state in a miss
   comparator.io.mshr.valid        := !mshr.io.missAddr.ready
   comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid

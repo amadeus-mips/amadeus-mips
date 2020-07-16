@@ -5,9 +5,10 @@ import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.TagValidDirtyBundle
+import cpu.pipelinedCache.components.metaBanks.TagValidDirtyBundle
 import cpu.pipelinedCache.dataCache.fetch.TagValidDirty
 
+@deprecated
 @chiselName
 class Fetch(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {

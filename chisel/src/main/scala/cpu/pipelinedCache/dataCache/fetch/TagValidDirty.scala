@@ -5,7 +5,7 @@ import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.{MetaBanks, TagValidBundle, TagValidDirtyBundle}
+import cpu.pipelinedCache.components.metaBanks.{TagValidBanks, TagValidBundle, TagValidDirtyBundle}
 
 /**
   * tag valid dirty unit for data cache
@@ -22,7 +22,7 @@ class TagValidDirty(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) ext
     val tagValidDirty = Output(Vec(cacheConfig.numOfWays, new TagValidDirtyBundle))
   })
 
-  val tagValidDirtyBanks = Module(new MetaBanks(hasDirty = true))
+  val tagValidDirtyBanks = Module(new TagValidBanks())
 
   for (i <- 0 until cacheConfig.numOfWays) {
     tagValidDirtyBanks.io.way(i).portA.addr := io.index
