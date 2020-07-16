@@ -11,8 +11,8 @@ import shared.{Constants, Util}
   * Only for simulation
   */
 //noinspection DuplicatedCode
-class AXIRam(memFile: String) extends Module {
-  val size = 1 << 20
+class AXIRam(memFile: Option[String], addrLen: Int = 20) extends Module {
+  val size = BigInt(1) << addrLen
   val INCR = 1.U
   val WRAP = 2.U
   val io = IO(new Bundle() {
@@ -40,7 +40,9 @@ class AXIRam(memFile: String) extends Module {
   checkAddrChannel()
 
   val mem = Mem(math.ceil(size.toDouble / 4).toInt, UInt(32.W))
-  loadMemoryFromFile(mem, memFile, MemoryLoadFileType.Hex)
+  memFile match {
+    case Some(file) => loadMemoryFromFile(mem, file, MemoryLoadFileType.Hex)
+  }
 
   val wrapMap = Seq(
     1.U  -> 3.U,
@@ -130,7 +132,7 @@ class AXIRam(memFile: String) extends Module {
 
   ar.ready    := instRQ.io.enq.ready && dataRQ.io.enq.ready
   r.bits.id   := rID
-  r.bits.data := mem.read((rRamAddr(19, 0) >> 2).asUInt())
+  r.bits.data := mem.read(rRamAddr(addrLen-1, 2))
   r.bits.resp := 0.U // fixed OKAY
   r.bits.last := rLen === 0.U
   r.valid     := rState === sRBurst
@@ -177,7 +179,7 @@ class AXIRam(memFile: String) extends Module {
   }
 
   when(w.valid && wState === sWBurst) {
-    val addr         = (wRamAddr(19, 0) >> 2).asUInt()
+    val addr         = wRamAddr(addrLen-1, 2)
     val internalData = mem.read(addr)
     val writeData =
       Cat((3 to 0 by -1).map(i => Mux(w.bits.strb(i), w.bits.data(7 + 8 * i, 8 * i), internalData(7 + 8 * i, 8 * i))))

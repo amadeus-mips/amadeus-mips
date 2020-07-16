@@ -47,7 +47,7 @@ class AXIRamRandomWrap()(implicit cfg: SocConfig) extends Module {
     val ramRandomMask = Input(UInt(5.W))
   })
 
-  val ram = Module(new AXIRam(cfg.memFile))
+  val ram = Module(new AXIRam(Some(cfg.memFile)))
 
   val axi_arvalid_m_masked = Wire(Bool())
   val axi_rready_m_masked  = Wire(Bool())
