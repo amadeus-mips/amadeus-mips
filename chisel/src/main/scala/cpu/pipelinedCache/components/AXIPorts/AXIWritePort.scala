@@ -9,7 +9,7 @@ import cpu.pipelinedCache.components.addressBundle.RecordAddressBundle
 
 //TODO: use outstanding AXI
 @chiselName
-class AXIWritePort(AXIID: Int)(implicit cacheConfig: CacheConfig) extends Module {
+class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
     /** address request, when address request is valid, try to initiate a write transaction
@@ -54,8 +54,8 @@ class AXIWritePort(AXIID: Int)(implicit cacheConfig: CacheConfig) extends Module
     0.U((32 - cacheConfig.tagLen - cacheConfig.indexLen).W)
   )
   io.axi.aw.bits.burst := "b01".U(2.W)
-  io.axi.aw.bits.len   := "b1111".U(3.W)
-  io.axi.aw.bits.id    := AXIID.U
+  io.axi.aw.bits.len   := (cacheConfig.numOfBanks).U(4.W)
+  io.axi.aw.bits.id    := AXIID
   io.axi.aw.bits.size  := "b010".U(3.W)
   io.axi.aw.bits.cache := 0.U
   io.axi.aw.bits.prot  := 0.U
@@ -65,7 +65,7 @@ class AXIWritePort(AXIID: Int)(implicit cacheConfig: CacheConfig) extends Module
   io.axi.w.valid     := io.data.valid
   io.axi.w.bits.last := io.dataLast
   io.axi.w.bits.strb := "b1111".U(4.W)
-  io.axi.w.bits.id   := AXIID.U
+  io.axi.w.bits.id   := AXIID
 
   // always ignore b channel response ( no cache error )
   io.axi.b.ready := true.B
