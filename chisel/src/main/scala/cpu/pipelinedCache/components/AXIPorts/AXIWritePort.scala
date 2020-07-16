@@ -12,7 +12,7 @@ import cpu.pipelinedCache.components.addressBundle.RecordAddressBundle
 class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
-    /** address request, when address request is valid, try to initiate a write transaction
+    /** request request, when request request is valid, try to initiate a write transaction
       * when axi write port is ready to start a transaction, assert the ready signal */
     val addrRequest = Flipped(Decoupled(new RecordAddressBundle))
 

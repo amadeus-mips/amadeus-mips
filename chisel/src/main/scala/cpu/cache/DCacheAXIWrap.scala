@@ -2,11 +2,11 @@
 
 package cpu.cache
 
+import axi.AXIIO
 import chisel3._
 import chisel3.util.Cat
-import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.common.DefaultConfig._
-import axi.AXIIO
+import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import shared.Constants._
 
 class DCacheAXIWrap extends Module {
@@ -16,7 +16,7 @@ class DCacheAXIWrap extends Module {
     val wData = Flipped(new NiseSramWriteIO)
     val exeAddr = Input(UInt(addrLen.W))
   })
-  /** The address of rData and wData will be the same */
+  /** The request of rData and wData will be the same */
   val addr = io.rData.addr
   val cachedTrans = addr(31, 29) =/= "b101".U
 
@@ -28,7 +28,7 @@ class DCacheAXIWrap extends Module {
   io.axi.ar.bits.addr := Mux(cachedTrans, Cat(0.U(3.W), addr(28, 5), 0.U(5.W)), virToPhy(addr))
   io.axi.ar.bits.len := Mux(cachedTrans, "b0111".U(4.W), 0.U(4.W)) // 8 or 1
   io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
-  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
+  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-request burst
   io.axi.ar.bits.lock := 0.U
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U

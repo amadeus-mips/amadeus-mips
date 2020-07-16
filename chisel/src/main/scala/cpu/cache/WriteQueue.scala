@@ -1,8 +1,8 @@
 package cpu.cache
 
+import axi.AXIIO
 import chisel3._
 import chisel3.util._
-import axi.AXIIO
 import shared.Constants
 
 class BufferLineAddr(val tagWidth: Int, val indexWidth: Int) extends Bundle {
@@ -16,13 +16,13 @@ class BufferLineBundle(val lineWidth: Int, val tagWidth: Int, val indexWidth: In
 }
 
 /**
-  * byte ( 8 bits ) address write queue
+  * byte ( 8 bits ) request write queue
   * if there is a write to the line being sent to dram, extract the line and write back to I-cache
   * @param bankWidth size of each bank in the cache line
   * @param bankAmount how many banks there are in the cache line
   * @param capacity how many entries should be in the write queue
-  * @param tagWidth how wide should the address tag should be
-  * @param indexWidth how wide should the address index should be
+  * @param tagWidth how wide should the request tag should be
+  * @param indexWidth how wide should the request index should be
   */
 class WriteBuffer(bankWidth: Int, bankAmount: Int, capacity: Int = 2, tagWidth: Int, indexWidth: Int, addrWidth: Int = 32) extends Module {
   val lineWidth = bankWidth * bankAmount
@@ -64,7 +64,7 @@ class WriteBuffer(bankWidth: Int, bankAmount: Int, capacity: Int = 2, tagWidth: 
   // only assert before waiting for handshake
   val waitForAWHandshake = RegInit(false.B)
   //-----------------------------------------------------------------------------
-  //------------------define a counple of functions to trim the addr-------------
+  //------------------define a counple of functions to trim the bankIndex-------------
   //-----------------------------------------------------------------------------
 
   //-----------------------------------------------------------------------------
@@ -75,7 +75,7 @@ class WriteBuffer(bankWidth: Int, bankAmount: Int, capacity: Int = 2, tagWidth: 
 
   io.axi := DontCare
   //TOD:
-//  io.axi.aw.bits.addr :=
+//  io.axi.aw.bits.bankIndex :=
   /**
     * default IO for aw
     */

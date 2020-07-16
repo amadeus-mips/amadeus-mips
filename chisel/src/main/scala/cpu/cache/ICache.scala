@@ -97,8 +97,8 @@ class ICache(
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
-  assert(!(io.rInst.valid && io.rInst.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
-  assert(!(io.rInst.valid && !io.rInst.enable), "the returned data should not be valid when the address is not enabled")
+  assert(!(io.rInst.valid && io.rInst.addr(1, 0).orR), "when request is not aligned, the valid signal must be false")
+  assert(!(io.rInst.valid && !io.rInst.enable), "the returned data should not be valid when the request is not enabled")
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
   //-------------------------------------------------------------------------------
@@ -285,7 +285,7 @@ class ICache(
       // TODO: check last boundary crossing
 
       when(io.rInst.enable) {
-        // enable already ensures that the address is aligned
+        // enable already ensures that the request is aligned
         when(isHit) {
           updateLRU(hitWay)
         }.otherwise {

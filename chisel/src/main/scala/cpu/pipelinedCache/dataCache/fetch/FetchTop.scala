@@ -11,14 +11,14 @@ import cpu.pipelinedCache.instCache.fetch.{TagValid, WriteTagValidBundle}
 class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
-    /** address information, no need for decoupled interface because this is the data path
+    /** request information, no need for decoupled interface because this is the data path
       * we don't use them anyway */
     val addr = Input(UInt(32.W))
 
     /** write tag valid from refill stage */
     val write = Flipped(Valid(new WriteTagValidBundle))
 
-    /** the query result of the physical address for cache request */
+    /** the query result of the physical request for cache request */
     val addrResult = Output(new QueryAddressBundle)
 
     /** tag valid bundle for all ways in cache */

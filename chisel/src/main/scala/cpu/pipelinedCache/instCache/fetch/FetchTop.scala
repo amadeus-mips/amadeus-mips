@@ -8,7 +8,7 @@ import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.metaBanks.TagValidBundle
 
 /**
-  * fetch top that fetches tags, valid, and do address translation
+  * fetch top that fetches tags, valid, and do request translation
   */
 @chiselName
 class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {

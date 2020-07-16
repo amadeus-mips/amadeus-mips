@@ -16,6 +16,6 @@ class CacheConfig {
   require(isPow2(numOfWays))
   require(isPow2(numOfBanks))
   require(isPow2(bankWidth))
-  require(tagLen + indexLen + bankIndexLen + bankOffsetLen == 32, "basic address calculation")
-  require((indexLen + bankIndexLen + bankOffsetLen) <= 12, "prevent address aliasing")
+  require(tagLen + indexLen + bankIndexLen + bankOffsetLen == 32, "basic request calculation")
+  require((indexLen + bankIndexLen + bankOffsetLen) <= 12, "prevent request aliasing")
 }

@@ -35,7 +35,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val mshr         = Module(new MSHR)
   val comparator   = Module(new MissComparator)
   val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID))
-  val refillBuffer = Module(new ReFillBuffer(false))
+  val refillBuffer = Module(new ReFillBuffer)
   val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val readHolder   = Module(new ReadHolder)
 
@@ -89,8 +89,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   comparator.io.mshr.valid        := !mshr.io.missAddr.ready
   comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
 
-  refillBuffer.io.addr.valid := newMiss
-  refillBuffer.io.addr.bits  := io.fetchQuery.bankIndex
+  // when is in miss
+  refillBuffer.io.bankIndex.valid := newMiss || (!mshr.io.missAddr.ready && !refillBuffer.io.finish)
+  refillBuffer.io.bankIndex.bits  := io.fetchQuery.bankIndex
   refillBuffer.io.inputData  := axi.io.transferData
   refillBuffer.io.finish     := axi.io.finishTransfer
 
@@ -111,15 +112,16 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       io.fetchQuery.bankIndex,
       0.U(cacheConfig.bankOffsetLen.W)
     ),
-    Cat(mshr.io.mshrInfo.asUInt, 0.U((cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen).W))
+    Cat(mshr.io.mshrInfo.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
   )
   axi.io.addrReq.valid := newMiss
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.missAddr.valid      := !queryHit && !passThrough
-  mshr.io.missAddr.bits.tag   := io.fetchQuery.phyTag
-  mshr.io.missAddr.bits.index := io.fetchQuery.index
-  mshr.io.readyForWB          := axi.io.finishTransfer
+  mshr.io.missAddr.valid          := !queryHit && !passThrough
+  mshr.io.missAddr.bits.tag       := io.fetchQuery.phyTag
+  mshr.io.missAddr.bits.index     := io.fetchQuery.index
+  mshr.io.missAddr.bits.bankIndex := io.fetchQuery.bankIndex
+  mshr.io.readyForWB              := axi.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

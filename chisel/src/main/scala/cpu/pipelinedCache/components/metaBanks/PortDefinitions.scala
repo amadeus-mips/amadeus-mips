@@ -20,3 +20,11 @@ class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) exten
   override def cloneType = (new ReadWritePort(gen)).asInstanceOf[this.type]
 }
 
+class MaskedReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
+  val addr      = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
+  val writeMask = Input(UInt(4.W))
+  val writeData = Input(gen)
+  val readData  = Output(gen)
+
+  override def cloneType = (new MaskedReadWritePort(gen)).asInstanceOf[this.type]
+}

@@ -4,16 +4,25 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.addressBundle.RecordAddressBundle
 
+class MSHREntry(implicit cacheConfig: CacheConfig) extends Bundle {
+  val tag   = UInt(cacheConfig.tagLen.W)
+  val index = UInt(cacheConfig.indexLen.W)
+
+  /** bank index is required to support axi burst transfer initial address */
+  val bankIndex = UInt(cacheConfig.bankIndexLen.W)
+
+  override def cloneType = (new MSHREntry).asInstanceOf[this.type]
+}
 
 @chiselName
 class MSHR(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
-    /** miss address value for mshr input
-      * this `valid` value is key for flushing */
-    val missAddr = Flipped(Decoupled(new RecordAddressBundle))
+    /** miss request value for mshr input
+      * this `valid` value is key for flushing
+      * ready means there is no miss that is being handled */
+    val missAddr = Flipped(Decoupled(new MSHREntry))
 
     /** is the refill buffer ready for write back*/
     val readyForWB = Input(Bool())
@@ -21,11 +30,11 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
     /** do we write back *this* cycle*/
     val writeBack = Output(Bool())
 
-    /** is the current state in a miss?
-      * current missing info */
-    val mshrInfo = Output(new RecordAddressBundle)
+    /** is the current state in a miss? *
+      *current missing info*/
+    val mshrInfo = Output(new MSHREntry())
   })
-  val missEntryReg = RegInit(0.U.asTypeOf(new RecordAddressBundle))
+  val missEntryReg = RegInit(0.U.asTypeOf(new MSHREntry))
   val wbNext       = RegInit(false.B)
   wbNext := false.B
   val sIdle :: sTransfer :: Nil = Enum(2)

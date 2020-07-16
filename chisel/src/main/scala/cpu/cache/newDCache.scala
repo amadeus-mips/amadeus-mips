@@ -89,7 +89,7 @@ class newDCache(
   val reFillBuffer = RegInit(VecInit(Seq.fill(bankAmount)(VecInit(Seq.fill(4)(0.U(8.W))))))
 //  RegInit(VecInit(Seq.fill(bankAmount)(0.U(32.W))))
 
-  // record the memory address info on a read miss
+  // record the memory request info on a read miss
   // keep track of which way to write to
   val lruWayReg = Reg(UInt(log2Ceil(wayAmount).W))
 
@@ -132,15 +132,15 @@ class newDCache(
   // the counter that records which word to dispatch to axi from write data buffer
   val writeBufferCounter = RegInit(0.U(log2Ceil(bankAmount).W))
 
-  // hold the dispatch to write address
+  // hold the dispatch to write request
   val writeAddrReg = RegInit(0.U(32.W))
   //-----------------------------------------------------------------------------
   //------------------assertions to check--------------------------------------
   //-----------------------------------------------------------------------------
-//  assert(!(io.rChannel.valid && io.rChannel.addr(1, 0).orR), "when address is not aligned, the valid signal must be false")
+//  assert(!(io.rChannel.valid && io.rChannel.bankIndex(1, 0).orR), "when request is not aligned, the valid signal must be false")
   assert(
     !(io.rChannel.valid && !io.rChannel.enable),
-    "the returned data should not be valid when the address is not enabled"
+    "the returned data should not be valid when the request is not enabled"
   )
   //-------------------------------------------------------------------------------
   //-------------------- setup some constants to use----------------------------------
@@ -451,7 +451,7 @@ class newDCache(
         "read channel and write channel should not be accessed at the same time"
       )
       when(io.rChannel.enable) {
-        // enable already ensures that the address is aligned
+        // enable already ensures that the request is aligned
         when(isHit) {
           LRU.update(index, hitWay)
         }.otherwise {
@@ -579,7 +579,7 @@ class newDCache(
       new SinglePortMaskBank(numberOfSet = setAmount, minWidth = 8, maskWidth = 4, syncRead = true)
     )
     bank.suggestName(s"dbank_way${i}_bankOffset${j}")
-    // read and write share the address
+    // read and write share the request
     bank.io.addr := indexWire
     bank.io.we   := we(i)(j)
     // if during the write back stage, then only write the refill buffer back.

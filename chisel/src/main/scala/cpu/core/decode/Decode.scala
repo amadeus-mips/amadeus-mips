@@ -13,7 +13,7 @@ class SignalBundle extends Bundle {
   val instType  = UInt(instTypeLen.W)
   val operation = UInt(opLen.W) // operation type
   val wr        = Bool() // write to register-file
-  val wraType   = UInt(2.W) // write register address type
+  val wraType   = UInt(2.W) // write register request type
   val immType   = UInt(3.W)
 }
 

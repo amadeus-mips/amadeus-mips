@@ -24,10 +24,10 @@ class WriteTagValidBundle(implicit cacheConfig: CacheConfig) extends Bundle {
 class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
-    /** for query address */
+    /** for query request */
     val index = Input(UInt(cacheConfig.indexLen.W))
 
-    /** contains address and data for write back */
+    /** contains request and data for write back */
     val write = Flipped(Valid(new WriteTagValidBundle))
 
     /** result for read in all 4 ways */

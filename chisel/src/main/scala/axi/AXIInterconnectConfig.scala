@@ -36,7 +36,7 @@ import spire.math.Natural
   * @param sCount        Number of AXI inputs (slave interfaces)
   * @param mCount        Number of AXI outputs (master interfaces)
   * @param dataWidth     Width of data bus in bits
-  * @param addrWidth     Width of address bus in bits
+  * @param addrWidth     Width of request bus in bits
   * @param idWidth       Width of ID signal
   * @param awUserEnable  Propagate awuser signal
   * @param awUserWidth   Width of awuser signal
@@ -53,7 +53,7 @@ import spire.math.Natural
   * @param mBaseAddr     Master interface base addresses
   *                      M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
   *                      set to zero for default addressing based on M_ADDR_WIDTH
-  * @param mAddrWidth    Master interface address widths
+  * @param mAddrWidth    Master interface request widths
   *                      M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
   * @param mConnectRead_raw  Read connections between interfaces
   *                      M_COUNT concatenated fields of S_COUNT bits
@@ -119,7 +119,7 @@ class AXIInterconnectConfig
     for (i <- 0 until mCount) {
       for (j <- 0 until mRegions) {
         if (mAddrWidth(i)(j) != 0 && mAddrWidth(i)(j) < 12 || mAddrWidth(i)(j) > addrWidth) {
-          err(s"address is ${mAddrWidth(i)(j)} width out of range (instance %m)")
+          err(s"request is ${mAddrWidth(i)(j)} width out of range (instance %m)")
           flag = false
         }
       }
@@ -164,7 +164,7 @@ class AXIInterconnectConfig
                 err("Overlapping regions:")
                 err(regionInfo(i, j, mbaua.toBigInt, mawa, starta, enda))
                 err(regionInfo(ii, jj, mbaub.toBigInt, mawb, startb, endb))
-                err("address range overlap (instance %m")
+                err("request range overlap (instance %m")
               }
             }
           }

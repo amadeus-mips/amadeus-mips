@@ -1,9 +1,9 @@
 package cpu.cache
 
+import axi.AXIIO
 import chisel3._
 import chisel3.util._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
-import axi.AXIIO
 import shared.Constants
 
 //TODO: what if trap during write
@@ -41,7 +41,7 @@ class UnCachedUnit extends Module {
   io.axi.ar.bits.addr := virToPhy(addr = readAddressReg)
   io.axi.ar.bits.len := 0.U(4.W)
   io.axi.ar.bits.size := "b010".U(3.W) // 4 Bytes
-  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-address burst
+  io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-request burst
   io.axi.ar.bits.lock := 0.U
   io.axi.ar.bits.cache := 0.U
   io.axi.ar.bits.prot := 0.U

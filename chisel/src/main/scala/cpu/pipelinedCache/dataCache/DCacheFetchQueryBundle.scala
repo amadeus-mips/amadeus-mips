@@ -5,7 +5,6 @@ import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.instCache.fetch.ICacheFetchQueryBundle
 
 class DCacheFetchQueryBundle(implicit cacheConfig: CacheConfig) extends ICacheFetchQueryBundle {
-  val writeEnable = Bool()
   val writeData   = Vec(4, UInt(8.W))
   val writeMask   = Vec(4, Bool())
 

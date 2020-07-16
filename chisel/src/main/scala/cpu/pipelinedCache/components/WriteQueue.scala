@@ -29,7 +29,7 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
   val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
 
-  // separate the associative address, data and valid
+  // separate the associative request, data and valid
   val addrBank = Reg(Vec(capacity, new RecordAddressBundle))
   // valid bank
   val validBank = RegInit(VecInit(Seq.fill(capacity)(false.B)))

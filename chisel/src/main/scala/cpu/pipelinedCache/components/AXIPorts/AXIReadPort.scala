@@ -10,9 +10,9 @@ import cpu.pipelinedCache.CacheConfig
 /**
   * AXI read port is an interface to AXI Bus
   *
-  * @param addrReqWidth : how wide should the address request be
+  * @param addrReqWidth : how wide should the request request be
   * @param AXIID        : what is the AXI ID for this port (hard coded)
-  * @param burstLen     : What's the address length for the axi port (hard coded)
+  * @param burstLen     : What's the request length for the axi port (hard coded)
   */
 @chiselName
 class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Module {
@@ -21,7 +21,7 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cac
     /** standard axi interface */
     val axi = AXIIO.master()
 
-    /** when address request is valid, try to start a read transaction.
+    /** when request request is valid, try to start a read transaction.
       * a read transaction is started successfully when there is a successful handshake*/
     val addrReq = Flipped(Valid(UInt(addrReqWidth.W)))
 
@@ -33,7 +33,7 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cac
   })
 
   // requirements for the parameters
-  require(addrReqWidth <= 32, "address should be less than 32 bits wide")
+  require(addrReqWidth <= 32, "request should be less than 32 bits wide")
 
   val readIdle :: readWaitForAR :: readTransfer :: Nil = Enum(3)
   val readState                                        = RegInit(readIdle)

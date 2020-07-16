@@ -8,7 +8,7 @@ import chisel3.util.log2Ceil
   * by default, this is initialized to all 0
   *
   * @param dataWidth      : the size of the data to store in each line, in bits
-  * @param addrWidth      : the width of address
+  * @param addrWidth      : the width of request
   * @param byteWriteWidth : addressable size of write
   * @param numberOfLines  : how many **bits** there are in the memory
   */
@@ -30,12 +30,12 @@ class LUTRamIP(dataWidth: Int, addrWidth: Int, byteWriteWidth: Int, numberOfLine
       )
     ) {
   override def desiredName: String = "xpm_memory_dpdistram"
-  require(addrWidth == log2Ceil(numberOfLines), "address width should be log 2 of number of lines to address all")
+  require(addrWidth == log2Ceil(numberOfLines), "request width should be log 2 of number of lines to request all")
   require(
     dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,
     "data width should be a multiple of byte write width"
   )
-  require(addrWidth <= 20, "address width should be 1 to 20")
+  require(addrWidth <= 20, "request width should be 1 to 20")
   val io = IO(new Bundle {
     val clka = Input(Clock())
     val clkb = Input(Clock())

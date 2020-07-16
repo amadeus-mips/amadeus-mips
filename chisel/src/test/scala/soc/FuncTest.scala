@@ -6,7 +6,7 @@ class FuncNoVcdTest extends ChiselFlatSpec {
   /** soc config */
   implicit val socCfg = SocConfig.funcConfig(simulation = false, performanceMonitor = false)
   /** test config */
-  implicit val tcfg = new TestConfig(trace = true, performanceMonitorEnable = true)
+  implicit val tcfg = new TestConfig(trace = true, performanceMonitorEnable =false)
 
   "func test" should "use verilator without vcd file with performance metrics enabled" in {
     Driver.execute(

@@ -5,8 +5,6 @@ import java.io.{BufferedWriter, FileOutputStream, OutputStreamWriter}
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
-import chisel3.stage.ChiselStage
-import chisel3.util._
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import memory.memoryAXIWrap
 import org.scalatest.{FlatSpec, Matchers}
@@ -34,7 +32,7 @@ class PerfectMemory(size: Int) {
 
   def writeToMem(addr: Int, data: List[Int], writeMask: List[Boolean]): Unit = {
     require(writeMask.length == 4, "write mask should have a length of 4")
-    require(addr % 4 == 0, "address should be aligned by 4")
+    require(addr % 4 == 0, "request should be aligned by 4")
     val addrList = Seq.tabulate(4)(addr + _)
     for (i <- 0 until 4) {
       if (writeMask(i)) {
@@ -44,7 +42,7 @@ class PerfectMemory(size: Int) {
   }
 
   def readFromMem(addr: Int): List[Int] = {
-    require(addr % 4 == 0, "address should be aligned by 4")
+    require(addr % 4 == 0, "request should be aligned by 4")
     val dataList = List.tabulate[Int](4)((offSet: Int) => memory(offSet + addr))
     dataList
   }
@@ -95,8 +93,8 @@ class ICacheTestModule extends Module {
 
 class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extends PeekPokeTester(dut) {
   /**
-    * read the memory at addr and compare it with the golden memory
-    * @param addr the memory op address
+    * read the memory at bankIndex and compare it with the golden memory
+    * @param addr the memory op request
     */
   def memRead(addr: Int): Unit = {
     poke(dut.io.wChannel.enable, false)
@@ -114,14 +112,14 @@ class DCacheBaseTester(dut: DCacheTestModule, goldenModel: PerfectMemory) extend
     expect(
       dut.io.rChannel.data,
       result,
-      s"the read address is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+      s"the read request is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
     )
     step(1)
   }
 
   /**
-    * write a random value to addr and update the golden model
-    * @param addr write at addr
+    * write a random value to bankIndex and update the golden model
+    * @param addr write at bankIndex
     * @param mask the write mask
     */
   def memWrite(addr: Int, mask: List[Boolean] = List.fill(4)(true)): Unit = {
@@ -165,7 +163,7 @@ class ICacheBaseTester(dut: ICacheTestModule, goldenModel: PerfectMemory) extend
     expect(
       dut.io.rChannel.data,
       result,
-      s"the read address is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
+      s"the read request is ${addr} the rchannel output is ${peek(dut.io.rChannel.data).toString(16)}, the expected result is ${result.toString(16)}"
     )
     step(1)
   }

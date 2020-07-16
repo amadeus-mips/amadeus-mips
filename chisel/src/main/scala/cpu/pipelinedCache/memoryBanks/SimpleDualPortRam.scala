@@ -63,7 +63,7 @@ class SimpleDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implic
     io.dataR := memory.io.doutb
   } else {
     assert(io.writeVector.orR || !io.enW, "when write port enable is high, write vector cannot be all 0")
-    assert(!(io.enR && io.enW && io.addrR === io.addrW), s"there should not have been an address collision, the address is ${io.addrR}")
+    assert(!(io.enR && io.enW && io.addrR === io.addrW), s"there should not have been an request collision, the request is ${io.addrR}")
     if (byteAddressable) {
       val bank = SyncReadMem(depth, Vec(width / 8, UInt(8.W)))
       when(io.enR) {

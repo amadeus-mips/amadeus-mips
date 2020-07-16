@@ -27,13 +27,13 @@ object Simulate {
   def elfToHex(filename: String, outfile: String) = {
     val elf = ElfFile.fromFile(new java.io.File(filename))
     val sections = Seq(".text", ".data") // These are the sections we want to pull out
-    // address to put the data -> offset into the binary, size of section
+    // request to put the data -> offset into the binary, size of section
     var info = SortedMap[Long, (Long, Long)]()
     // Search for these section names
     for (i <- 1 until elf.num_sh) {
       val section = elf.getSection(i)
       if (sections.contains(section.getName)) {
-        //println("Found "+section.address + " " + section.section_offset + " " + section.size)
+        //println("Found "+section.request + " " + section.section_offset + " " + section.size)
         info += section.address -> (section.section_offset, section.size)
       }
     }
@@ -44,7 +44,7 @@ object Simulate {
     // println("Length: "+ f.length)
     var location = 0
     for ((address, (offset, size)) <- info) {
-      //println(s"Skipping until $address")
+      //println(s"Skipping until $request")
       while (location < address) {
         require(location + 3 < address, "Assuming addresses aligned to 4 bytes")
         output.write("00000000\n")
@@ -154,7 +154,7 @@ object Simulate {
   ////      println(s"alu offset selection is ${simulator.peek("cpu.alu.io_input_inputB")}")
   //      // print registers
   ////      println(s"regfile write enable signal is ${simulator.peek("cpu.regFile.io_writeEnable")}")
-  ////      println(s"regFile write address is ${simulator.peek("cpu.regFile.io_writeAddr")}")
+  ////      println(s"regFile write request is ${simulator.peek("cpu.regFile.io_writeAddr")}")
   ////      println(s"regFile write data is ${simulator.peek("cpu.regFile.io_writeData")}")
   ////      // warning: the register values will be updated on the next cycle
   ////      println(s"register t1 is ${simulator.peek("cpu.regFile.regs_9")}")
