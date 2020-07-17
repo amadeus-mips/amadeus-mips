@@ -3,7 +3,7 @@ package soc
 import chisel3.iotesters.PeekPokeTester
 
 class SystemTester(c: SocUpTop)(implicit cfg: SystemTestConfig) extends PeekPokeTester(c) {
-  val nioReader: NIOReader = new SocketReader(9654)
+  val nioReader: NIOWrapper = new SocketWrapper(9654)
 
   var pc:    BigInt = peek(c.io.debug.wbPC)
   var wen:   BigInt = peek(c.io.debug.wbRegFileWEn)
