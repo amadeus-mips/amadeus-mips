@@ -41,6 +41,7 @@ class SocketWrapper(port: Int) extends NIOWrapper {
     } else {
       buf.clear()
       bytesLen = socket.read(buf)
+      buf.flip()
       if (bytesLen > 0) {
         bytesLen -= 1
         Some(buf.get())
@@ -60,7 +61,7 @@ object NIOWrapperTest extends App {
   wrapper.send("MONITOR for MIPS32 - initialized.".toCharArray.map(_.toByte))
   while (true) {
     wrapper.next match {
-      case Some(b) => println(s"get data ${b.toString}")
+      case Some(b) => println(s"get data ${b.toChar}")
       case None =>
         println("sleeping")
         TimeUnit.SECONDS.sleep(1)
