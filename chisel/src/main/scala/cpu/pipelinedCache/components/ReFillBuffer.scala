@@ -29,7 +29,7 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
       * 2. read data is valid at bank index in refill buffer*/
     val queryResult = Valid(UInt(32.W))
 
-    /** connect directly to banks, used for write back */
+    /** connect directly to [[cpu.pipelinedCache.dataCache.DataBanks]], used for write back */
     val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
   })
 

@@ -35,7 +35,7 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
       * 2. read data is valid at bank index in refill buffer*/
     val queryResult = Valid(UInt(32.W))
 
-    /** connect directly to banks, used for write back */
+    /** connect directly to [[cpu.pipelinedCache.dataCache.DataBanks]], used for write back */
     val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
   })
 
@@ -50,13 +50,29 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   /** writePtr points to the next location to write */
   val writePtr = Reg(UInt(log2Ceil(cacheConfig.numOfBanks).W))
 
-//  io.request.ready := state === sTransfer && io.request.bits.bankIndex =/= writePtr
+  /** if the query (r/w) this cycle hits in the write data from axi read port */
+  val hitInInputData = WireInit(io.request.bits.bankIndex === writePtr && io.inputData.valid)
 
+  val refillWriteData = WireInit(
+    Cat(
+      (3 to 0 by -1).map(i =>
+        Mux(
+          (io.request.bits.bankIndex === writePtr && io.request.bits.writeMask(i)),
+          io.request.bits
+            .writeData(8 * i + 7, 8 * i),
+          io.inputData.bits(8 * i + 7, 8 * i)
+        )
+      )
+    )
+  )
+
+  /** write query is always valid, read query is valid when there is a hit in InputData or
+    * the read position is all valid */
   io.queryResult.valid := (bufferValidMask(
     io.request.bits.bankIndex
-  ) === 15.U && io.request.bits.writeMask === 0.U) || (io.request.bits.writeMask =/= 0.U)
+  ) === 15.U && io.request.bits.writeMask === 0.U) || (io.request.bits.writeMask =/= 0.U) || hitInInputData
 
-  io.queryResult.bits := buffer(io.request.bits.bankIndex)
+  io.queryResult.bits := Mux(hitInInputData, io.inputData.bits, buffer(io.request.bits.bankIndex))
 
   io.allData := buffer
 
@@ -76,13 +92,21 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
       }
     }
     is(sTransfer) {
-      when(io.inputData.valid) {
-        writePtr := writePtr + 1.U
-        buffer(writePtr) := Cat(
+      when(io.request.valid) {
+        buffer(io.request.bits.bankIndex) := Cat(
           (3 to 0 by -1).map(i =>
-            Mux(oldRefillMask(i), oldRefillData(8 * i + 7, 8 * i), io.inputData.bits(8 * i + 7, 8 * i))
+            Mux(
+              io.request.bits.writeMask(i),
+              io.request.bits.writeData(8 * i + 7, 8 * i),
+              buffer(io.request.bits.bankIndex)(8 * i + 7, 8 * i)
+            )
           )
         )
+      }
+      // when request data collides with input data, last connect semantic will kick in to ensure the right data is written
+      when(io.inputData.valid) {
+        writePtr                  := writePtr + 1.U
+        buffer(writePtr)          := refillWriteData
         bufferValidMask(writePtr) := 15.U
       }
       when(io.finish) {
