@@ -23,22 +23,28 @@ class FakeNIO extends NIOWrapper {
 }
 
 class SocketWrapper(port: Int) extends NIOWrapper {
-  val server = ServerSocketChannel.open()
+  private val server = ServerSocketChannel.open()
   server.bind(new InetSocketAddress(port))
   println(s"server listening on $port...")
-  val buf = ByteBuffer.allocate(200)
+  private val buf = ByteBuffer.allocate(200)
   buf.flip()
   val socket = server.accept()
   socket.configureBlocking(false)
   println("connection established")
 
+  var bytesLen = 0
+
   override def next: Option[Byte] = {
-    if (buf.hasRemaining) {
+    if (bytesLen > 0) {
+      bytesLen -= 1
       Some(buf.get())
     } else {
-      buf.flip()
-      val bytesRead = socket.read(buf)
-      if (bytesRead > 0) Some(buf.get())
+      buf.clear()
+      bytesLen = socket.read(buf)
+      if (bytesLen > 0) {
+        bytesLen -= 1
+        Some(buf.get())
+      }
       else None
     }
   }
@@ -54,7 +60,7 @@ object NIOWrapperTest extends App {
   wrapper.send("MONITOR for MIPS32 - initialized.".toCharArray.map(_.toByte))
   while (true) {
     wrapper.next match {
-      case Some(b) => println(s"get data ${b.toChar}")
+      case Some(b) => println(s"get data ${b.toString}")
       case None =>
         println("sleeping")
         TimeUnit.SECONDS.sleep(1)
