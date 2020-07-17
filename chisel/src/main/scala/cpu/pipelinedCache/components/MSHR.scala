@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
+import cpu.pipelinedCache.components.metaBanks.TagValidBundle
 
 class MSHREntry(implicit cacheConfig: CacheConfig) extends Bundle {
   val tag   = UInt(cacheConfig.tagLen.W)
@@ -20,18 +21,26 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
     /** miss request value for mshr input
-      * this `valid` value is key for flushing
-      * ready means there is no miss that is being handled */
-    val missAddr = Flipped(Valid(new MSHREntry))
+      * tag valid at index is for dcache only */
+    val recordMiss = Flipped(Valid(new Bundle {
+      val addr            = new MSHREntry
+      val tagValidAtIndex = Input(Vec(cacheConfig.numOfWays, new TagValidBundle))
+    }))
 
     /** is the current state in a miss? *
       *current missing info*/
-    val mshrInfo = Output(new MSHREntry())
+    val extractMiss = Output(new Bundle {
+      val addr            = new MSHREntry
+      val tagValidAtIndex = Input(Vec(cacheConfig.numOfWays, new TagValidBundle))
+    })
   })
-  val missEntryReg = RegInit(0.U.asTypeOf(new MSHREntry))
-  when(io.missAddr.valid) {
-    missEntryReg := io.missAddr.bits
+  val missEntryReg       = Reg((new MSHREntry))
+  val tagValidAtIndexReg = Reg(Vec(cacheConfig.numOfWays, new TagValidBundle))
+  when(io.recordMiss.valid) {
+    missEntryReg       := io.recordMiss.bits.addr
+    tagValidAtIndexReg := io.recordMiss.bits.tagValidAtIndex
   }
-  io.mshrInfo := missEntryReg
+  io.extractMiss.addr            := missEntryReg
+  io.extractMiss.tagValidAtIndex := tagValidAtIndexReg
 
 }

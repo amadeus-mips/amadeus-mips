@@ -37,6 +37,8 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
     /** connect directly to [[cpu.pipelinedCache.dataCache.DataBanks]], used for write back */
     val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
+
+    val dataDirty = Output(Bool())
   })
 
   val sIdle :: sTransfer :: Nil = Enum(2)
@@ -46,6 +48,9 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
     Vec(cacheConfig.numOfBanks, UInt(32.W))
   )
   val bufferValidMask = RegInit(VecInit(Seq.fill(cacheConfig.numOfBanks)(0.U(4.W))))
+
+  /** have I written to buffer since refill? */
+  val bufferDirty = RegInit(false.B)
 
   /** writePtr points to the next location to write */
   val writePtr = Reg(UInt(log2Ceil(cacheConfig.numOfBanks).W))
@@ -82,11 +87,16 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   val oldRequestData = WireInit(buffer(io.request.bits.bankIndex))
   val oldRequestMask = WireInit(bufferValidMask(io.request.bits.bankIndex))
 
+  when(io.queryResult.valid && io.request.bits.writeMask =/= 0.U) {
+    bufferDirty := true.B
+  }
+
   switch(state) {
     is(sIdle) {
       when(io.request.valid) {
         writePtr        := io.request.bits.bankIndex
         buffer          := 0.U.asTypeOf(buffer)
+        bufferDirty     := false.B
         state           := sTransfer
         bufferValidMask := 0.U.asTypeOf(bufferValidMask)
       }
@@ -111,6 +121,7 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
       }
       when(io.finish) {
         bufferValidMask := 0.U.asTypeOf(bufferValidMask)
+        bufferDirty     := false.B
         state           := sIdle
       }
     }
