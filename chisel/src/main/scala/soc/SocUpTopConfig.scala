@@ -1,5 +1,3 @@
 package soc
 
-class SocUpTopConfig(val memFile: String) {
-
-}
+case class SocUpTopConfig(memFile: String = "./src/test/resources/loongson/system/kernel.coe") {}

@@ -18,7 +18,6 @@ class FakeNIO extends NIOWrapper {
       Some(10.toByte)
     }
   }
-
   override def send(bytes: Seq[Byte]): Unit = {}
 }
 
@@ -32,7 +31,7 @@ class SocketWrapper(port: Int) extends NIOWrapper {
   socket.configureBlocking(false)
   println("connection established")
 
-  var bytesLen = 0
+  private var bytesLen = 0
 
   override def next: Option[Byte] = {
     if (bytesLen > 0) {
@@ -45,8 +44,7 @@ class SocketWrapper(port: Int) extends NIOWrapper {
       if (bytesLen > 0) {
         bytesLen -= 1
         Some(buf.get())
-      }
-      else None
+      } else None
     }
   }
 
@@ -57,11 +55,11 @@ class SocketWrapper(port: Int) extends NIOWrapper {
 
 object NIOWrapperTest extends App {
   val wrapper = new SocketWrapper(9965)
-  println("inited")
+  println("init")
   wrapper.send("MONITOR for MIPS32 - initialized.".toCharArray.map(_.toByte))
   while (true) {
     wrapper.next match {
-      case Some(b) => println(s"get data ${b.toChar}")
+      case Some(b) => println(s"get data $b")
       case None =>
         println("sleeping")
         TimeUnit.SECONDS.sleep(1)

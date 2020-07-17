@@ -11,7 +11,7 @@ import shared.{Constants, Util}
   * Only for simulation
   */
 //noinspection DuplicatedCode
-class AXIRam(memFile: Option[String], addrLen: Int = 20) extends Module {
+class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) extends Module {
   val size = BigInt(1) << addrLen
   val INCR = 1.U
   val WRAP = 2.U
@@ -41,7 +41,8 @@ class AXIRam(memFile: Option[String], addrLen: Int = 20) extends Module {
 
   val mem = Mem(math.ceil(size.toDouble / 4).toInt, UInt(32.W))
   memFile match {
-    case Some(file) => loadMemoryFromFile(mem, file, MemoryLoadFileType.Hex)
+    case Some(file) => loadMemoryFromFile(mem, file, if(bin) MemoryLoadFileType.Binary else MemoryLoadFileType.Hex)
+    case None =>
   }
 
   val wrapMap = Seq(

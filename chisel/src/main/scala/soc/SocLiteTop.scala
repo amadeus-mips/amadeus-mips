@@ -54,7 +54,7 @@ class SocLiteTop(implicit
     })
   })
 
-  implicit val cpuCfg = new CPUConfig(build = false, memoryFile = socCfg.memFile)
+  implicit val cpuCfg = new CPUConfig(build = false, memoryFile = socCfg.memFile, compareRamDirectly = true)
 
   val cpu = Module(new CPUTop(socCfg.performanceMonitor))
 

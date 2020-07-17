@@ -242,19 +242,19 @@ object AXIInterconnectConfig {
     forwardID = true,
     mRegions = 2,
     mBaseAddr = Seq(
-      Seq("hffffffff".U(32.W), "hffffffff".U(32.W)), // ddr3
+      Seq("h00000000".U(32.W), "hffffffff".U(32.W)), // ddr3
       Seq("h1fc00000".U(32.W), "h1fe80000".U(32.W)), // SPI(flash
       Seq("h1fe40000".U(32.W), "hffffffff".U(32.W)), // APB(uart)
       Seq("h1faf0000".U(32.W), "hffffffff".U(32.W)), // CONF
       Seq("hffffffff".U(32.W), "hffffffff".U(32.W)), // MAC: unused
     ),
     mAddrWidth = Seq(
-      Seq(0),
+      Seq(32, 0),
       Seq(20, 16),
       Seq(16, 0),
       Seq(16, 0),
       Seq(0, 0),
     ),
-    mDefaultMatch = 0
+    mDefaultMatch = -1
   )
 }

@@ -19,7 +19,7 @@ class SocUpTop(implicit cfg: SocUpTopConfig) extends Module {
     }
   })
 
-  implicit val cpuConfig = new CPUConfig(build = false, memoryFile = cfg.memFile)
+  implicit val cpuConfig = new CPUConfig(build = false, memoryFile = cfg.memFile, compareRamDirectly = false)
 
   val cpu = Module(new CPUTop())
 
@@ -27,8 +27,8 @@ class SocUpTop(implicit cfg: SocUpTopConfig) extends Module {
   val axiInterconnect = Module(new AXIInterconnect(AXIInterconnectConfig.loongson_system()))
 
   val confreg = Module(new Confreg())
-  val ddr3    = Module(new AXIRam(memFile = Some(cfg.memFile), addrLen = 32))
-  val flash   = Module(new AXIRam(memFile = None, addrLen = 20))
+  val ddr3    = Module(new AXIRam(memFile = None, addrLen = 27))
+  val flash   = Module(new AXIRam(memFile = Some(cfg.memFile), bin = true, addrLen = 20))
   val uart    = Module(new MyUART())
 
   axiInterconnect.io.slaves(0)  <> cpu.io.axi

@@ -46,7 +46,9 @@ class MyUART extends Module {
 
   io.axi.ar.ready    := rwState === arHandshake
   io.axi.r.valid     := rwState === rTransfer
+  io.axi.r.bits.id   := shared.Constants.DATA_ID
   io.axi.r.bits.last := rwState === rTransfer
+  io.axi.r.bits.resp := 0.U
   io.axi.r.bits.data := MuxCase(
     0.U,
     Array(
@@ -62,6 +64,8 @@ class MyUART extends Module {
   io.axi.aw.ready := rwState === awHandshake
   io.axi.w.ready  := rwState === wTransfer
   io.axi.b.valid  := rwState === bTransfer
+  io.axi.b.bits.id := shared.Constants.DATA_ID
+  io.axi.b.bits.resp := 0.U
 
   io.outputData.bits  := writeDataReg
   io.outputData.valid := rwState === bTransfer && writeAddrReg === 0.U && lcrReg(7) === 0.U
@@ -107,9 +111,9 @@ class MyUART extends Module {
           writeAddrReg := MuxCase(
             writeAddrWire,
             Array(
-              (io.axi.w.bits.strb(1)) -> (writeAddrWire + 1.U),
-              (io.axi.w.bits.strb(2)) -> (writeAddrWire + 2.U),
-              (io.axi.w.bits.strb(3)) -> (writeAddrWire + 3.U)
+              io.axi.w.bits.strb(1) -> (writeAddrWire + 1.U),
+              io.axi.w.bits.strb(2) -> (writeAddrWire + 2.U),
+              io.axi.w.bits.strb(3) -> (writeAddrWire + 3.U)
             )
           )
         }
