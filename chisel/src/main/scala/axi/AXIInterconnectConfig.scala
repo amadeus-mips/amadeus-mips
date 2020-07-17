@@ -191,7 +191,7 @@ class AXIInterconnectConfig
     mRegions: Int,
     mBaseAddr: Seq[Seq[UInt]],
     mAddrWidth: Seq[Seq[Int]],
-    mDefaultMatch: Int = -1,
+    mDefaultMatch: Int,
   ) {
     this(
       sCount = sCount,
@@ -231,7 +231,8 @@ object AXIInterconnectConfig {
     mAddrWidth = Seq(
       Seq(22, 29, 30, 31, 28),
       Seq(16, 0, 0, 0, 0)
-    )
+    ),
+    mDefaultMatch = -1
   )
 
   def loongson_system(sCount: Int = 1) = new AXIInterconnectConfig(
