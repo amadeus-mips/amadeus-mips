@@ -13,7 +13,7 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     /* physical tag for the request */
     val phyTag            = Input(UInt(cacheConfig.tagLen.W))
     val index             = Input(UInt(cacheConfig.indexLen.W))
-    val mshr              = Flipped(Valid(new RecordAddressBundle))
+    val mshr              = Input(new RecordAddressBundle)
     val refillBufferValid = Input(Bool())
 
     val bankHitWay        = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
@@ -32,7 +32,7 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     * and valid must be returned
     */
   io.hitInRefillBuffer :=
-    io.phyTag === io.mshr.bits.tag &&
-      io.index === io.mshr.bits.index &&
+    io.phyTag === io.mshr.tag &&
+      io.index === io.mshr.index &&
       io.refillBufferValid
 }

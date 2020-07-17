@@ -48,14 +48,32 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** is the query hit in the refill buffer */
   val hitInRefillBuffer = WireDefault(comparator.io.hitInRefillBuffer)
 
-  /** is a new miss generated and *accepted* */
-  val newMiss = WireDefault(mshr.io.missAddr.fire)
-
   /** is the query a hit in either places */
   val queryHit = WireDefault(hitInBank || hitInRefillBuffer)
 
+  /** is a new miss generated, but is not guaranteed to be accepted */
+  val newMiss = WireDefault(!queryHit && !passThrough)
+
   /** is the data.valid output high? */
   val validData = WireDefault(queryHit && !passThrough)
+
+  val qIdle :: qRefill :: qWriteBack :: Nil = Enum(3)
+  val qState                                = RegInit(qIdle)
+  switch(qState) {
+    is(qIdle) {
+      when(newMiss) {
+        qState := qRefill
+      }
+    }
+    is(qRefill) {
+      when(axi.io.finishTransfer) {
+        qState := qWriteBack
+      }
+    }
+    is(qWriteBack) {
+      qState := Mux(newMiss, qRefill, qIdle)
+    }
+  }
 
   /** io parts */
 
@@ -69,9 +87,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     )
   )
 
-  io.inAMiss := !mshr.io.missAddr.ready
+  io.inAMiss := qState === qRefill
 
-  io.write.valid               := mshr.io.writeBack
+  io.write.valid               := qState === qWriteBack
   io.write.bits.waySelection   := lru.getLRU(mshr.io.mshrInfo.index)
   io.write.bits.indexSelection := mshr.io.mshrInfo.index
   io.write.bits.tagValid.tag   := mshr.io.mshrInfo.tag
@@ -81,19 +99,17 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.axi := DontCare
   io.axi <> axi.io.axi
 
-  comparator.io.tagValid  := io.fetchQuery.tagValid
-  comparator.io.phyTag    := io.fetchQuery.phyTag
-  comparator.io.index     := io.fetchQuery.index
-  comparator.io.mshr.bits := mshr.io.mshrInfo
-  // is the state in a miss
-  comparator.io.mshr.valid        := !mshr.io.missAddr.ready
+  comparator.io.tagValid          := io.fetchQuery.tagValid
+  comparator.io.phyTag            := io.fetchQuery.phyTag
+  comparator.io.index             := io.fetchQuery.index
+  comparator.io.mshr              := mshr.io.mshrInfo
   comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
 
   // when is in miss
-  refillBuffer.io.bankIndex.valid := newMiss || (!mshr.io.missAddr.ready && !refillBuffer.io.finish)
+  refillBuffer.io.bankIndex.valid := newMiss || (qState === qRefill && !refillBuffer.io.finish)
   refillBuffer.io.bankIndex.bits  := io.fetchQuery.bankIndex
-  refillBuffer.io.inputData  := axi.io.transferData
-  refillBuffer.io.finish     := axi.io.finishTransfer
+  refillBuffer.io.inputData       := axi.io.transferData
+  refillBuffer.io.finish          := axi.io.finishTransfer
 
   readHolder.io.input.valid := validData && !io.data.ready
   readHolder.io.input.bits := MuxCase(
@@ -117,11 +133,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   axi.io.addrReq.valid := newMiss
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.missAddr.valid          := !queryHit && !passThrough
+  mshr.io.missAddr.valid          := newMiss && qState =/= qRefill
   mshr.io.missAddr.bits.tag       := io.fetchQuery.phyTag
   mshr.io.missAddr.bits.index     := io.fetchQuery.index
   mshr.io.missAddr.bits.bankIndex := io.fetchQuery.bankIndex
-  mshr.io.axiFinish              := axi.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

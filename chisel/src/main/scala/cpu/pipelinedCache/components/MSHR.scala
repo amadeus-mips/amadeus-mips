@@ -22,41 +22,16 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
     /** miss request value for mshr input
       * this `valid` value is key for flushing
       * ready means there is no miss that is being handled */
-    val missAddr = Flipped(Decoupled(new MSHREntry))
-
-    /** [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]] has finished transferring */
-    val axiFinish = Input(Bool())
-
-    /** do we write back *this* cycle*/
-    val writeBack = Output(Bool())
+    val missAddr = Flipped(Valid(new MSHREntry))
 
     /** is the current state in a miss? *
       *current missing info*/
     val mshrInfo = Output(new MSHREntry())
   })
   val missEntryReg = RegInit(0.U.asTypeOf(new MSHREntry))
-  val wbNext       = RegInit(false.B)
-  wbNext := false.B
-  val sIdle :: sTransfer :: Nil = Enum(2)
-  val state                     = RegInit(sIdle)
-
-  io.writeBack      := wbNext
-  io.mshrInfo       := missEntryReg
-  io.missAddr.ready := state === sIdle
-
-  switch(state) {
-    is(sIdle) {
-      when(io.missAddr.valid) {
-        missEntryReg := io.missAddr.bits
-        state        := sTransfer
-      }
-    }
-    is(sTransfer) {
-      when(io.axiFinish) {
-        wbNext := true.B
-        state  := sIdle
-      }
-    }
+  when(io.missAddr.valid) {
+    missEntryReg := io.missAddr.bits
   }
+  io.mshrInfo := missEntryReg
 
 }
