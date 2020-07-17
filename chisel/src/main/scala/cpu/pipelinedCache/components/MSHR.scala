@@ -24,8 +24,8 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
       * ready means there is no miss that is being handled */
     val missAddr = Flipped(Decoupled(new MSHREntry))
 
-    /** is the refill buffer ready for write back*/
-    val readyForWB = Input(Bool())
+    /** [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]] has finished transferring */
+    val axiFinish = Input(Bool())
 
     /** do we write back *this* cycle*/
     val writeBack = Output(Bool())
@@ -52,7 +52,7 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
       }
     }
     is(sTransfer) {
-      when(io.readyForWB) {
+      when(io.axiFinish) {
         wbNext := true.B
         state  := sIdle
       }

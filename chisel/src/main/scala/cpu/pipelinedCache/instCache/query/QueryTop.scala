@@ -121,7 +121,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   mshr.io.missAddr.bits.tag       := io.fetchQuery.phyTag
   mshr.io.missAddr.bits.index     := io.fetchQuery.index
   mshr.io.missAddr.bits.bankIndex := io.fetchQuery.bankIndex
-  mshr.io.readyForWB              := axi.io.finishTransfer
+  mshr.io.axiFinish              := axi.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

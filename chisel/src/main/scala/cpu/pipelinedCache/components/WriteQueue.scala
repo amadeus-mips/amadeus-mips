@@ -5,6 +5,7 @@ import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.{QueryAddressBundle, RecordAddressBundle}
 
+//TODO: hit in bust write queue?
 class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
@@ -23,7 +24,7 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
     })
 
     /** response to the query */
-    val respData = Valid(UInt(32.W))
+    val resp = Valid(UInt(32.W))
 
     /** dequeue address information, to dispatch to [[cpu.pipelinedCache.components.AXIPorts.AXIWritePort]] */
     val dequeueAddr = Decoupled(new RecordAddressBundle)
@@ -36,9 +37,13 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
   })
   require(isPow2(capacity))
 
-  // size of the write queue
-  val size    = RegInit(0.U(log2Ceil(capacity).W))
+  /** size of the queue: how many entries are in this queue */
+  val size = RegInit(0.U(log2Ceil(capacity).W))
+
+  /** points to the head of the queue */
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
+
+  /** points to the head of the queue */
   val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
 
   /** write ptr within a cache line */
@@ -47,28 +52,52 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
   val dIdle :: dDispatch :: Nil = Enum(2)
   val dispatchState             = RegInit(dIdle)
 
-  val dispatchDataWire = Wire(UInt(32.W))
   // separate the associative request, data and valid
   val addrBank = Reg(Vec(capacity, new RecordAddressBundle))
   // valid bank
   val validBank = RegInit(VecInit(Seq.fill(capacity)(false.B)))
   // data banks
-  for (i <- 0 until capacity) {
-    val dataBank = Mem(cacheConfig.numOfBanks, Vec(4, UInt(8.W)))
-    dataBank.suggestName(s"data_bank_No.$i")
-    when(i.U === headPTR) {
-      dispatchDataWire := dataBank(lineWritePTR)
-    }
+  val dataBanks = Vec(capacity, Reg(Vec(cacheConfig.numOfBanks, Vec(4, UInt(8.W)))))
+
+  val dispatchDataWire = WireInit(dataBanks(headPTR)(lineWritePTR))
+
+  val queryHitVec = Wire(Vec(cacheConfig.numOfBanks, Bool()))
+  queryHitVec := (addrBank.zip(validBank)).map {
+    case (addr, valid) => ((addr.index === io.query.addr.index) && (addr.tag === io.query.addr.phyTag) && valid)
   }
+  val queryHitPos = queryHitVec.lastIndexOf(true.B)
+  val isQueryHit  = queryHitVec.asUInt === 0.U
 
-  // AXI registers, to comply with axi rules
-
+  /** enqueue io, when not full, enqueue is ready */
   io.enqueue.ready := size =/= capacity.U
 
+  io.resp.valid := isQueryHit
+  io.resp.bits  := dataBanks(queryHitPos)(io.query.addr.bankIndex)
+
+  /** dequeue io, always dequeue when fifo is not empty */
   io.dequeueAddr.bits  := addrBank(headPTR)
   io.dequeueAddr.valid := Mux(dispatchState === dDispatch, true.B, size =/= 0.U)
   io.dequeueData.bits  := dispatchDataWire
   io.dequeueData.valid := Mux(dispatchState === dDispatch, true.B, size =/= 0.U)
+
+  io.dequeueLast := (lineWritePTR === (cacheConfig.numOfBanks - 1).U) && dispatchState === dDispatch
+
+  when(io.enqueue.fire) {
+    addrBank(tailPTR)  := io.enqueue.bits.addr
+    validBank(tailPTR) := true.B
+    dataBanks(tailPTR) := io.enqueue.bits.data
+    tailPTR            := tailPTR - 1.U
+    size               := size + 1.U
+  }
+
+  // write query
+  when(io.query.writeMask.asUInt =/= 0.U && isQueryHit) {
+    dataBanks(queryHitPos)(io.query.addr.bankIndex) := Cat(
+      (3 to 0 by -1).map(i =>
+        Mux(io.query.writeMask(i), io.query.data(i), dataBanks(queryHitPos)(io.query.addr.bankIndex)(i))
+      )
+    )
+  }
 
   switch(dispatchState) {
     is(dIdle) {
@@ -78,10 +107,15 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
       }
     }
     is(dDispatch) {
-      when()
+      when(io.dequeueData.fire) {
+        lineWritePTR := lineWritePTR + 1.U
+      }
+      when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
+        dispatchState := dIdle
+      }
     }
   }
 
   assert(size === 0.U || (size =/= 0.U && validBank(headPTR)))
-
+  assert(headPTR =/= tailPTR || (headPTR === tailPTR && (size === 0.U || size === (cacheConfig.numOfBanks - 1).U)))
 }

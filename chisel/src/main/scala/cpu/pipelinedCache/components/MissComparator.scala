@@ -6,7 +6,7 @@ import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.RecordAddressBundle
 import cpu.pipelinedCache.components.metaBanks.TagValidBundle
 
-class MissComparator(implicit cacheConfig: CacheConfig) extends Module {
+class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     /* tag valid bundle for all ways*/
     val tagValid = Input(Vec(cacheConfig.numOfWays, new TagValidBundle))
