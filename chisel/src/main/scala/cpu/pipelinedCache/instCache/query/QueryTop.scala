@@ -46,7 +46,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
 
   /** is the query hit in the refill buffer */
-  val hitInRefillBuffer = WireDefault(comparator.io.hitInRefillBuffer)
+  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid)
 
   /** is the query a hit in either places */
   val queryHit = WireDefault(hitInBank || hitInRefillBuffer)
@@ -82,8 +82,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.data.bits := MuxCase(
     io.bankData(comparator.io.bankHitWay.bits),
     Seq(
-      readHolder.io.output.valid      -> readHolder.io.output.bits,
-      comparator.io.hitInRefillBuffer -> refillBuffer.io.queryResult.bits
+      readHolder.io.output.valid          -> readHolder.io.output.bits,
+      hitInRefillBuffer -> refillBuffer.io.queryResult.bits
     )
   )
 
@@ -103,7 +103,6 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   comparator.io.phyTag            := io.fetchQuery.phyTag
   comparator.io.index             := io.fetchQuery.index
   comparator.io.mshr              := mshr.io.extractMiss.addr
-  comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
 
   // when is in miss
   refillBuffer.io.bankIndex.valid := newMiss
@@ -115,7 +114,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   readHolder.io.input.bits := MuxCase(
     readHolder.io.output.bits,
     Seq(
-      comparator.io.hitInRefillBuffer                                 -> refillBuffer.io.queryResult.bits,
+      hitInRefillBuffer                             -> refillBuffer.io.queryResult.bits,
       (comparator.io.bankHitWay.valid && !readHolder.io.output.valid) -> io.bankData(comparator.io.bankHitWay.bits)
     )
   )

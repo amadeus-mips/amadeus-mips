@@ -11,13 +11,12 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     /* tag valid bundle for all ways*/
     val tagValid = Input(Vec(cacheConfig.numOfWays, new TagValidBundle))
     /* physical tag for the request */
-    val phyTag            = Input(UInt(cacheConfig.tagLen.W))
-    val index             = Input(UInt(cacheConfig.indexLen.W))
-    val mshr              = Input(new RecordAddressBundle)
-    val refillBufferValid = Input(Bool())
+    val phyTag = Input(UInt(cacheConfig.tagLen.W))
+    val index  = Input(UInt(cacheConfig.indexLen.W))
+    val mshr   = Input(new RecordAddressBundle)
 
     val bankHitWay        = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
-    val hitInRefillBuffer = Output(Bool())
+    val addrHitInRefillBuffer = Output(Bool())
   })
 
   val bankHitVec = Wire(Vec(cacheConfig.numOfWays, Bool()))
@@ -31,8 +30,7 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     * when there is a hit in the refill buffer, the tag much be equal to missing tag, index much match
     * and valid must be returned
     */
-  io.hitInRefillBuffer :=
+  io.addrHitInRefillBuffer :=
     io.phyTag === io.mshr.tag &&
-      io.index === io.mshr.index &&
-      io.refillBufferValid
+      io.index === io.mshr.index
 }

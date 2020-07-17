@@ -42,7 +42,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
 
   /** is the query hit in the refill buffer */
-  val hitInRefillBuffer = WireDefault(comparator.io.hitInRefillBuffer)
+  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer)
 
   //TODO: use this
   val hitInWriteQueue = WireDefault(false.B)
@@ -97,10 +97,14 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   comparator.io.phyTag            := io.fetchQuery.phyTag
   comparator.io.index             := io.fetchQuery.index
   comparator.io.mshr              := mshr.io.extractMiss.addr
-  comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
 
+  /** request valid doesn't mean if the query is valid
+    * it is only asserted when there is a new miss */
   refillBuffer.io.request.valid  := newMiss
-  refillBuffer.io.bankIndex.bits := io.fetchQuery.bankIndex
+  refillBuffer.io.request.bits.bankIndex := io.fetchQuery.bankIndex
+  refillBuffer.io.request.bits.writeData := io.fetchQuery.writeData
+  //TODO
+  refillBuffer.io.request.bits.writeMask := Mux(io.fetchQuery.writeMask)
   refillBuffer.io.inputData      := axiRead.io.transferData
   refillBuffer.io.finish         := axiRead.io.finishTransfer
 
