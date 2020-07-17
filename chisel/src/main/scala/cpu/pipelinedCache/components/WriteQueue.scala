@@ -6,6 +6,7 @@ import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.{QueryAddressBundle, RecordAddressBundle}
 
 //TODO: hit in bust write queue?
+//TODO: reduce wire usage
 class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 

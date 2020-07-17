@@ -20,8 +20,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
     /** dirty data is connected to [[cpu.pipelinedCache.dataCache.DataBanks]]
       * and is queried when write queue is not full */
-    val dirtyData   = Input(Vec(cacheConfig.numOfBanks, UInt(32.W)))
+    val dirtyData = Input(Vec(cacheConfig.numOfBanks, UInt(32.W)))
+
+    /** data path for a read hit */
     val queryCommit = Output(new DCacheCommitBundle())
+
+    /** control path for a hit */
+    val hit = Output(Bool())
   })
 
   val comparator   = Module(new MissComparator)
@@ -31,6 +36,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val axiWrite     = Module(new AXIWritePort(AXIID = DATA_ID))
   val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val writeQueue   = Module(new WriteQueue)
+
+  /** keep all the dirty information, dirty(way)(index) */
+  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))))
 
   val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
   val qState                                          = RegInit(qIdle)
@@ -42,13 +50,11 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
 
   /** is the query hit in the refill buffer */
-  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer)
+  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid)
 
-  //TODO: use this
-  val hitInWriteQueue = WireDefault(false.B)
+  val hitInWriteQueue = WireDefault(writeQueue.io.resp.valid)
 
-  //TODO: use this
-  val writeQueueAvailable = WireDefault(false.B)
+  val writeQueueAvailable = WireDefault(writeQueue.io.enqueue.ready)
 
   /** is a new miss generated, but is not guarateed to be accepted */
   val newMiss = WireDefault(!queryHit && !passThrough)
@@ -60,7 +66,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val validData = WireDefault(queryHit && !passThrough)
 
   /** select lru way for eviction */
-  val lruWay = WireDefault(lru.getLRU(mshr.io.mshrInfo.index))
+  val lruWay = WireDefault(lru.getLRU(mshr.io.extractMiss.addr.index))
 
   /** corner case: write back is also in the idle stage */
   val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
@@ -93,20 +99,30 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.axi <> axiRead.io.axi
   io.axi <> axiWrite.io.axi
 
-  comparator.io.tagValid          := io.fetchQuery.tagValid
-  comparator.io.phyTag            := io.fetchQuery.phyTag
-  comparator.io.index             := io.fetchQuery.index
-  comparator.io.mshr              := mshr.io.extractMiss.addr
+  io.queryCommit.indexSel     := io.fetchQuery.index
+  io.queryCommit.waySel       := comparator.io.bankHitWay.bits
+  io.queryCommit.bankIndexSel := io.fetchQuery.bankIndex
+  io.queryCommit.writeData    := io.fetchQuery.bankIndex
+  io.queryCommit.writeMask    := io.fetchQuery.writeMask
+  io.queryCommit.writeEnable  := hitInBank
+  io.queryCommit.readData     := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
+  io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue'
+  io.hit := queryHit
+
+  comparator.io.tagValid := io.fetchQuery.tagValid
+  comparator.io.phyTag   := io.fetchQuery.phyTag
+  comparator.io.index    := io.fetchQuery.index
+  comparator.io.mshr     := mshr.io.extractMiss.addr
 
   /** request valid doesn't mean if the query is valid
     * it is only asserted when there is a new miss */
-  refillBuffer.io.request.valid  := newMiss
+  refillBuffer.io.request.valid          := newMiss
   refillBuffer.io.request.bits.bankIndex := io.fetchQuery.bankIndex
   refillBuffer.io.request.bits.writeData := io.fetchQuery.writeData
   //TODO
-  refillBuffer.io.request.bits.writeMask := Mux(io.fetchQuery.writeMask)
-  refillBuffer.io.inputData      := axiRead.io.transferData
-  refillBuffer.io.finish         := axiRead.io.finishTransfer
+  refillBuffer.io.request.bits.writeMask := Mux(comparator.io.addrHitInRefillBuffer, io.fetchQuery.writeMask, 0.U)
+  refillBuffer.io.inputData              := axiRead.io.transferData
+  refillBuffer.io.finish                 := axiRead.io.finishTransfer
 
   axiRead.io.addrReq.bits := Mux(
     newMiss,
@@ -140,7 +156,6 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   mshr.io.recordMiss.bits.addr.index      := io.fetchQuery.index
   mshr.io.recordMiss.bits.addr.bankIndex  := io.fetchQuery.bankIndex
   mshr.io.recordMiss.bits.tagValidAtIndex := io.fetchQuery.tagValid
-
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {
