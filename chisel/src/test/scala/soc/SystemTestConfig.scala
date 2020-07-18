@@ -5,5 +5,5 @@ case class SystemTestConfig(
   switchData: BigInt = BigInt("ff", 16),
   needBlockingIO: Boolean = false,
   blockingIOCycle: BigInt = BigInt(1000000),
-  cycleLimit: BigInt = BigInt(2000000)
+  cycleLimit: BigInt = BigInt(1000000)
 ) {}

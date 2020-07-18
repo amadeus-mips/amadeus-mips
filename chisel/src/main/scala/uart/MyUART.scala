@@ -26,134 +26,146 @@ class MyUART extends Module {
   // offset 4
   val mcrReg = RegInit(0.U(8.W))
   // offset 5
-  val lsrReg = RegInit(0.U(8.W))
+  val lsrReg = RegInit("h20".U(8.W)) // always can be wrote
   // offset 6
   val msrReg = RegInit(0.U(8.W))
-
-  val readAddress  = io.axi.ar.bits.addr(2, 0)
-  val writeAddress = io.axi.aw.bits.addr(2, 0)
 
   val useTL = lcrReg(7)
 
   val readAddrReg  = Reg(UInt(3.W))
   val writeAddrReg = Reg(UInt(3.W))
-  val writeDataReg = Reg(UInt(8.W))
 
-  val writeAddrWire = WireInit(writeAddrReg)
+  val rIdle :: rTransfer :: Nil = Enum(2)
 
-  val rwIdle :: arHandshake :: rTransfer :: awHandshake :: wTransfer :: bTransfer :: Nil = Enum(6)
-  val rwState                                                                            = RegInit(rwIdle)
-
-  io.axi.ar.ready    := rwState === arHandshake
-  io.axi.r.valid     := rwState === rTransfer
-  io.axi.r.bits.id   := shared.Constants.DATA_ID
-  io.axi.r.bits.last := rwState === rTransfer
-  io.axi.r.bits.resp := 0.U
-  io.axi.r.bits.data := MuxCase(
-    0.U,
-    Array(
-      (readAddrReg === 0.U) -> Mux(lcrReg(7), tllReg, datReg),
-      (readAddrReg === 1.U) -> Mux(lcrReg(7), tlhReg, ierReg),
-      (readAddrReg === 2.U) -> iirReg,
-      (readAddrReg === 3.U) -> lcrReg,
-      (readAddrReg === 4.U) -> mcrReg,
-      (readAddrReg === 5.U) -> lsrReg,
-      (readAddrReg === 6.U) -> msrReg
-    )
-  )
-  io.axi.aw.ready := rwState === awHandshake
-  io.axi.w.ready  := rwState === wTransfer
-  io.axi.b.valid  := rwState === bTransfer
-  io.axi.b.bits.id := shared.Constants.DATA_ID
-  io.axi.b.bits.resp := 0.U
-
-  io.outputData.bits  := writeDataReg
-  io.outputData.valid := rwState === bTransfer && writeAddrReg === 0.U && lcrReg(7) === 0.U
-
-  io.inputData.ready := rwState === rwIdle && lsrReg(0) === 0.U
-
-  io.interrupt := lsrReg(0) === 1.U
-
-  switch(rwState) {
-    is(rwIdle) {
-      when(io.inputData.fire) {
-        assert(lsrReg(0) === 0.U)
-        lsrReg := lsrReg | "b00000001".U(8.W)
+  val rState = RegInit(rIdle)
+  val readId = RegInit(0.U(4.W))
+  switch(rState) {
+    is(rIdle) {
+      when(io.axi.ar.fire()) {
+        rState      := rTransfer
+        readAddrReg := io.axi.ar.bits.addr(2, 0)
+        readId      := io.axi.ar.bits.id
       }
-      when(io.axi.ar.valid) {
-        rwState := arHandshake
-      }.otherwise {
-        when(io.axi.aw.valid) {
-          rwState := awHandshake
-        }
-      }
-    }
-    is(arHandshake) {
-      // valid should be asserted until handshake
-      readAddrReg := readAddress
-      rwState     := rTransfer
     }
     is(rTransfer) {
-      when(io.axi.r.fire) {
-        when(readAddrReg === 0.U && lcrReg(7) === 0.U) {
-          lsrReg := lsrReg & "b11111110".U(8.W)
-        }
-        rwState := rwIdle
-      }
-    }
-    is(awHandshake) {
-      writeAddrReg := writeAddress
-      rwState      := wTransfer
-    }
-    is(wTransfer) {
-      when(io.axi.w.fire) {
-        when(writeAddrWire(1, 0) === 0.U) {
-          writeAddrReg := MuxCase(
-            writeAddrWire,
-            Array(
-              io.axi.w.bits.strb(1) -> (writeAddrWire + 1.U),
-              io.axi.w.bits.strb(2) -> (writeAddrWire + 2.U),
-              io.axi.w.bits.strb(3) -> (writeAddrWire + 3.U)
-            )
-          )
-        }
-        writeDataReg := io.axi.w.bits.data(7, 0)
-        rwState      := bTransfer
-      }
-    }
-    is(bTransfer) {
-      when(io.axi.b.fire) {
-        when(writeAddrReg === 0.U) {
-          when(lcrReg(7) === 0.U) {
-            io.outputData.valid := true.B
-          }.otherwise {
-            tllReg := writeDataReg
-          }
-        }.elsewhen(writeAddrReg === 1.U) {
-            when(lcrReg(7) === 0.U) {
-              ierReg := writeDataReg
-            }.otherwise {
-              tlhReg := writeDataReg
-            }
-          }
-          .elsewhen(writeAddrReg === 2.U) {
-            iirReg := writeDataReg
-          }
-          .elsewhen(writeAddrReg === 3.U) {
-            lcrReg := writeDataReg
-          }
-          .elsewhen(writeAddrReg === 4.U) {
-            mcrReg := writeDataReg
-          }
-          .elsewhen(writeAddrReg === 5.U) {
-            lsrReg := writeDataReg
-          }
-          .elsewhen(writeAddrReg === 6.U) {
-            msrReg := writeDataReg
-          }
+      when(io.axi.r.fire()) {
+        rState := rIdle
       }
     }
   }
+
+  io.axi.ar.ready    := rState === rIdle
+  io.axi.r.valid     := rState === rTransfer
+  io.axi.r.bits.id   := readId
+  io.axi.r.bits.last := rState === rTransfer
+  io.axi.r.bits.resp := 0.U
+  io.axi.r.bits.data := Fill(
+    4,
+    MuxLookup(
+      readAddrReg,
+      0.U,
+      Array(
+        0.U -> Mux(useTL, tllReg, datReg),
+        1.U -> Mux(useTL, tlhReg, ierReg),
+        2.U -> iirReg,
+        3.U -> lcrReg,
+        4.U -> mcrReg,
+        5.U -> lsrReg,
+        6.U -> msrReg
+      )
+    )
+  )
+
+  val wIdle :: wTransfer :: bResp :: Nil = Enum(3)
+
+  val wState  = RegInit(wIdle)
+  val writeId = RegInit(0.U(4.W))
+
+  val writeAddress = MuxCase(
+    writeAddrReg,
+    Seq(
+      io.axi.w.bits.strb(1) -> (writeAddrReg + 1.U),
+      io.axi.w.bits.strb(2) -> (writeAddrReg + 2.U),
+      io.axi.w.bits.strb(3) -> (writeAddrReg + 3.U)
+    )
+  )
+  val writeData = MuxCase(
+    io.axi.w.bits.data(7, 0),
+    Seq(
+      io.axi.w.bits.strb(1) -> io.axi.w.bits.data(15, 8),
+      io.axi.w.bits.strb(2) -> io.axi.w.bits.data(23, 16),
+      io.axi.w.bits.strb(3) -> io.axi.w.bits.data(31, 24)
+    )
+  )
+  switch(wState) {
+    is(wIdle) {
+      when(io.axi.aw.fire()) {
+        wState       := wTransfer
+        writeAddrReg := io.axi.aw.bits.addr(2, 0)
+        writeId      := io.axi.aw.bits.id
+      }
+    }
+    is(wTransfer) {
+      when(io.axi.w.fire()) {
+        wState := bResp
+        switch(writeAddress) {
+          is(0.U) {
+            when(useTL === 0.U) {
+              datReg := writeData
+            }.otherwise {
+              tllReg := writeData
+            }
+          }
+          is(1.U) {
+            when(useTL === 0.U) {
+              ierReg := writeData
+            }.otherwise {
+              tlhReg := writeData
+            }
+          }
+          is(2.U) {
+            fifoReg := writeData
+          }
+          is(3.U) {
+            lcrReg := writeData
+          }
+          is(4.U) {
+            mcrReg := writeData
+          }
+          is(5.U) {
+//            lsrReg := writeData // readonly
+          }
+          is(6.U) {
+//            msrReg := writeData // readonly
+          }
+        }
+      }
+    }
+    is(bResp) {
+      when(io.axi.b.fire()) {
+        wState := wIdle
+      }
+    }
+  }
+
+  io.axi.aw.ready    := wState === wIdle
+  io.axi.w.ready     := wState === wTransfer
+  io.axi.b.valid     := wState === bResp
+  io.axi.b.bits.id   := writeId
+  io.axi.b.bits.resp := 0.U
+
+  io.outputData.bits  := writeData
+  io.outputData.valid := wState === wTransfer && io.axi.w.fire() && !useTL && writeAddress === 0.U
+
+  io.inputData.ready := lsrReg(0) === 0.U
+  when(io.inputData.fire()) {
+    datReg := io.inputData.bits
+    lsrReg := lsrReg | "b00000001".U(8.W)
+  }.elsewhen(io.axi.r.fire() && readAddrReg === 0.U && !useTL) {
+    lsrReg := lsrReg & "b11111110".U(8.W)
+  }
+
+  io.interrupt := lsrReg(0) === 1.U
 
   def write(oldData: UInt, newData: UInt, mask: UInt): Unit = {
     require(oldData.getWidth == 8)

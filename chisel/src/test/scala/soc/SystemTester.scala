@@ -76,19 +76,21 @@ class SystemTester(c: SocUpTop)(implicit cfg: SystemTestConfig) extends PeekPoke
     step(1)
   }
 
-  def writeToUartSimu(): Unit = {
+  def ReadFromUartSimu(): Unit = {
     if(peek(c.io.uart.out.valid) != 0) {
-      val ch = peek(c.io.uart.out.bits).toByte
-      nioWrapper.send(Seq(ch))
+      val ch = peek(c.io.uart.out.bits)
+      log(s"read ${ch.toChar.toString} from uart")
+      nioWrapper.send(Seq(ch.toByte))
     }
   }
 
-  def ReadFromUartSimu(): Unit = {
+  def writeToUartSimu(): Unit = {
     if(peek(c.io.uart.in.ready) != 0) {
       nioWrapper.next match {
         case Some(b) =>
           poke(c.io.uart.in.valid, true)
           poke(c.io.uart.in.bits, b)
+          log(s"write ${b.toChar.toString} to uart")
         case None =>
           poke(c.io.uart.in.valid, false)
       }
