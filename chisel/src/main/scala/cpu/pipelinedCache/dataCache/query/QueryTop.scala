@@ -15,7 +15,7 @@ import shared.LRU.PLRUMRUNM
 class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
     val fetchQuery = Input(new DCacheFetchQueryBundle)
-    val write      = Output(new WriteTagValidBundle)
+    val write      = Valid(new WriteTagValidBundle)
     val axi        = AXIIO.master()
 
     /** dirty data is connected to [[cpu.pipelinedCache.dataCache.DataBanks]]
@@ -25,8 +25,11 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     /** data path for a read hit */
     val queryCommit = Output(new DCacheCommitBundle())
 
-    /** control path for a hit */
+    /** hit reports to pipeline whether next cycle's returned data is valid */
     val hit = Output(Bool())
+
+    /** ready reflects whether last stage's data need to be re-fetched */
+    val ready = Output(Bool())
   })
 
   val comparator   = Module(new MissComparator)
@@ -40,9 +43,6 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** keep all the dirty information, dirty(way)(index) */
   val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))))
 
-  val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
-  val qState                                          = RegInit(qIdle)
-
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid)
 
@@ -54,7 +54,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   val hitInWriteQueue = WireDefault(writeQueue.io.resp.valid)
 
-  val writeQueueAvailable = WireDefault(writeQueue.io.enqueue.ready)
+  /** a successful handshake with the write queue */
+  val dispatchToWriteQSucessful = WireDefault(writeQueue.io.enqueue.ready)
 
   /** is a new miss generated, but is not guarateed to be accepted */
   val newMiss = WireDefault(!queryHit && !passThrough)
@@ -67,7 +68,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   /** lru way records the way to evict, as eviction could last serveral cycles if
     * the write queue if full */
-  val lruWay = Reg(UInt(log2Ceil(cacheConfig.numOfWays).W))
+  val lruWayReg = Reg(UInt(log2Ceil(cacheConfig.numOfWays).W))
+
+  /** if the way to evict at current cycle is dirty */
+  val evictWayDirty = WireDefault(dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index))
 
   /** corner case: write back is also in the idle stage */
   val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
@@ -81,15 +85,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     is(qRefill) {
       when(axiRead.io.finishTransfer) {
 
-        /** this is a bit of combinational logic. When rlast comes,
-          * and write queue is valid, then evict directly. */
-        qState := Mux(writeQueueAvailable, qWriteBack, qEvict)
+        qState := Mux(evictWayDirty, qEvict, qWriteBack)
       }.otherwise {
-        lruWay := lru.getLRU(mshr.io.extractMiss.addr.index)
+        lruWayReg := lru.getLRU(mshr.io.extractMiss.addr.index)
       }
     }
     is(qEvict) {
-      when(writeQueueAvailable) {
+      when(dispatchToWriteQSucessful) {
         qState := qWriteBack
       }
     }
@@ -99,18 +101,48 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
 
+  val isQueryMissAddress = WireDefault(
+    qState === qWriteBack || qState === qEvict || (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty)
+  )
   io.axi <> axiRead.io.axi
   io.axi <> axiWrite.io.axi
 
-  io.queryCommit.indexSel      := io.fetchQuery.index
-  io.queryCommit.waySel        := comparator.io.bankHitWay.bits
-  io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
-  io.queryCommit.writeData     := io.fetchQuery.bankIndex
-  io.queryCommit.writeMask     := io.fetchQuery.writeMask
-  io.queryCommit.writeEnable   := hitInBank
+  io.queryCommit.indexSel := Mux(
+    isQueryMissAddress,
+    mshr.io.extractMiss.addr.index,
+    io.fetchQuery.index
+  )
+  io.queryCommit.waySel := Mux(isQueryMissAddress, lruWayReg, comparator.io.bankHitWay.bits)
+  io.queryCommit.bankIndexSel := Mux(
+    isQueryMissAddress,
+    mshr.io.extractMiss.addr.bankIndex,
+    io.fetchQuery.bankIndex
+  )
+  //FIXME
+  io.queryCommit.writeData   := io.fetchQuery.writeData
+  io.queryCommit.refillData  := refillBuffer.io.allData
+  io.queryCommit.isWriteBack := qState === qWriteBack
+  io.queryCommit.writeMask   := Mux(qState === qWriteBack, "b1111".U(4.W), io.fetchQuery.writeMask)
+  io.queryCommit.writeEnable := MuxCase(
+    hitInBank,
+    Array(
+      (qState === qWriteBack)                                            -> true.B,
+      (qState === qEvict)                                                -> false.B,
+      (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty) -> false.B
+    )
+  )
   io.queryCommit.readData      := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
   io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue
-  io.hit                       := queryHit
+
+  io.write.valid               := qState === qWriteBack
+  io.write.bits.indexSelection := mshr.io.extractMiss.addr.index
+  io.write.bits.waySelection   := lruWayReg
+  io.write.bits.tagValid.tag   := mshr.io.extractMiss.addr.tag
+  io.write.bits.tagValid.valid := true.B
+
+  //FIXME: not sure if this is correct
+  io.hit   := validData && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer)))
+  io.ready := validData && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer)))
 
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
@@ -138,8 +170,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   )
   axiRead.io.addrReq.valid := newMiss
 
-  writeQueue.io.enqueue.valid     := qState === qWriteBack && dirty
-  writeQueue.io.enqueue.bits.addr := mshr.io.extractMiss.tagValidAtIndex(lruWay)
+  writeQueue.io.enqueue.valid     := (qState === qEvict) && dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index)
+  writeQueue.io.enqueue.bits.addr := mshr.io.extractMiss.tagValidAtIndex(lruWayReg)
   writeQueue.io.enqueue.bits.data := io.dirtyData
 
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)

@@ -31,7 +31,7 @@ class MSHR(implicit cacheConfig: CacheConfig) extends Module {
       *current missing info*/
     val extractMiss = Output(new Bundle {
       val addr            = new MSHREntry
-      val tagValidAtIndex = Input(Vec(cacheConfig.numOfWays, new TagValidBundle))
+      val tagValidAtIndex = (Vec(cacheConfig.numOfWays, new TagValidBundle))
     })
   })
   val missEntryReg       = Reg((new MSHREntry))

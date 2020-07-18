@@ -30,14 +30,23 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
     val axi = AXIIO.master()
   })
 
-  val fetch       = Module(new FetchTop)
-  val fetch_query = Module(new CachePipelineStage(new DCacheFetchQueryBundle))
-  val query       = Module(new QueryTop)
-  val dataBanks   = Module(new DataBanks)
-  val controller  = Module(new DCacheController)
+  val fetch        = Module(new FetchTop)
+  val fetch_query  = Module(new CachePipelineStage(new DCacheFetchQueryBundle))
+  val query        = Module(new QueryTop)
+  val dataBanks    = Module(new DataBanks)
+  val query_commit = Module(new CachePipelineStage(new DCacheCommitBundle))
+  val controller   = Module(new DCacheController)
+
+  val readData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 
   io.request.ready := controller.io.inputReady
   io.axi           <> query.io.axi
+  io.commit        := query.io.hit
+  io.readData := Mux(
+    query_commit.io.out.readDataValid,
+    query_commit.io.out.readData,
+    readData(query_commit.io.out.waySel)
+  )
 
   fetch.io.addr  := io.request.bits.address
   fetch.io.write := query.io.write
@@ -45,7 +54,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //-----------------------------------------------------------------------------
   //------------------pipeline register seperating fetch and query---------------
   //-----------------------------------------------------------------------------
-  fetch_query.io.stall        := !controller.io.stage2Free
+  fetch_query.io.stall        := false.B
   fetch_query.io.in.valid     := io.request.fire
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.index     := fetch.io.addrResult.index
@@ -57,20 +66,27 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //-----------------------------------------------------------------------------
   //------------------query stage--------------------------------------
   //-----------------------------------------------------------------------------
+
   query.io.fetchQuery := fetch_query.io.out
+  query.io.dirtyData  := readData
 
+  query_commit.io.stall := false.B
+  query_commit.io.in    := query.io.queryCommit
 
-
-  val readData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
+  controller.io.stage2Ready := query.io.ready
 
   for (i <- 0 until cacheConfig.numOfWays) {
     for (k <- 0 until cacheConfig.numOfBanks) {
-      dataBanks.io.way_bank(i)(k).addr      := fetch_query.io.out.index
-      dataBanks.io.way_bank(i)(k).writeMask := fetch_query.io.out.writeMask
-      dataBanks.io.way_bank(i)(k).writeData := fetch_query.io.out.writeData
+      //FIXME: this is plain wrong
+      dataBanks.io.way_bank(i)(k).addr := query.io.queryCommit.indexSel
+      dataBanks.io.way_bank(i)(k).writeMask := Mux(
+        query.io.queryCommit.bankIndexSel === k.U && query.io.queryCommit.waySel === i.U && query.io.queryCommit.writeEnable,
+        query.io.queryCommit.writeMask,
+        0.U
+      )
+      dataBanks.io.way_bank(i)(k).writeData := query.io.queryCommit.writeData
     }
-//    readData(i) := dataBanks.io.way_bank(i)(TBD_bankSel).readData
+    readData(i) := dataBanks.io.way_bank(i)(query.io.queryCommit.bankIndexSel).readData
   }
-
 
 }
