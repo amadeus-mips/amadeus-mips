@@ -65,8 +65,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** is the data.valid output high? */
   val validData = WireDefault(queryHit && !passThrough)
 
-  /** select lru way for eviction */
-  val lruWay = WireDefault(lru.getLRU(mshr.io.extractMiss.addr.index))
+  /** lru way records the way to evict, as eviction could last serveral cycles if
+    * the write queue if full */
+  val lruWay = Reg(UInt(log2Ceil(cacheConfig.numOfWays).W))
 
   /** corner case: write back is also in the idle stage */
   val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
@@ -83,6 +84,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
         /** this is a bit of combinational logic. When rlast comes,
           * and write queue is valid, then evict directly. */
         qState := Mux(writeQueueAvailable, qWriteBack, qEvict)
+      }.otherwise {
+        lruWay := lru.getLRU(mshr.io.extractMiss.addr.index)
       }
     }
     is(qEvict) {
@@ -99,15 +102,15 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.axi <> axiRead.io.axi
   io.axi <> axiWrite.io.axi
 
-  io.queryCommit.indexSel     := io.fetchQuery.index
-  io.queryCommit.waySel       := comparator.io.bankHitWay.bits
-  io.queryCommit.bankIndexSel := io.fetchQuery.bankIndex
-  io.queryCommit.writeData    := io.fetchQuery.bankIndex
-  io.queryCommit.writeMask    := io.fetchQuery.writeMask
-  io.queryCommit.writeEnable  := hitInBank
-  io.queryCommit.readData     := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
-  io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue'
-  io.hit := queryHit
+  io.queryCommit.indexSel      := io.fetchQuery.index
+  io.queryCommit.waySel        := comparator.io.bankHitWay.bits
+  io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
+  io.queryCommit.writeData     := io.fetchQuery.bankIndex
+  io.queryCommit.writeMask     := io.fetchQuery.writeMask
+  io.queryCommit.writeEnable   := hitInBank
+  io.queryCommit.readData      := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
+  io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue
+  io.hit                       := queryHit
 
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
@@ -119,7 +122,6 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   refillBuffer.io.request.valid          := newMiss
   refillBuffer.io.request.bits.bankIndex := io.fetchQuery.bankIndex
   refillBuffer.io.request.bits.writeData := io.fetchQuery.writeData
-  //TODO
   refillBuffer.io.request.bits.writeMask := Mux(comparator.io.addrHitInRefillBuffer, io.fetchQuery.writeMask, 0.U)
   refillBuffer.io.inputData              := axiRead.io.transferData
   refillBuffer.io.finish                 := axiRead.io.finishTransfer
