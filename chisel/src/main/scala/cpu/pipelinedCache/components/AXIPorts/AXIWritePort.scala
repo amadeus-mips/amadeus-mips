@@ -26,7 +26,7 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
     val axi = AXIIO.master()
   })
 
-  val writeIdle :: writeTransfer :: Nil = Enum(3)
+  val writeIdle :: writeTransfer :: Nil = Enum(2)
   val writeState                        = RegInit(writeIdle)
 
   /** aw and w requests are initiated at the same time, this is to keep track of aw status */
@@ -54,7 +54,7 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
     0.U((32 - cacheConfig.tagLen - cacheConfig.indexLen).W)
   )
   io.axi.aw.bits.burst := "b01".U(2.W)
-  io.axi.aw.bits.len   := (cacheConfig.numOfBanks).U(4.W)
+  io.axi.aw.bits.len   := (cacheConfig.numOfBanks - 1).U(4.W)
   io.axi.aw.bits.id    := AXIID
   io.axi.aw.bits.size  := "b010".U(3.W)
   io.axi.aw.bits.cache := 0.U

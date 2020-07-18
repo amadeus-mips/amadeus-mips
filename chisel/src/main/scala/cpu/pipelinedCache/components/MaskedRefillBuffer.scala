@@ -81,6 +81,8 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
   io.allData := buffer
 
+  io.dataDirty := bufferDirty
+
   val oldRefillData = WireInit(buffer(writePtr))
   val oldRefillMask = WireInit(bufferValidMask(writePtr))
 

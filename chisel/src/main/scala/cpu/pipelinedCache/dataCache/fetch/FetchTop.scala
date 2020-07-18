@@ -43,4 +43,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
 
   tagValid.io.index := virtualIndex
   tagValid.io.write := io.write
+
+  //TODO: implement cache instruction
+  tagValid.io.invalidateAllWays := false.B
 }

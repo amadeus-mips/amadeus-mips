@@ -5,8 +5,8 @@ import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.instCache.fetch.ICacheFetchQueryBundle
 
 class DCacheFetchQueryBundle(implicit cacheConfig: CacheConfig) extends ICacheFetchQueryBundle {
-  val writeData   = Vec(4, UInt(8.W))
-  val writeMask   = Vec(4, Bool())
+  val writeData   = UInt(32.W)
+  val writeMask   = UInt(4.W)
 
   override def cloneType = (new DCacheFetchQueryBundle).asInstanceOf[this.type]
 }

@@ -37,7 +37,8 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   val query_commit = Module(new CachePipelineStage(new DCacheCommitBundle))
   val controller   = Module(new DCacheController)
 
-  val readData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
+  val readDataWire = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
+  val dirtyData    = Wire(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
 
   io.request.ready := controller.io.inputReady
   io.axi           <> query.io.axi
@@ -45,7 +46,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   io.readData := Mux(
     query_commit.io.out.readDataValid,
     query_commit.io.out.readData,
-    readData(query_commit.io.out.waySel)
+    readDataWire(query_commit.io.out.waySel)
   )
 
   fetch.io.addr  := io.request.bits.address
@@ -68,7 +69,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //-----------------------------------------------------------------------------
 
   query.io.fetchQuery := fetch_query.io.out
-  query.io.dirtyData  := readData
+  query.io.dirtyData  := dirtyData
 
   query_commit.io.stall := false.B
   query_commit.io.in    := query.io.queryCommit
@@ -85,8 +86,9 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
         0.U
       )
       dataBanks.io.way_bank(i)(k).writeData := query.io.queryCommit.writeData
+      dirtyData(k)                          := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
     }
-    readData(i) := dataBanks.io.way_bank(i)(query.io.queryCommit.bankIndexSel).readData
+    readDataWire(i) := dataBanks.io.way_bank(i)(query.io.queryCommit.bankIndexSel).readData
   }
 
 }

@@ -30,6 +30,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
     /** ready reflects whether last stage's data need to be re-fetched */
     val ready = Output(Bool())
+
+    val dirtyWay = Output(UInt(log2Ceil(cacheConfig.numOfWays).W))
   })
 
   val comparator   = Module(new MissComparator)
@@ -58,7 +60,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val dispatchToWriteQSucessful = WireDefault(writeQueue.io.enqueue.ready)
 
   /** is a new miss generated, but is not guarateed to be accepted */
-  val newMiss = WireDefault(!queryHit && !passThrough)
+  val newMiss = Wire(Bool())
 
   /** is the query a hit in either places */
   val queryHit = WireDefault(hitInBank || hitInRefillBuffer || hitInWriteQueue)
@@ -101,11 +103,19 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
 
+  newMiss := !queryHit && !passThrough
+
   val isQueryMissAddress = WireDefault(
     qState === qWriteBack || qState === qEvict || (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty)
   )
-  io.axi <> axiRead.io.axi
-  io.axi <> axiWrite.io.axi
+  axiRead.io.axi <> DontCare
+  axiWrite.io.axi <> DontCare
+  io.axi.ar <> axiRead.io.axi.ar
+  io.axi.r <> axiRead.io.axi.r
+
+  io.axi.aw <> axiWrite.io.axi.aw
+  io.axi.w <> axiWrite.io.axi.w
+  io.axi.b <> axiWrite.io.axi.b
 
   io.queryCommit.indexSel := Mux(
     isQueryMissAddress,
@@ -142,7 +152,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   //FIXME: not sure if this is correct
   io.hit   := validData && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer)))
-  io.ready := validData && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer)))
+  io.ready := ((validData || passThrough) && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer))))
+
+  io.dirtyWay := lruWayReg
 
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
@@ -170,14 +182,22 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   )
   axiRead.io.addrReq.valid := newMiss
 
-  writeQueue.io.enqueue.valid     := (qState === qEvict) && dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index)
-  writeQueue.io.enqueue.bits.addr := mshr.io.extractMiss.tagValidAtIndex(lruWayReg)
-  writeQueue.io.enqueue.bits.data := io.dirtyData
+  writeQueue.io.enqueue.valid           := (qState === qEvict) && dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index)
+  writeQueue.io.enqueue.bits.addr.tag   := mshr.io.extractMiss.tagValidAtIndex(lruWayReg).tag
+  writeQueue.io.enqueue.bits.addr.index := mshr.io.extractMiss.addr.index
+  writeQueue.io.enqueue.bits.data       := io.dirtyData
+
+  when(writeQueue.io.enqueue.fire) {
+    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := false.B
+  }
+  when(qState === qWriteBack) {
+    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := refillBuffer.io.dataDirty
+  }
 
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)
     .asTypeOf(writeQueue.io.query.addr)
   // if the query is valid, then the query could issue to write queue any cycle
-  writeQueue.io.query.writeMask := Mux(io.fetchQuery.valid, 0.U, io.fetchQuery.writeMask)
+  writeQueue.io.query.writeMask := Mux(io.fetchQuery.valid, 0.U(4.W), io.fetchQuery.writeMask)
   writeQueue.io.query.data      := io.fetchQuery.writeData
 
   axiWrite.io.addrRequest <> writeQueue.io.dequeueAddr

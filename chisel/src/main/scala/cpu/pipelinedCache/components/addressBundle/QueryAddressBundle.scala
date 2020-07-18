@@ -7,4 +7,6 @@ class QueryAddressBundle(implicit cacheConfig: CacheConfig) extends Bundle {
   val phyTag     = UInt(cacheConfig.bankIndexLen.W)
   val index      = UInt(cacheConfig.indexLen.W)
   val bankIndex  = UInt(cacheConfig.bankIndexLen.W)
+
+  override def cloneType = (new QueryAddressBundle).asInstanceOf[this.type]
 }

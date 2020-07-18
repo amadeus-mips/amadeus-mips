@@ -20,8 +20,8 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
     /** write queue is queried every cycle to see if there is a hit */
     val query = Input(new Bundle {
       val addr      = new QueryAddressBundle
-      val data      = Vec(4, UInt(8.W))
-      val writeMask = Vec(4, Bool())
+      val data      = UInt(32.W)
+      val writeMask = UInt(4.W)
     })
 
     /** response to the query */
@@ -58,16 +58,17 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
   // valid bank
   val validBank = RegInit(VecInit(Seq.fill(capacity)(false.B)))
   // data banks
-  val dataBanks = Vec(capacity, Reg(Vec(cacheConfig.numOfBanks, Vec(4, UInt(8.W)))))
+  val dataBanks = Reg(Vec(capacity, Vec(cacheConfig.numOfBanks, UInt(32.W))))
 
   val dispatchDataWire = WireInit(dataBanks(headPTR)(lineWritePTR))
 
-  val queryHitVec = Wire(Vec(cacheConfig.numOfBanks, Bool()))
+  val queryHitVec = Wire(Vec(capacity, Bool()))
   queryHitVec := (addrBank.zip(validBank)).map {
     case (addr, valid) => ((addr.index === io.query.addr.index) && (addr.tag === io.query.addr.phyTag) && valid)
   }
-  val queryHitPos = queryHitVec.lastIndexOf(true.B)
-  val isQueryHit  = queryHitVec.asUInt === 0.U
+  val queryHitPos = Wire(UInt(log2Ceil(capacity).W))
+  queryHitPos := queryHitVec.indexWhere(queryHit => queryHit)
+  val isQueryHit = queryHitVec.asUInt =/= 0.U
 
   /** enqueue io, when not full, enqueue is ready */
   io.enqueue.ready := size =/= capacity.U

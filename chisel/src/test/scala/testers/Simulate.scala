@@ -179,7 +179,7 @@ object Simulate {
   //    println(s"TOTAL CYCLES: $cycles")
   //
   //    // manually verify for now
-  //    // Note: verification should not be in the process of simulation, as this
+  //    // Note: veri should not be in the process of simulation, as this
   //    // reg files will not "poke" correctly on the same cycle
   //    //TODO: bridge an interface between simulation results and results from an actual simulator
   //    println(s"Register t2: ${simulator.peek("cpu.regFile.regs_10")}")
