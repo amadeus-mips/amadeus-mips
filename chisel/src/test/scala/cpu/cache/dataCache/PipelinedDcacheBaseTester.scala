@@ -1,9 +1,10 @@
-package cpu.cache
+package cpu.cache.dataCache
 
 import chisel3._
 import chisel3.iotesters.PeekPokeTester
 import chisel3.util.Decoupled
 import cpu.CPUConfig
+import cpu.cache.PerfectMemory
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.dataCache.DataCache
 import verification.VeriAXIRam
@@ -35,11 +36,11 @@ class PipelinedDcacheBaseTester(dut: VeriDCache, goldenMem: PerfectMemory) exten
       poke(dut.io.request.bits.address, newReq.address)
       poke(
         dut.io.request.bits.writeMask,
-        newReq.writeMask.zipWithIndex.map { case (value, index) => value << (8 * index) }.sum
+        newReq.writeMask.zipWithIndex.map { case (value, index) => value << index }.sum
       )
       poke(
         dut.io.request.bits.writeData,
-        newReq.writeData.zipWithIndex.map { case (value, index) => value << index }.sum
+        newReq.writeData.zipWithIndex.map { case (value, index) => value << (8*index) }.sum
       )
 
       if (peek(dut.io.request.ready) == 1) {

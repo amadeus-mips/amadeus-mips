@@ -98,12 +98,12 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       }
     }
     is(qWriteBack) {
-      //TODO: check this logic
-      qState := Mux(newMiss, qRefill, qIdle)
+      //TODO: make this faster
+      qState := qIdle
     }
   }
 
-  newMiss := !queryHit && !passThrough
+  newMiss := !queryHit && !passThrough && qState === qIdle
 
   val isQueryMissAddress = WireDefault(
     qState === qWriteBack || qState === qEvict || (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty)
@@ -205,7 +205,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   axiWrite.io.dataLast    := writeQueue.io.dequeueLast
   // axi write .io .axi has been moved to former place
 
-  mshr.io.recordMiss.valid                := newMiss && (qState === qIdle || qState === qWriteBack)
+  //TODO: don't accept miss when write back
+  mshr.io.recordMiss.valid                := newMiss
   mshr.io.recordMiss.bits.addr.tag        := io.fetchQuery.phyTag
   mshr.io.recordMiss.bits.addr.index      := io.fetchQuery.index
   mshr.io.recordMiss.bits.addr.bankIndex  := io.fetchQuery.bankIndex
