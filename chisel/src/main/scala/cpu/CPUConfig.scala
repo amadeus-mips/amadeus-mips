@@ -8,8 +8,8 @@ case class CPUConfig(
   memoryFile:         String      = "",
   tlbSize:            Int         = 32,
   compareRamDirectly: Boolean     = false,
-  iCacheConf:         CacheConfig = new CacheConfig,
-  dCacheConf:         CacheConfig = new CacheConfig,
+  iCacheConf:         CacheConfig = CacheConfig(),
+  dCacheConf:         CacheConfig = CacheConfig(),
   branchPredictorAddrLen: Int      = 10,
   branchPredictorTableEntryNum: Int = 64
 ) {
