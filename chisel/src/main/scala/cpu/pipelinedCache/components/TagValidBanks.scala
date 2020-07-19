@@ -18,7 +18,7 @@ class ReadOnlyPort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extend
   val addr = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
   val data = Output(gen)
 
-  override def cloneType = (new ReadOnlyPort(gen)).asInstanceOf[this.type]
+  override def cloneType = new ReadOnlyPort(gen).asInstanceOf[this.type]
 }
 
 class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
@@ -27,7 +27,7 @@ class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) exten
   val writeData = Input(gen)
   val readData = Output(gen)
 
-  override def cloneType = (new ReadWritePort(gen)).asInstanceOf[this.type]
+  override def cloneType = new ReadWritePort(gen).asInstanceOf[this.type]
 }
 
 /**
@@ -35,9 +35,9 @@ class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) exten
   *
   */
 @chiselName
-class TagValidBanks(implicit CacheC: CacheConfig, CPUConfig: CPUConfig) extends Module {
-  val numOfSets: Int = CacheC.numOfSets
-  val numOfWays: Int = CacheC.numOfWays
+class TagValidBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+  val numOfSets: Int = cacheConfig.numOfSets
+  val numOfWays: Int = cacheConfig.numOfWays
   require(isPow2(numOfSets))
   val io = IO(new Bundle {
     // has multiple banks to write to, select before hand
@@ -49,15 +49,31 @@ class TagValidBanks(implicit CacheC: CacheConfig, CPUConfig: CPUConfig) extends 
       }
     )
   })
-  val tagBanks = for (i <- 0 until numOfWays) yield {
-    val bank = Module(new LUTRam(depth = numOfSets, width = (new TagValidBundle).getWidth))
-    bank.suggestName(s"tag_valid_bank_way_$i")
-    bank.io.readAddr := io.way(i).portA.addr
-    io.way(i).portA.data := bank.io.readData.asTypeOf(new TagValidBundle)
 
-    bank.io.writeAddr := io.way(i).portB.addr
-    bank.io.writeEnable := io.way(i).portB.writeEnable
-    bank.io.writeData := io.way(i).portB.writeData.asTypeOf(bank.io.writeData)
-    io.way(i).portB.readData := bank.io.writeOutput.asTypeOf(new TagValidBundle)
+  for (i <- 0 until numOfWays) {
+    val tagBank = Module(
+      new LUTRam(
+        depth = numOfSets,
+        width = cacheConfig.tagLen
+      )
+    )
+    val validBank = RegInit(VecInit(Seq.fill(numOfSets)(false.B)))
+    tagBank.suggestName(s"tag_bank_way_$i")
+    validBank.suggestName(s"valid_bank_way_$i")
+
+    tagBank.io.readAddr        := io.way(i).portA.addr
+    io.way(i).portA.data.tag   := tagBank.io.readData
+    io.way(i).portA.data.valid := validBank(io.way(i).portA.addr)
+
+    // ignore the port b read
+    io.way(i).portB.readData := DontCare
+    tagBank.io.writeAddr     := io.way(i).portB.addr
+    tagBank.io.writeEnable   := io.way(i).portB.writeEnable
+    tagBank.io.writeData     := io.way(i).portB.writeData.tag
+    when(io.way(i).portB.writeEnable) {
+      validBank(io.way(i).portB.addr) := io.way(i).portB.writeData.valid
+    }
+
   }
 }
+
