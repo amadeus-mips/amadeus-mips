@@ -29,11 +29,9 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
-  implicit val cacheConfig = new CacheConfig
-
   val axiArbiter = Module(new AXIArbiter())
 
-  val iCache   = Module(new InstrCache())
+  val iCache   = Module(new InstrCache(conf.iCacheConf))
   val dCache   = Module(new newDCache)
   val unCached = Module(new UnCachedUnit)
 

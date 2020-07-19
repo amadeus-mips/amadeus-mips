@@ -16,7 +16,8 @@ import verification.VeriAXIRam
 //TODO: optional enable for most banks
 
 @chiselName
-class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends Module {
+  implicit val conf = cacheConfig
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Decoupled(UInt(32.W))
@@ -95,8 +96,7 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 }
 
 object ICacheElaborate extends App {
-  implicit val cacheConfig = new CacheConfig
-  implicit val CPUConfig   = new CPUConfig(build = false)
+  implicit val cpuConfig   = new CPUConfig(build = false)
 
   class ICacheVeri() extends Module {
     val io = IO(new Bundle {
@@ -106,7 +106,7 @@ object ICacheElaborate extends App {
       /** flush the stage 2 information */
       val flush = Input(Bool())
     })
-    val insCache = Module(new InstrCache)
+    val insCache = Module(new InstrCache(cpuConfig.iCacheConf))
     val ram      = Module(new VeriAXIRam)
     insCache.io.axi                   <> ram.io.axi
     insCache.io.addr                  <> io.addr
