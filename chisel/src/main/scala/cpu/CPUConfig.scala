@@ -1,9 +1,8 @@
 package cpu
 
-import chisel3._
 import cpu.common.WriteMask
 
-class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: Int = 32) {
+class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: Int = 32, val compareRamDirectly: Boolean = false) {
   WriteMask.tlbSize = tlbSize
 
   val branchPredictorAddrLen = 10
@@ -12,5 +11,5 @@ class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: In
 }
 
 object CPUConfig{
-  val Build = new CPUConfig(build = true)
+  val Build = new CPUConfig(build = true, memoryFile = "", compareRamDirectly = false)
 }

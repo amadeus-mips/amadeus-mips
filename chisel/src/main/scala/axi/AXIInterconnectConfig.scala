@@ -61,6 +61,7 @@ import spire.math.Natural
   *                      M_COUNT concatenated fields of S_COUNT bits
   * @param mSecure       Secure master (fail operations based on awprot/arprot)
   *                      M_COUNT bits
+  * @param mDefaultMatch default master interface, set to -1 to disable
   */
 class AXIInterconnectConfig
 (
@@ -86,6 +87,7 @@ class AXIInterconnectConfig
   mConnectRead_raw: Seq[Seq[Bool]],
   mConnectWrite_raw: Seq[Seq[Bool]],
   val mSecure: Seq[Boolean],
+  val mDefaultMatch: Int = -1,
   banLog: Boolean = false,
 ) {
   def strbWidth = dataWidth / 8
@@ -109,8 +111,12 @@ class AXIInterconnectConfig
       println(Console.CYAN + "Info: " + msg + Console.RESET)
   }
 
+  //noinspection DuplicatedCode
   private def configureCheck: Boolean = {
     var flag = true
+    if(mDefaultMatch != -1 && (mDefaultMatch < 0 || mDefaultMatch >= mRegions)){
+      flag = false
+    }
     if (mRegions < 1 || mRegions > 16) {
       err(s"M_REGIONS is $mRegions, must be between 1 and 16 (instance %m)")
       flag = false
@@ -174,7 +180,7 @@ class AXIInterconnectConfig
     flag
   }
 
-  assert(configureCheck)
+  require(configureCheck)
 
   def this
   (
@@ -184,7 +190,8 @@ class AXIInterconnectConfig
     forwardID: Boolean,
     mRegions: Int,
     mBaseAddr: Seq[Seq[UInt]],
-    mAddrWidth: Seq[Seq[Int]]
+    mAddrWidth: Seq[Seq[Int]],
+    mDefaultMatch: Int,
   ) {
     this(
       sCount = sCount,
@@ -197,6 +204,7 @@ class AXIInterconnectConfig
       mConnectRead_raw = Seq.fill(mCount)(Seq.fill(sCount)(true.B)),
       mConnectWrite_raw = Seq.fill(mCount)(Seq.fill(sCount)(true.B)),
       mSecure = Seq.fill(mCount)(true),
+      mDefaultMatch = mDefaultMatch
     )
   }
 }
@@ -223,6 +231,30 @@ object AXIInterconnectConfig {
     mAddrWidth = Seq(
       Seq(22, 29, 30, 31, 28),
       Seq(16, 0, 0, 0, 0)
-    )
+    ),
+    mDefaultMatch = -1
+  )
+
+  def loongson_system(sCount: Int = 1) = new AXIInterconnectConfig(
+    sCount = sCount,
+    mCount = 5,
+    idWidth = 4,
+    forwardID = true,
+    mRegions = 2,
+    mBaseAddr = Seq(
+      Seq("h00000000".U(32.W), "hffffffff".U(32.W)), // ddr3
+      Seq("h1fc00000".U(32.W), "h1fe80000".U(32.W)), // SPI(flash
+      Seq("h1fe40000".U(32.W), "hffffffff".U(32.W)), // APB(uart)
+      Seq("h1faf0000".U(32.W), "hffffffff".U(32.W)), // CONF
+      Seq("hffffffff".U(32.W), "hffffffff".U(32.W)), // MAC: unused
+    ),
+    mAddrWidth = Seq(
+      Seq(32, 0),
+      Seq(20, 16),
+      Seq(16, 0),
+      Seq(16, 0),
+      Seq(0, 0),
+    ),
+    mDefaultMatch = -1
   )
 }

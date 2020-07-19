@@ -221,9 +221,11 @@ class AXIInterconnect(cfg: AXIInterconnectConfig) extends Module {
       hit := false.B
       val flag = Wire(Bool())
       flag := false.B
+      if(cfg.mDefaultMatch != -1){
+        m_select_reg := cfg.mDefaultMatch.U
+      }
       for (i <- 0 until cfg.mCount) {
         for (j <- 0 until cfg.mRegions) {
-          val temp = axi_addr_reg.addr >> cfg.mAddrWidth(i)(j).U
           if (cfg.mAddrWidth(i)(j) != 0) {
             when(
               (!cfg.mSecure(i).B || !axi_addr_reg.prot(1)) &&
