@@ -9,7 +9,7 @@ import cpu.pipelinedCache.components.AXIPorts.AXIReadPort
 import cpu.pipelinedCache.components.{MSHR, MissComparator, ReFillBuffer, ReadHolder}
 import cpu.pipelinedCache.instCache.fetch.{ICacheFetchQueryBundle, WriteTagValidBundle}
 import shared.Constants.INST_ID
-import shared.LRU.PLRUMRUNM
+import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
 @chiselName
 class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
@@ -36,7 +36,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val comparator   = Module(new MissComparator)
   val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID))
   val refillBuffer = Module(new ReFillBuffer)
-  val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val lru          = if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val readHolder   = Module(new ReadHolder)
 
   /** do nothing to this query, proceed to next */

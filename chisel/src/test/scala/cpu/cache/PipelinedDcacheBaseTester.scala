@@ -55,27 +55,31 @@ class PipelinedDcacheBaseTester(dut: VeriDCache, goldenMem: PerfectMemory) exten
       poke(dut.io.request.bits.writeMask, 0)
       poke(dut.io.request.bits.writeData, 0)
     }
-    readValidQueue.enqueue(peek(dut.io.dataValid) == 1)
     if (readValidQueue.nonEmpty) {
       // if this data is valid
       if (readValidQueue.head) {
         val rsp = responseQueue.head
         if (!rsp.writeEnable) {
+          val goldenResult: BigInt = goldenMem
+            .readFromMem(rsp.address)
+            .zipWithIndex
+            .map { case (value, index) => BigInt(value) << (8 * index) }
+            .sum
+          println(s"expected address is ${rsp.address}")
+          if (peek(dut.io.dataOutput) != goldenResult) {
+            println(s"the read request is ${rsp.address} the data output is ${goldenResult.toString(16)}")
+          }
+
           expect(
             dut.io.dataOutput,
             goldenMem.readFromMem(rsp.address).zipWithIndex.map { case (value, index) => value << (8 * index) }.sum,
-            s"the read request is ${rsp.address} the data output is ${peek(dut.io.dataOutput)
-              .toString(16)}, the expected result is ${goldenMem
-              .readFromMem(rsp.address)
-              .zipWithIndex
-              .map { case (value, index) => value << (8 * index) }
-              .sum
-              .toHexString(16)}"
+            s"the read request is ${rsp.address} the data output is ${goldenResult.toString(16)}"
           )
         }
+        readValidQueue.dequeue()
         responseQueue.dequeue
       }
-      readValidQueue.dequeue()
+      readValidQueue.enqueue(peek(dut.io.dataValid) == 1)
     }
     cycleCount = cycleCount + 1
     step(1)

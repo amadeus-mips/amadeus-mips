@@ -36,7 +36,7 @@ class PerfectMemory(size: Int) {
   def readFromMem(addr: Int): List[Int] = {
     require(addr % 4 == 0, "request should be aligned by 4")
     val dataList = List.tabulate[Int](4)((offSet: Int) => memory(offSet + addr))
-    dataList
+    dataList.reverse
   }
 
 }

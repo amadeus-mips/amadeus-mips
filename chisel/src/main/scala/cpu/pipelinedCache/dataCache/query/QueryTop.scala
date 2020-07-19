@@ -9,7 +9,7 @@ import cpu.pipelinedCache.components.{MSHR, MaskedRefillBuffer, MissComparator, 
 import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheFetchQueryBundle}
 import cpu.pipelinedCache.instCache.fetch.WriteTagValidBundle
 import shared.Constants.DATA_ID
-import shared.LRU.PLRUMRUNM
+import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
 //TODO: Don't accept query when write back
 class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
@@ -39,7 +39,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val refillBuffer = Module(new MaskedRefillBuffer)
   val axiRead      = Module(new AXIReadPort(addrReqWidth = 32, AXIID = DATA_ID))
   val axiWrite     = Module(new AXIWritePort(AXIID = DATA_ID))
-  val lru          = PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val lru          = if (cacheConfig.numOfWays >2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val writeQueue   = Module(new WriteQueue)
 
   /** keep all the dirty information, dirty(way)(index) */
