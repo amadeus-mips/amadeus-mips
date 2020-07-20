@@ -11,11 +11,11 @@ import cpu.core.bundles.TLBOpIO
 import cpu.core.bundles.stages._
 import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
-import shared.bundles.DualBundle
+import shared.bundles.Dual
 
 class InstFetchIO extends Bundle {
   val addr   = Decoupled(UInt(addrLen.W))
-  val data   = Flipped(Decoupled(DualBundle(UInt(dataLen.W))))
+  val data   = Flipped(Decoupled(Dual(UInt(dataLen.W))))
   val change = Output(Bool())
 }
 
