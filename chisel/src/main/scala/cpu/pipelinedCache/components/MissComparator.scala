@@ -21,8 +21,9 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
 
   val bankHitVec = Wire(Vec(cacheConfig.numOfWays, Bool()))
   bankHitVec := io.tagValid.map {
-    case (tagValidBundle: TagValidBundle) => tagValidBundle.valid && tagValidBundle.tag === io.phyTag
+    tagValidBundle => tagValidBundle.valid && tagValidBundle.tag === io.phyTag
   }
+  assert(bankHitVec.map(_.asUInt()).reduce(_+_) <= 1.U)
   io.bankHitWay.valid := bankHitVec.contains(true.B)
   io.bankHitWay.bits  := bankHitVec.indexWhere(hit => hit === true.B)
 
