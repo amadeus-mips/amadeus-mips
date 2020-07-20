@@ -11,7 +11,7 @@ class Buffer(len: Int) extends Module {
     val out = Output(UInt(len.W))
   })
 
-  val buffer = RegInit(0.U.asTypeOf(new ValidBundle(len)))
+  val buffer = RegInit(0.U.asTypeOf(new ValidBundle(UInt(len.W))))
   buffer.valid := io.en
   buffer.bits  := Mux(buffer.valid, buffer.bits, io.in)
   io.out       := Mux(buffer.valid, buffer.bits, io.in)

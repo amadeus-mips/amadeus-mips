@@ -2,10 +2,11 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.ValidIO
+import cpu.BranchPredictorType.{AlwaysNotTaken, AlwaysTaken, TwoBit}
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.IfIf1Bundle
-import cpu.core.components.{BrPrUpdateBundle, TwoBitPredictor}
+import cpu.core.components.{AlwaysNotTakenPredictor, AlwaysTakenPredictor, BrPrUpdateBundle, TwoBitPredictor}
 import shared.ValidBundle
 
 class FetchTop(implicit conf: CPUConfig) extends Module {
@@ -19,6 +20,7 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
     // from decode stage
     val inDelaySlot = Input(Bool())
     val predict     = Input(new ValidBundle)
+    val predictSrc  = Input(UInt(1.W))
     // from execute stage
     val branch     = Input(new ValidBundle)
     val predUpdate = Flipped(ValidIO(new BrPrUpdateBundle))
@@ -39,7 +41,11 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
       val invalid = Bool()
     })
   })
-  val branchPredictor = Module(new TwoBitPredictor())
+  val branchPredictor = Module(conf.branchPredictorType match {
+    case TwoBit         => new TwoBitPredictor()
+    case AlwaysNotTaken => new AlwaysNotTakenPredictor()
+    case AlwaysTaken    => new AlwaysTakenPredictor()
+  })
 
   val hazard = Module(new cpu.core.fetch.Hazard)
   val pcMux  = Module(new cpu.core.fetch.PCMux(n = 4))
@@ -64,16 +70,15 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := pcMux.io.pc
   io.out.instValid   := io.instValid && !except
   io.out.inDelaySlot := hazard.io.out.inDelaySlot
+  io.out.validPcMask := VecInit(Seq(io.out.instValid, !pcMux.io.pcCacheCorner && io.out.instValid))
   io.out.brPredict   := branchPredictor.io.prediction
-
-  io.out.brPredict.valid := branchPredictor.io.prediction.valid && io.out.instValid
 
   io.out.except                          := DontCare
   io.out.except(EXCEPT_FETCH)            := pcMux.io.pcNotAligned
   io.out.except(EXCEPT_INST_TLB_REFILL)  := io.tlbExcept.refill
   io.out.except(EXCEPT_INST_TLB_INVALID) := io.tlbExcept.invalid
 
-  io.pcValid  := !except && !(io.branch.valid || io.flush)
+  io.pcValid  := !except && !(io.branch.valid || io.flush) && !(io.predict.valid && io.predictSrc === 0.U)
   io.pcChange := false.B
   io.stallReq := !io.instValid && !except
 }
