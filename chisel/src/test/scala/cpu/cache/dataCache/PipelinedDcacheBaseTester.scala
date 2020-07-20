@@ -30,6 +30,7 @@ class PipelinedDcacheBaseTester(dut: VeriDCache, goldenMem: PerfectMemory) exten
   }
 
   def next(): Boolean = {
+    step(1)
     if (requestQueue.nonEmpty) {
       val newReq = requestQueue.head
       poke(dut.io.request.valid, true)
@@ -83,7 +84,6 @@ class PipelinedDcacheBaseTester(dut: VeriDCache, goldenMem: PerfectMemory) exten
       readValidQueue.enqueue(peek(dut.io.dataValid) == 1)
     }
     cycleCount = cycleCount + 1
-    step(1)
     (requestQueue.nonEmpty || responseQueue.nonEmpty) && (cycleCount < cycleLimit)
   }
 

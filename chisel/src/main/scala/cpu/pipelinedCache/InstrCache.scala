@@ -3,7 +3,6 @@ package cpu.pipelinedCache
 import axi.AXIIO
 import chisel3._
 import chisel3.internal.naming.chiselName
-import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.components._
@@ -11,8 +10,6 @@ import cpu.pipelinedCache.components.pipelineRegister.CachePipelineStage
 import cpu.pipelinedCache.instCache.ICacheController
 import cpu.pipelinedCache.instCache.fetch.{FetchTop, ICacheFetchQueryBundle}
 import cpu.pipelinedCache.instCache.query.QueryTop
-import firrtl.options.TargetDirAnnotation
-import verification.VeriAXIRam
 
 //TODO: refactor non-module to objects
 //TODO: optional enable for most banks
@@ -96,28 +93,3 @@ class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extend
 
 }
 
-object ICacheElaborate extends App {
-  implicit val cacheConfig = new CacheConfig
-  implicit val CPUConfig   = new CPUConfig(build = false)
-
-  class ICacheVeri() extends Module {
-    val io = IO(new Bundle {
-      val addr = Flipped(Decoupled(UInt(32.W)))
-      val data = Decoupled(UInt(32.W))
-
-      /** flush the stage 2 information */
-      val flush = Input(Bool())
-    })
-    val insCache = Module(new InstrCache)
-    val ram      = Module(new VeriAXIRam)
-    insCache.io.axi   <> ram.io.axi
-    insCache.io.addr  <> io.addr
-    insCache.io.data  <> io.data
-    insCache.io.flush <> io.flush
-  }
-
-  (new ChiselStage).execute(
-    Array(),
-    Seq(ChiselGeneratorAnnotation(() => new ICacheVeri()), TargetDirAnnotation("generation"))
-  )
-}

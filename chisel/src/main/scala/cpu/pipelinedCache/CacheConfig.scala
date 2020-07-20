@@ -3,7 +3,7 @@ package cpu.pipelinedCache
 import chisel3.util._
 
 class CacheConfig {
-  val numOfSets:    Int = 4
+  val numOfSets:    Int = 2
   val numOfWays:    Int = 2
   val numOfBanks:   Int = 2
   val bankWidth:    Int = 4 // bytes per bank
