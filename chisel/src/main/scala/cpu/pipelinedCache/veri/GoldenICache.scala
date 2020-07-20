@@ -11,7 +11,7 @@ class GoldenICache extends Module {
   })
   val mem = RegInit(VecInit(Seq.tabulate(64)(i => i.U(32.W))))
   dontTouch(mem)
-  io.data := mem(io.addr)
+  io.data := mem((io.addr(31, 2)))
 }
 
 object GoldenICacheElaborate extends App {

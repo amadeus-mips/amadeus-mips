@@ -1,13 +1,15 @@
 package cpu.pipelinedCache.components
 
 import chisel3._
+import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.{QueryAddressBundle, RecordAddressBundle}
+import firrtl.options.TargetDirAnnotation
 
 //TODO: hit in bust write queue?
 //TODO: reduce wire usage
-class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends Module {
+class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
     /** enqueue io, for the data cache to dispatch dirty lines into the write queue
@@ -39,10 +41,11 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
   require(isPow2(capacity))
 
   /** size of the queue: how many entries are in this queue */
-  val size = RegInit(0.U(log2Ceil(capacity).W))
+  val size = RegInit(0.U((log2Ceil(capacity) + 1).W))
 
   /** points to the head of the queue */
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
+  dontTouch(headPTR)
 
   /** points to the head of the queue */
   val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
@@ -120,4 +123,12 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig) extends M
 
   assert(size === 0.U || (size =/= 0.U && validBank(headPTR)))
   assert(headPTR =/= tailPTR || (headPTR === tailPTR && (size === 0.U || size === (cacheConfig.numOfBanks - 1).U)))
+}
+
+object WriteQueueElaborate extends App {
+  implicit val cacheConfig = new CacheConfig
+  (new ChiselStage).execute(
+    Array(),
+    Seq(ChiselGeneratorAnnotation(() => new WriteQueue), TargetDirAnnotation("verification"))
+  )
 }
