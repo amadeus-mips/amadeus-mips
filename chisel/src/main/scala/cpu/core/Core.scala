@@ -13,10 +13,12 @@ import cpu.core.components.{CP0, HILO, RegFile, Stage}
 import cpu.core.pipeline._
 import shared.bundles.Dual
 
-class InstFetchIO extends Bundle {
+class InstFetchIO(implicit conf: CPUConfig) extends Bundle {
   val addr   = Decoupled(UInt(addrLen.W))
-  val data   = Flipped(Decoupled(Dual(UInt(dataLen.W))))
+  val data   = Flipped(Decoupled(Vec(conf.fetchAmount, UInt(dataLen.W))))
   val change = Output(Bool())
+
+  override def cloneType: InstFetchIO.this.type = new InstFetchIO().asInstanceOf[this.type ]
 }
 
 class Core(implicit conf: CPUConfig) extends MultiIOModule {
