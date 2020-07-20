@@ -6,7 +6,7 @@ import chisel3._
 
 /**
   * master IO. <br/>
-  * out: .addr, .enable <br/>
+  * out: .bankIndex, .enable <br/>
   * in: .data, .valid
   */
 class NiseSramReadIO extends Bundle {
@@ -19,7 +19,7 @@ class NiseSramReadIO extends Bundle {
 
 /**
   * master IO <br/>
-  * out: .addr, .enable, .sel, .data <br/>
+  * out: .bankIndex, .enable, .sel, .data <br/>
   * in: .valid
   */
 class NiseSramWriteIO extends Bundle {

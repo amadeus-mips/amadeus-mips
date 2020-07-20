@@ -9,8 +9,8 @@ import chisel3.util.log2Ceil
   *
   * @param dataWidth       : the width of data in bits
   * @param byteWriteWidth  : how many bits to write each bit in write mask (wea), should default to 8
-  * @param addrWidth       : the address of the width to address all locations
-  * @param numberOfLines   : how wide is the address (to cover all lines)
+  * @param addrWidth       : the request of the width to request all locations
+  * @param numberOfLines   : how wide is the request (to cover all lines)
   * @param memoryPrimitive : should I use auto, block ram or distributed ram
   */
 class SinglePortRamIP(
@@ -47,8 +47,8 @@ class SinglePortRamIP(
       List("auto", "block", "distributed", "ultra").contains(memoryPrimitive),
       "memory primitive should be auto, block ram, dist ram or ultra ram"
     )
-    require(addrWidth <= 20, "address width should be 1 to 20")
-    require(addrWidth == log2Ceil(numberOfLines), "address width should be log 2 of number of lines to address all")
+    require(addrWidth <= 20, "request width should be 1 to 20")
+    require(addrWidth == log2Ceil(numberOfLines), "request width should be log 2 of number of lines to request all")
     // clock and reset
     val clka = Input(Clock())
     val rsta = Input(Reset())

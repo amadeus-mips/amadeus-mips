@@ -2,9 +2,9 @@
 
 package memory.axi
 
+import _root_.axi.AXIIO
 import chisel3._
 import chisel3.util._
-import _root_.axi.AXIIO
 
 class QueueBundle extends Bundle {
   val addr = UInt(32.W)
@@ -16,7 +16,7 @@ class QueueBundle extends Bundle {
   * only for 'INCR' burst
   *
   * @param id    AXI id
-  * @param qSize address buffer queue size
+  * @param qSize request buffer queue size
   */
 class AXIToSram(id: UInt, qSize: Int = 20) extends Module {
   val io = IO(new Bundle {

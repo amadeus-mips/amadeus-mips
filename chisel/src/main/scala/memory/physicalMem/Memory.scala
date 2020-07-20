@@ -1,7 +1,6 @@
 package memory.physicalMem
 
 import chisel3._
-import chisel3.util.Cat
 
 /**
  * This is the actual memory. You should never directly use this in the CPU.
@@ -28,9 +27,9 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
     // We should only be expecting a read from instruction memory
     assert(request.operation === Read)
-    // Check that address is pointing to a valid location in memory
+    // Check that request is pointing to a valid location in memory
 
-    // TODO: Revert this back to the assert form "assert (request.address < size.U)"
+    // TODO: Revert this back to the assert form "assert (request.request < size.U)"
     // TODO: once CSR is integrated into CPU
     io.imem.response.valid := true.B
     io.imem.response.bits.data := physicalMem.read((request.address(19, 0) >> 2).asUInt())
@@ -50,11 +49,11 @@ class DualPortedCombinMemory(size: Int, memfile: String) extends BaseDualPortedM
 
     // Check that non-combin write isn't being used
     assert (request.operation =/= Write)
-    // Check that address is pointing to a valid location in memory
-    // assert (request.address < size.U)
+    // Check that request is pointing to a valid location in memory
+    // assert (request.request < size.U)
 
     // Read path
-    //TODO: read address is byte aligned, acutal reference address for mem is word aligned
+    //TODO: read request is byte aligned, acutal reference request for mem is word aligned
     io.dmem.response.bits.data := physicalMem.read((memAddress >> 2).asUInt())
     io.dmem.response.valid := true.B
 

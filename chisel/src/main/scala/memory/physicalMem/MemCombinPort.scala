@@ -47,11 +47,11 @@ class DCombinMemPort extends BaseDMemPort {
     when(io.pipeline.memwrite) {
       // We issue a ReadWrite to the backing memory.
       // Basic run-down of the ReadWrite operation:
-      // - DCombinMemPort sends a ReadWrite at a specific address, **addr**.
-      // - Backing memory outputs the data at **addr** in io.response
+      // - DCombinMemPort sends a ReadWrite at a specific request, **bankIndex**.
+      // - Backing memory outputs the data at **bankIndex** in io.response
       // - DCombinMemPort notes that io.memwrite is high in the response path. io.response.bits.data
       //   is masked and sign extended, and sent down io.request.writedata
-      // - Backing memory receives the modified writedata and feeds it into the memory at **addr**.
+      // - Backing memory receives the modified writedata and feeds it into the memory at **bankIndex**.
       // Since this is combinational logic, this should theoretically all resolve in one clock cycle with no issues
       io.bus.request.bits.operation := ReadWrite
     }.otherwise {
@@ -71,7 +71,7 @@ class DCombinMemPort extends BaseDMemPort {
 
       // When not writing a whole word
       when(io.pipeline.maskmode =/= 2.U) {
-        // Read in the existing piece of data at the address, so we "overwrite" only part of it
+        // Read in the existing piece of data at the request, so we "overwrite" only part of it
         val offset = io.pipeline.address(1, 0)
         val readdata = Wire(UInt(32.W))
 

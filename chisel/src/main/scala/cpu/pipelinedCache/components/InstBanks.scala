@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
+import cpu.pipelinedCache.components.metaBanks.ReadWritePort
 import cpu.pipelinedCache.memoryBanks.SinglePortBRam
 
 /**
