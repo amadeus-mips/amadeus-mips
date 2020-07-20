@@ -1,5 +1,6 @@
 package cpu
 
+import chisel3.util.isPow2
 import cpu.BranchPredictorType.TwoBit
 import cpu.common.WriteMask
 import cpu.pipelinedCache.CacheConfig
@@ -14,9 +15,12 @@ case class CPUConfig(
   dCacheConf:                   CacheConfig         = CacheConfig(),
   branchPredictorAddrLen:       Int                 = 10,
   branchPredictorTableEntryNum: Int                 = 64,
-  branchPredictorType:          BranchPredictorType = TwoBit
+  branchPredictorType:          BranchPredictorType = TwoBit,
+  instructionFIFOLength:        Int                 = 4,
+  instructionFIFOWidth:         Int                 = 2
 ) {
   WriteMask.tlbSize = tlbSize
+  require(isPow2(instructionFIFOLength))
 
 //  require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
 }
