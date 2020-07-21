@@ -46,13 +46,11 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
 
   /** how many valid enqueue requests are there?
     * This has not been handshaked */
-  val enqueueRequestValidArray = Wire(Vec(CPUConfig.fetchAmount, Bool()))
-  enqueueRequestValidArray := io.enqueue.map(entry => entry.valid)
+  val enqueueRequestValidArray = io.enqueue.map(entry => entry.valid)
 
   /** calculate how many entries are required to accommodate this enqueue request */
-  val numOfEnqueueRequests = WireDefault(
-    enqueueRequestValidArray.asTypeOf(Vec(CPUConfig.fetchAmount, UInt(1.W))).reduce(_ + _)
-  )
+  val numOfEnqueueRequests = Wire(UInt(log2Ceil(capacity).W))
+  numOfEnqueueRequests := enqueueRequestValidArray.map(_.asUInt).foldLeft(0.U((log2Ceil(capacity) + 1).W))(_ + _)
 
   /** there are capacity - size entries left for enqueue */
   val spaceLeft = WireDefault(capacity.U - size)
@@ -65,11 +63,11 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
 
   /** calculate how many elements are de-queued in the handshake
     * this value *has been handshaked* */
-  val numOfDequeueElements = Wire(UInt(4.W))
+  val numOfDequeueElements = Wire(UInt((log2Ceil(capacity) + 1).W))
   numOfDequeueElements := dequeueResponseValidArray
     .zip((0 until CPUConfig.decodeWidth).map { case (i: Int) => io.dequeue(i).ready })
     .map { case (ready: Bool, valid: Bool) => ready && valid }
-    .foldLeft(0.U)((a: UInt, b: Bool) => a + b.asUInt)
+    .foldLeft(0.U((log2Ceil(capacity) + 1).W))((a: UInt, b: Bool) => a + b.asUInt)
 
   // IO section
   io.readyForEnqueue := enqueueReady
