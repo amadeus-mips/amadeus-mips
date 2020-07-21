@@ -48,8 +48,8 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) exte
     .map(i => bufferValidMask(io.bankIndex.bits + i.U))
     .reduce(_ & _)
 
-  io.queryResult.bits := Cat((0 until CPUConfig.fetchAmount).map(i => buffer(io.bankIndex.bits + i.U)))
-    .asTypeOf(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W)))
+  io.queryResult.bits := VecInit((0 until CPUConfig.fetchAmount).map(i => buffer(io.bankIndex.bits + i.U)))
+
 
   io.allData := buffer
 
