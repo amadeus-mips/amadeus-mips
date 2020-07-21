@@ -19,6 +19,8 @@ class BranchPredictorIO(fa: Int, predType: BranchPredictorType) extends Bundle {
   val update = Flipped(Valid(new BrPrUpdateBundle))
 
   val prediction = Output(Vec(fa, new BranchPredictorEntryBundle(predType)))
+
+  override def cloneType: BranchPredictorIO.this.type = new BranchPredictorIO(fa, predType).asInstanceOf[this.type ]
 }
 
 class BranchPredictorEntryBundle(predType: BranchPredictorType) extends Bundle {

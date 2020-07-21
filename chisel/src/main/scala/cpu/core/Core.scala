@@ -62,6 +62,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetchTop.io.predUpdate := executeTop.io.predUpdate
 
   fetchTop.io.predict     := fetch1Top.io.predict
+  fetchTop.io.predictSrc  := fetch1Top.io.predictSrc
   fetchTop.io.branch      := executeTop.io.branch
   fetchTop.io.inDelaySlot := fetch1Top.io.nextInstInDelaySlot
 
@@ -81,9 +82,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
 
-  instFIFO.reset := hazard.io.flush || (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
+  instFIFO.reset := reset.asBool() || hazard.io.flush || (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
   instFIFO.io.enqueue := fetch1Top.io.out
-  instFIFO.io.dequeue := !hazard.io.stall(3)
+  instFIFO.io.dequeue.head.ready := !hazard.io.stall(3)
 
   decodeTop.io.in     := instFIFO.io.dequeue.head.bits
   decodeTop.io.exeWR  := executeTop.io.out.write

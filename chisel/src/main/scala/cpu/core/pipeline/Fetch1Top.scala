@@ -1,7 +1,7 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.{Decoupled, Valid}
+import chisel3.util.{log2Ceil, Decoupled, Valid}
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.InstructionFIFOEntry
@@ -18,7 +18,8 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
 
     val stallReq = Output(Bool())
 
-    val predict = Output(ValidBundle(32)) // to Fetch
+    val predict    = Output(ValidBundle(32)) // to Fetch
+    val predictSrc = Output(UInt(log2Ceil(conf.fetchAmount).W))
 
     val nextInstInDelaySlot = Output(Bool()) // to Fetch
   })
@@ -49,7 +50,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
       out.bits.brPredict.bits  := predict.target
       out.bits.brPredict.valid := (if (i == 0) branchVec(i) else !branchVec.slice(0, i).reduce(_ || _) && branchVec(i))
       out.bits.valid           := (if (i == 0) !io.in.except.asUInt().orR() && valid else valid)
-      out.valid                := (if (i == 0) valid else !io.in.except.asUInt().orR() && valid)
+      out.valid                := (if (i == 0) valid else !io.in.except.asUInt().orR() && valid) && io.inst.valid
   }
   io.inst.ready := io.itReady
 
@@ -63,8 +64,10 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
     }
   }
   io.nextInstInDelaySlot := lastIsBranch && io.inst.fire()
-  io.predict.bits        := Mux(isBranchInstVec(0), io.in.brPredict(0).target, io.in.brPredict(1).target)
-  io.predict.valid       := io.inst.fire() && branchVec.reduce(_ || _)
+  // TODO
+  io.predict.bits  := Mux(isBranchInstVec(0), io.in.brPredict(0).target, io.in.brPredict(1).target)
+  io.predict.valid := io.inst.fire() && branchVec.reduce(_ || _)
+  io.predictSrc    := Mux(isBranchInstVec(0), 0.U, 1.U)
 
   assert(!io.in.except.asUInt().orR() || io.in.validPcMask(0) && !io.in.validPcMask.tail.reduce(_ || _))
 }
