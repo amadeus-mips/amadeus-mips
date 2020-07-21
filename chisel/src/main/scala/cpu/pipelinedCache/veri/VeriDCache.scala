@@ -1,11 +1,13 @@
 package cpu.pipelinedCache.veri
 
 import chisel3._
+import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.dataCache.DataCache
-import verification.VeriAXIRam
+import firrtl.options.TargetDirAnnotation
+import verification.SymbiyosysAXIRam
 
 class VeriDCache extends Module {
   val io = IO(new Bundle {
@@ -14,15 +16,21 @@ class VeriDCache extends Module {
       val writeMask = UInt(4.W)
       val writeData = UInt(32.W)
     }))
-    val dataOutput = Output(UInt(32.W))
-    val dataValid  = Output(Bool())
+    val data = Valid(UInt(32.W))
   })
   implicit val cacheConfig: CacheConfig = new CacheConfig
   implicit val cpuConfig:   CPUConfig   = new CPUConfig(build = false)
   val dcache  = Module(new DataCache)
-  val veriRam = Module(new VeriAXIRam)
+  val veriRam = Module(new SymbiyosysAXIRam)
   dcache.io.axi     <> veriRam.io.axi
   dcache.io.request <> io.request
-  io.dataValid      := dcache.io.commit
-  io.dataOutput     := dcache.io.readData
+  io.data.valid     := dcache.io.commit
+  io.data.bits      := dcache.io.readData
+}
+
+object VeriDCacheElaborate extends App {
+  (new ChiselStage).execute(
+    Array(),
+    Seq(ChiselGeneratorAnnotation(() => new VeriDCache), TargetDirAnnotation("verification"))
+  )
 }
