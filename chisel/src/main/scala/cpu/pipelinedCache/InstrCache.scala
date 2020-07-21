@@ -19,8 +19,6 @@ import cpu.pipelinedCache.instCache.query.QueryTop
 class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends Module {
   implicit val conf = cacheConfig
   val io = IO(new Bundle {
-//    val addr = Flipped(Decoupled(UInt(32.W)))
-//    val data = Decoupled(Vec(2, UInt(32.W)))
 
     /** replace old IO for instruction fetching and flushing */
     val fetchIO = Flipped(new InstFetchIO)
@@ -28,15 +26,12 @@ class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extend
     /** invalidate the icache at index */
     val invalidateIndex = Flipped(Decoupled(UInt(cacheConfig.indexLen.W)))
 
-//    /** flush the stage 2 information */
-//    val flush = Input(Bool())
     val axi = AXIIO.master()
   })
 
   val fetch       = Module(new FetchTop)
   val fetch_query = Module(new CachePipelineStage(new ICacheFetchQueryBundle))
   val query       = Module(new QueryTop)
-  val x =  Queue
   val instrBanks  = Module(new InstBanks)
   val controller  = Module(new ICacheController)
 
