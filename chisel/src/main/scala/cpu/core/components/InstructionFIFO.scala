@@ -29,7 +29,7 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   val dataArray  = Mem(capacity, gen)
   val validArray = RegInit(VecInit(Seq.fill(capacity)(false.B)))
 
-  val enqueueRequestValidArray = Wire(Vec(CPUConfig.decodeWidth, Bool()))
+  val enqueueRequestValidArray = Wire(Vec(CPUConfig.fetchAmount, Bool()))
   enqueueRequestValidArray := io.enqueue.map(entry => entry.valid)
 
   val dequeueResponseValidArray = Wire(Vec(CPUConfig.decodeWidth, Bool()))
@@ -76,8 +76,8 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
       validArray(tailPTR + i.U) := io.enqueue(i).valid
     }
     // write signal
-    val dataValue = Wire(gen)
-    dataValue                    := validArray(headPTR - i.U)
+    val dataValue = Wire(gen.cloneType)
+    dataValue                    := dataArray(headPTR - i.U)
     io.dequeue(i).bits           := dataArray(headPTR - i.U)
     io.dequeue(i).valid          := dataValue
     dequeueResponseValidArray(i) := validArray(headPTR - i.U)
