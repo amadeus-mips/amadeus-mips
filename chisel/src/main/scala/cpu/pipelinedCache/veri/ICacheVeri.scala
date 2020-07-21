@@ -10,17 +10,17 @@ import verification.SymbiyosysAXIRam
 
 class ICacheVeri(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val addr = Flipped(Decoupled(UInt(32.W)))
-    val data = Decoupled(UInt(32.W))
+    val addr = Flipped(Decoupled(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W))))
+    val data = Decoupled(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
   })
-  val insCache = Module(new InstrCache)
+  val insCache = Module(new InstrCache(cacheConfig))
   val ram      = Module(new SymbiyosysAXIRam)
-  insCache.io.axi   <> ram.io.axi
-  insCache.io.addr  <> io.addr
-  insCache.io.invalidateIndex.bits := DontCare
+  insCache.io.axi                   <> ram.io.axi
+  insCache.io.fetchIO.addr          <> io.addr
+  insCache.io.invalidateIndex.bits  := DontCare
   insCache.io.invalidateIndex.valid := false.B
-  insCache.io.data  <> io.data
-  insCache.io.flush <> false.B
+  insCache.io.fetchIO.data          <> io.data
+  insCache.io.fetchIO.change        := false.B
 }
 
 object ICacheElaborate extends App {

@@ -5,11 +5,11 @@ package cpu
 import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{newDCache, UnCachedUnit}
+import cpu.cache.{UnCachedUnit, newDCache}
 import cpu.core.Core_ls
 import cpu.mmu.MMU
 import cpu.performance.CPUTopPerformanceIO
-import cpu.pipelinedCache.{CacheConfig, InstrCache}
+import cpu.pipelinedCache.InstrCache
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
 
@@ -48,9 +48,9 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   mmu.io.in.wChannel <> core.io.wChannel
 
   // assume instructions are always cached
-  iCache.io.addr  <> mmu.io.out.rInst.addr
-  iCache.io.data  <> mmu.io.out.rInst.data
-  iCache.io.flush := mmu.io.out.rInst.change
+  iCache.io.fetchIO.addr  <> mmu.io.out.rInst.addr
+  iCache.io.fetchIO.data  <> mmu.io.out.rInst.data
+  iCache.io.fetchIO.change := mmu.io.out.rInst.change
   iCache.io.invalidateIndex.valid := false.B
   iCache.io.invalidateIndex.bits  := DontCare
   // buffer the read data
