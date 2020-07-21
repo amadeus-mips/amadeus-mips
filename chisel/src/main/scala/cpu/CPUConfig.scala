@@ -17,7 +17,7 @@ case class CPUConfig(
   branchPredictorTableEntryNum: Int                 = 64,
   branchPredictorType:          BranchPredictorType = TwoBit,
   instructionFIFOLength:        Int                 = 4,
-  decodeWidth:                  Int                 = 1
+  decodeWidth:                  Int                 = 2
 ) {
   WriteMask.tlbSize = tlbSize
   require(isPow2(instructionFIFOLength))

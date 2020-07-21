@@ -36,6 +36,7 @@ class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extend
   val fetch       = Module(new FetchTop)
   val fetch_query = Module(new CachePipelineStage(new ICacheFetchQueryBundle))
   val query       = Module(new QueryTop)
+  val x =  Queue
   val instrBanks  = Module(new InstBanks)
   val controller  = Module(new ICacheController)
 
