@@ -3,7 +3,7 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.ValidIO
+import chisel3.util.Valid
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
@@ -31,8 +31,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     val wbOp  = Input(UInt(opLen.W))
 
     val out      = Output(new ExeMemBundle)
-    val branch   = Output(new ValidBundle) // back to `Fetch`
-    val predUpdate = ValidIO(new BrPrUpdateBundle)
+    val branch   = Output(ValidBundle(32)) // back to `Fetch`
+    val predUpdate = Valid(new BrPrUpdateBundle)
     val stallReq = Output(Bool())
   })
 

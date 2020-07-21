@@ -10,7 +10,7 @@ import shared.ValidBundle
 
 class PCMux(n: Int)(implicit val cpuConf: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val ins = Input(Vec(n, new ValidBundle()))
+    val ins = Input(Vec(n, ValidBundle(32)))
 
     val pc = Output(UInt(addrLen.W))
 

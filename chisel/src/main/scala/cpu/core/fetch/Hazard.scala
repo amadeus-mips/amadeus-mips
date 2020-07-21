@@ -10,18 +10,18 @@ class Hazard extends Module {
     val associateDS = Input(Bool())
 
     val in = Input(new Bundle() {
-      val predict     = new ValidBundle()
-      val branch      = new ValidBundle()
+      val predict     = ValidBundle(32)
+      val branch      = ValidBundle(32)
       val inDelaySlot = Bool()
     })
     val out = Output(new Bundle() {
-      val predict     = new ValidBundle()
+      val predict     = ValidBundle(32)
       val inDelaySlot = Bool()
     })
   })
 
-  val predictBuffer = RegInit(0.U.asTypeOf(new ValidBundle()))
-  val branchBuffer  = RegInit(0.U.asTypeOf(new ValidBundle()))
+  val predictBuffer = RegInit(0.U.asTypeOf(ValidBundle(32)))
+  val branchBuffer  = RegInit(0.U.asTypeOf(ValidBundle(32)))
 
   when(io.flush || io.in.branch.valid || branchBuffer.valid) {
     predictBuffer.valid := false.B

@@ -1,24 +1,24 @@
 package cpu.core.components
 
 import chisel3._
-import chisel3.util.{MuxLookup, ValidIO}
+import chisel3.util.{MuxLookup, Valid}
 import cpu.BranchPredictorType.TwoBit
 import cpu.core.Constants._
 import cpu.{BranchPredictorType, CPUConfig}
 import shared.ValidBundle
 
 class BrPrUpdateBundle extends Bundle {
-  val taken  = Input(Bool())
-  val pc     = Input(UInt(addrLen.W))
-  val target = Input(UInt(addrLen.W))
+  val taken  = Bool()
+  val pc     = UInt(addrLen.W)
+  val target = UInt(addrLen.W)
 }
 
 class BranchPredictorIO(fa: Int, predType: BranchPredictorType) extends Bundle {
   val pc = Input(UInt(addrLen.W))
 
-  val update = Flipped(ValidIO(new BrPrUpdateBundle))
+  val update = Flipped(Valid(new BrPrUpdateBundle))
 
-  val prediction = Vec(fa, Output(ValidBundle(new BranchPredictorEntry(predType))))
+  val prediction = Output(Vec(fa, ValidBundle(new BranchPredictorEntry(predType))))
 }
 
 class BranchPredictorEntry(predType: BranchPredictorType) extends Bundle {

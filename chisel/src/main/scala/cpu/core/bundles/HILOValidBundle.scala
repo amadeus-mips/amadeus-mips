@@ -10,8 +10,8 @@ import shared.ValidBundle
  * hi and lo are ValidIO
  */
 class HILOValidBundle extends Bundle {
-  val hi = new ValidBundle
-  val lo = new ValidBundle
+  val hi = ValidBundle(UInt(32.W))
+  val lo = ValidBundle(UInt(32.W))
 }
 
 /**

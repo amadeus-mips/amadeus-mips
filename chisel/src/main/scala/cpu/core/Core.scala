@@ -7,9 +7,9 @@ import chisel3.util.Decoupled
 import cpu.CPUConfig
 import cpu.common.{NiseSramReadIO, NiseSramWriteIO}
 import cpu.core.Constants._
-import cpu.core.bundles.TLBOpIO
+import cpu.core.bundles.{InstructionFIFOEntry, TLBOpIO}
 import cpu.core.bundles.stages._
-import cpu.core.components.{CP0, HILO, RegFile, Stage}
+import cpu.core.components.{CP0, HILO, InstructionFIFO, RegFile, Stage}
 import cpu.core.pipeline._
 import shared.bundles.Dual
 
@@ -48,7 +48,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   // stages
   val if_if1  = Module(new Stage(1, new IfIf1Bundle))
-  val if1_id  = Module(new Stage(2, new If1IdBundle))
+  val instFIFO = Module(new InstructionFIFO(new InstructionFIFOEntry()))
+//  val if1_id  = Module(new Stage(2, new If1IdBundle))
   val id_exe  = Module(new Stage(3, new IdExeBundle))
   val exe_mem = Module(new Stage(4, new ExeMemBundle))
   val mem_wb  = Module(new Stage(5, new MemWbBundle))
@@ -75,16 +76,16 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
     (executeTop.io.branch.valid && hazard.io.predictFailFlush(0))
 
   fetch1Top.io.in         := if_if1.io.out
-  fetch1Top.io.itReady    := !VecInit(hazard.io.stallReq.tail.tail).asUInt().orR()
+  fetch1Top.io.itReady    := instFIFO.io.readyForEnqueue
   fetch1Top.io.inst.bits  := io.rInst.data.bits
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
-  if1_id.io.in    := fetch1Top.io.out
-  if1_id.io.stall := hazard.io.stall
-  if1_id.io.flush := hazard.io.flush ||
-    (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
 
-  decodeTop.io.in     := if1_id.io.out
+  instFIFO.reset := hazard.io.flush || (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
+  instFIFO.io.enqueue := fetch1Top.io.out
+  instFIFO.io.dequeue := !hazard.io.stall(3)
+
+  decodeTop.io.in     := instFIFO.io.dequeue.head.bits
   decodeTop.io.exeWR  := executeTop.io.out.write
   decodeTop.io.memWR  := memoryTop.io.out.write
   decodeTop.io.wbWR   := wbTop.io.out.write
@@ -92,8 +93,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   decodeTop.io.rtData := regFile.io.rtData
 
   regFile.io.write := wbTop.io.out.write
-  regFile.io.rs    := if1_id.io.out.inst(25, 21)
-  regFile.io.rt    := if1_id.io.out.inst(20, 16)
+  regFile.io.rs    := instFIFO.io.dequeue.head.bits.inst(25, 21)
+  regFile.io.rt    := instFIFO.io.dequeue.head.bits.inst(20, 16)
 
   id_exe.io.in    := decodeTop.io.out
   id_exe.io.stall := hazard.io.stall
@@ -142,7 +143,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   hazard.io.stallReq(4) := memoryTop.io.stallReq
 
   hazard.io.delaySlots(0) := fetchTop.io.out.inDelaySlot
-  hazard.io.delaySlots(1) := fetch1Top.io.out.inDelaySlot
+  hazard.io.delaySlots(1) := /* fetch1Top.io.out.inDelaySlot */ DontCare
   hazard.io.delaySlots(2) := decodeTop.io.out.inDelaySlot
 
   mem_wb.io.in    := memoryTop.io.out

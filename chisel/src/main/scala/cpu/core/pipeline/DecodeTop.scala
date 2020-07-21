@@ -6,13 +6,13 @@ import chisel3._
 import chisel3.util.experimental.loadMemoryFromFile
 import cpu.CPUConfig
 import cpu.core.Constants._
-import cpu.core.bundles.WriteBundle
+import cpu.core.bundles.{InstructionFIFOEntry, WriteBundle}
 import cpu.core.bundles.stages.{IdExeBundle, If1IdBundle}
 import firrtl.annotations.MemoryLoadFileType
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val in = Input(new If1IdBundle)
+    val in = Input(new InstructionFIFOEntry())
 
     val exeWR = Input(new WriteBundle)
     val memWR = Input(new WriteBundle)
@@ -78,16 +78,16 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.imm26       := imm26
   io.out.inDelaySlot := io.in.inDelaySlot
   io.out.brPredict   := io.in.brPredict
-  io.out.instValid   := io.in.instValid
+  io.out.instValid   := io.in.valid
 
   io.stallReq := hazard.io.stallReq
 
   if (conf.compareRamDirectly) {
     val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
     loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)
-    when (!(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))) {
+    when (!(!io.in.valid || io.in.valid && io.in.inst === veriMem.read(io.in.pc(19, 2)))) {
       printf(p"the request is ${io.in.pc}, the wrong instruction is ${io.in.inst}, the correct instruction should be ${veriMem.read(io.in.pc(19, 2))}")
     }
-    assert(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))
+    assert(!io.in.valid || io.in.valid && io.in.inst === veriMem.read(io.in.pc(19, 2)))
   }
 }

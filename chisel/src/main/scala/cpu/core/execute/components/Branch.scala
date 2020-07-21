@@ -14,7 +14,7 @@ class Branch extends Module {
     val operation = Input(UInt(opLen.W))
     val imm26 = Input(UInt(26.W))
     val pc = Input(UInt(addrLen.W))
-    val branch = Output(new ValidBundle)
+    val branch = Output(ValidBundle(32))
   })
   val pcPlus4 = io.pc + 4.U
   val imm16 = io.imm26(15, 0)

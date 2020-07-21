@@ -1,7 +1,7 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.ValidIO
+import chisel3.util.Valid
 import cpu.BranchPredictorType.{AlwaysNotTaken, AlwaysTaken, TwoBit}
 import cpu.CPUConfig
 import cpu.core.Constants._
@@ -19,11 +19,11 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
 
     // from decode stage
     val inDelaySlot = Input(Bool())
-    val predict     = Input(new ValidBundle)
+    val predict     = Input(ValidBundle(32))
     val predictSrc  = Input(UInt(1.W))
     // from execute stage
-    val branch     = Input(new ValidBundle)
-    val predUpdate = Flipped(ValidIO(new BrPrUpdateBundle))
+    val branch     = Input(ValidBundle(32))
+    val predUpdate = Flipped(Valid(new BrPrUpdateBundle))
 
     // from ram
     val instValid = Input(Bool())

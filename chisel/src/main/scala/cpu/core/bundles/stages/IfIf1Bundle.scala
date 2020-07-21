@@ -13,4 +13,6 @@ class IfIf1Bundle(implicit conf: CPUConfig) extends Bundle {
   val inDelaySlot = Bool()
   val brPredict   = Vec(conf.fetchAmount, ValidBundle(new BranchPredictorEntry(conf.branchPredictorType)))
   val validPcMask = Vec(conf.fetchAmount, Bool())
+
+  override def cloneType: IfIf1Bundle.this.type = new IfIf1Bundle().asInstanceOf[this.type ]
 }
