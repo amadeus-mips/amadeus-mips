@@ -24,6 +24,9 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
 
   val io = IO(new Bundle {
 
+    /** this will flush everything but the entry in head pointer */
+    val flushTail = Input(Bool())
+
     /** enqueue data structure */
     val enqueue         = Vec(CPUConfig.fetchAmount, Flipped(Valid(genType)))
     val readyForEnqueue = Output(Bool())
@@ -38,10 +41,10 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   require(capacity > CPUConfig.decodeWidth)
   require(capacity % CPUConfig.decodeWidth == 0)
   val size    = RegInit(0.U((log2Ceil(capacity) + 1).W))
-  val headPTR = RegInit(0.U(log2Ceil(capacity).W))
   val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
+  val headPTR = RegInit(0.U(log2Ceil(capacity).W))
 
-  val dataArray  = Mem(capacity, genType)
+  val dataArray  = Reg(Vec(capacity, genType))
   val validArray = RegInit(VecInit(Seq.fill(capacity)(false.B)))
 
   /** how many valid enqueue requests are there?
@@ -74,7 +77,7 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
 
   for (i <- 0 until CPUConfig.decodeWidth) {
     io.dequeue(i).valid := dequeueResponseValidArray(i)
-    io.dequeue(i).bits  := dataArray(headPTR - i.U)
+    io.dequeue(i).bits  := dataArray(tailPTR - i.U)
   }
 
   // assert(size >= numOfDequeueElements)
@@ -84,31 +87,40 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   for (i <- 0 until CPUConfig.fetchAmount) {
     // write signal
     when(enqueueRequestValidArray(i) && enqueueReady) {
-      dataArray(tailPTR - i.U) := io.enqueue(i).bits
-      assert(!validArray(tailPTR - i.U))
+      dataArray(headPTR - i.U) := io.enqueue(i).bits
+      assert(!validArray(headPTR - i.U))
       assert(io.enqueue(i).valid)
-      validArray(tailPTR - i.U) := true.B
+      validArray(headPTR - i.U) := true.B
     }
   }
 
   for (i <- 0 until CPUConfig.decodeWidth) {
-    dequeueResponseValidArray(i) := validArray(headPTR - i.U)
+    dequeueResponseValidArray(i) := validArray(tailPTR - i.U)
     when(io.dequeue(i).ready && dequeueResponseValidArray(i)) {
-      validArray(headPTR - i.U) := false.B
+      validArray(tailPTR - i.U) := false.B
     }
   }
 
   when(enqueueReady) {
-    tailPTR := tailPTR - numOfEnqueueRequests
+    headPTR := headPTR - numOfEnqueueRequests
   }
 
-  headPTR := headPTR - numOfDequeueElements
+  tailPTR := tailPTR - numOfDequeueElements
 
   size := Mux(
     (enqueueReady),
     (size - numOfDequeueElements + numOfEnqueueRequests),
     size - numOfDequeueElements
   )
+
+  when(io.flushTail) {
+    tailPTR             := headPTR
+    size                := 1.U
+    validArray          := 0.U.asTypeOf(validArray)
+    validArray(headPTR) := true.B
+  }
+
+  assert(!io.flushTail || (io.flushTail && size =/= 0.U))
 }
 
 object InstructionFIFOElaborate extends App {
