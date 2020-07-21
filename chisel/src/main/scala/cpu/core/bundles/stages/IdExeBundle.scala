@@ -18,6 +18,6 @@ class IdExeBundle extends Bundle {
   val imm26       = UInt(26.W)
   val pc          = UInt(addrLen.W)
   val inDelaySlot = Bool()
-  val brPredict   = ValidBundle(UInt(32.W))
+  val brPredict   = ValidBundle(32)
   val instValid   = Bool()
 }

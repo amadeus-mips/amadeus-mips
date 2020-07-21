@@ -18,7 +18,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
 
     val stallReq = Output(Bool())
 
-    val predict = Output(ValidBundle(UInt(32.W))) // to Fetch
+    val predict = Output(ValidBundle(32)) // to Fetch
 
     val nextInstInDelaySlot = Output(Bool()) // to Fetch
   })
@@ -32,7 +32,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   val isBranchInstVec = io.inst.bits.map(isBranchInst)
 
   val branchVec = io.in.brPredict.zip(isBranchInstVec).zip(io.in.validPcMask).map {
-    case ((entry, isBranch), validPc) => entry.valid && isBranch && entry.bits.statistics(1) && validPc
+    case ((entry, isBranch), validPc) => entry.valid && isBranch && entry.statistics(1) && validPc
   }
 
   val inDelaySlotVec = VecInit(
@@ -46,7 +46,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
       out.bits.inst            := inst
       out.bits.except          := io.in.except
       out.bits.inDelaySlot     := inDS
-      out.bits.brPredict.bits  := predict.bits.target
+      out.bits.brPredict.bits  := predict.target
       out.bits.brPredict.valid := (if (i == 0) branchVec(i) else !branchVec.slice(0, i).reduce(_ || _) && branchVec(i))
       out.bits.valid           := (if (i == 0) !io.in.except.asUInt().orR() && valid else valid)
       out.valid                := (if (i == 0) valid else !io.in.except.asUInt().orR() && valid)
@@ -63,7 +63,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
     }
   }
   io.nextInstInDelaySlot := lastIsBranch && io.inst.fire()
-  io.predict.bits        := Mux(isBranchInstVec(0), io.in.brPredict(0).bits.target, io.in.brPredict(1).bits.target)
+  io.predict.bits        := Mux(isBranchInstVec(0), io.in.brPredict(0).target, io.in.brPredict(1).target)
   io.predict.valid       := io.inst.fire() && branchVec.reduce(_ || _)
 
   assert(!io.in.except.asUInt().orR() || io.in.validPcMask(0) && !io.in.validPcMask.tail.reduce(_ || _))
