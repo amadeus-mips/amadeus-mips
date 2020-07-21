@@ -9,6 +9,8 @@ import cpu.pipelinedCache.components.pipelineRegister.CachePipelineStage
 import cpu.pipelinedCache.dataCache.fetch.FetchTop
 import cpu.pipelinedCache.dataCache.query.QueryTop
 
+//TODO: freshess of tag and valid
+//TODO: hit in writing entry in write queue
 class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
