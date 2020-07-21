@@ -52,7 +52,7 @@ class LUTRam(depth: Int, width: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Buil
   } else {
 //    assert(
 //      !(io.writeEnable && io.readAddr === io.writeAddr),
-//      s"there has been an address collision, the address is ${io.readAddr}"
+//      s"there has been an request collision, the request is ${io.readAddr}"
 //    )
 val bank = RegInit(VecInit(Seq.fill(depth)(0.U(width.W))))
     io.readData    := bank(io.readAddr)

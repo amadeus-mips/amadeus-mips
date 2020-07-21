@@ -13,7 +13,7 @@ class ReadHolder extends Module {
     val output = Valid(UInt(32.W))
   })
 
-  val instruction = RegInit(0.U(32.W))
+  val instruction = RegInit("hdeadbeef".U(32.W))
   val valid       = RegInit(false.B)
 
   instruction     := io.input.bits

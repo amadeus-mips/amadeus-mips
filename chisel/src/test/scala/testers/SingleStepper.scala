@@ -14,9 +14,9 @@ object SingleStepper {
       | ------------------
       | print reg <num>  : print the value in register
       | print regs       : print values in all registers
-      | print pc         : print the address in the pc
-      | print inst [addr]: print the disassembly for the instruction at addr.
-      |                    If no addr provided then use the current pc.
+      | print pc         : print the request in the pc
+      | print inst [bankIndex]: print the disassembly for the instruction at bankIndex.
+      |                    If no bankIndex provided then use the current pc.
       |
       | Printing AXI related IO
       | ------------------------

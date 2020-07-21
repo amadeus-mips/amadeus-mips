@@ -9,8 +9,8 @@ import chisel3._
  * This interface corresponds with the pipeline <=> port interface between the
  * pipelined CPU and the memory port.
  *
- * Input:  address, the address of a piece of data in memory.
- * Input:  valid, true when the address specified is valid
+ * Input:  request, the request of a piece of data in memory.
+ * Input:  valid, true when the request specified is valid
  * Output: good, true when memory is responding with a piece of data (used to un-stall the pipeline)
  *
  */
@@ -25,8 +25,8 @@ class MemPortIO extends Bundle {
   * The *interface* of the IMemPort module.
   *
   * Pipeline <=> Port:
-  *   Input:  address, the address of an instruction in memory
-  *   Input:  valid, true when the address specified is valid
+  *   Input:  request, the request of an instruction in memory
+  *   Input:  valid, true when the request specified is valid
   *   Output: instruction, the requested instruction
   *   Output: good, true when memory is responding with a piece of data
   */
@@ -38,9 +38,9 @@ class IMemPortIO extends MemPortIO {
   * The *interface* of the DMemPort module.
   *
   * Pipeline <=> Port:
-  *   Input:  address, the address of a piece of data in memory.
-  *   Input:  writedata, valid interface for the data to write to the address
-  *   Input:  valid, true when the address (and writedata during a write) specified is valid
+  *   Input:  request, the request of a piece of data in memory.
+  *   Input:  writedata, valid interface for the data to write to the request
+  *   Input:  valid, true when the request (and writedata during a write) specified is valid
   *   Input:  memread, true if we are reading from memory
   *   Input:  memwrite, true if we are writing to memory
   *   Input:  maskmode, mode to mask the result. 0 means byte, 1 means halfword, 2 means word

@@ -72,7 +72,7 @@ class TrueDualPortRam(depth: Int, width: Int, byteAddressable: Boolean)(implicit
     )
     assert(
       !(io.portA.addr === io.portB.addr && io.portA.portEnable && io.portB.portEnable && (io.portA.writeVector.orR || io.portB.writeVector.orR)),
-      "there has been an address collision"
+      "there has been an request collision"
     )
     if (byteAddressable) {
       val bank = SyncReadMem(depth, Vec(width / 8, UInt(8.W)))

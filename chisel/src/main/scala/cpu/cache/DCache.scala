@@ -22,12 +22,12 @@ class DCache(wayAmount: Int = 2, numOfSets: Int = 128) extends Module {
     val bus_bValid = Input(Bool()) // write to axi bus response valid
 
     // TODO convert to `NiseSramIO`
-    val cpu_addr = Input(UInt(addrLen.W)) // address from cpu
+    val cpu_addr = Input(UInt(addrLen.W)) // request from cpu
     val cpu_ren = Input(Bool()) // read enable from cpu
     val cpu_wen = Input(Bool()) // write enable from cpu
     val cpu_wData = Input(UInt(dataLen.W)) // write data & write enable from cpu
     val cpu_wSel = Input(UInt(bankSize.W)) // write sel from cpu
-    val cpu_exeAddr = Input(UInt(addrLen.W)) // execute stage address from cpu
+    val cpu_exeAddr = Input(UInt(addrLen.W)) // execute stage request from cpu
 
     val cpu_data = Output(UInt(dataLen.W)) // data to cpu
     val hit = Output(Bool()) // read from cache hit
@@ -35,7 +35,7 @@ class DCache(wayAmount: Int = 2, numOfSets: Int = 128) extends Module {
     val miss = Output(Bool()) // cache not hit, need to access memory
 
     val bus_writeBack = Output(Bool()) // cache replaced item need to write back(dirty)
-    val bus_wAddr = Output(UInt(addrLen.W)) // address for write back
+    val bus_wAddr = Output(UInt(addrLen.W)) // request for write back
     val bus_wData = Output(UInt(dataLen.W))
     val bus_wValid = Output(Bool())
     val bus_wLast = Output(Bool())

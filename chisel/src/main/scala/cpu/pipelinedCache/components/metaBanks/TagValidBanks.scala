@@ -1,4 +1,4 @@
-package cpu.pipelinedCache.components
+package cpu.pipelinedCache.components.metaBanks
 
 import chisel3._
 import chisel3.internal.naming.chiselName
@@ -6,29 +6,6 @@ import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.memoryBanks.LUTRam
-
-class TagValidBundle(implicit cacheConfig: CacheConfig) extends Bundle {
-  val tag = UInt(cacheConfig.tagLen.W)
-  val valid = Bool()
-
-  override def cloneType: this.type = (new TagValidBundle).asInstanceOf[this.type]
-}
-
-class ReadOnlyPort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
-  val addr = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
-  val data = Output(gen)
-
-  override def cloneType = new ReadOnlyPort(gen).asInstanceOf[this.type]
-}
-
-class ReadWritePort[+T <: Data](gen: T)(implicit cacheConfig: CacheConfig) extends Bundle {
-  val addr = Input(UInt(log2Ceil(cacheConfig.numOfSets).W))
-  val writeEnable = Input(Bool())
-  val writeData = Input(gen)
-  val readData = Output(gen)
-
-  override def cloneType = new ReadWritePort(gen).asInstanceOf[this.type]
-}
 
 /**
   * all the tag and valid data are in here, stored in LUTRam
@@ -76,4 +53,3 @@ class TagValidBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) ext
 
   }
 }
-

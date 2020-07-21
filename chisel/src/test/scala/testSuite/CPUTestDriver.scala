@@ -1,9 +1,8 @@
 package testSuite
 
 import chisel3.iotesters.TesterOptionsManager
-import cpu._
-import testers.Simulate.build
 import org.scalatest.{FlatSpec, Matchers}
+import testers.Simulate.build
 import treadle.TreadleTester
 import treadle.executable.TreadleException
 
@@ -288,7 +287,7 @@ class CPUTestDriver(directoryName: String, memFile: String, dumpVCD: Boolean = f
         case e: TreadleException => {
           success = false
           val real = simulator.peekMemory("mem.physicalMem", addr)
-          println(s"Memory at address 0x${addr.toHexString} failed to match. Was $real. Should be $value")
+          println(s"Memory at request 0x${addr.toHexString} failed to match. Was $real. Should be $value")
         }
       }
     }
