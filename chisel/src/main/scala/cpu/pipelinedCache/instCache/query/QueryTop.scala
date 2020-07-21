@@ -36,8 +36,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val comparator   = Module(new MissComparator)
   val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID))
   val refillBuffer = Module(new ReFillBuffer)
-  val lru          = if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val readHolder   = Module(new ReadHolder)
+  val lru =
+    if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+    else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val readHolder = Module(new ReadHolder)
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid || io.flush)
@@ -78,6 +80,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
   newMiss := (!queryHit && !passThrough && (qState === qIdle || qState === qWriteBack))
+
   /** io parts */
 
   io.ready      := io.data.fire || passThrough
@@ -127,10 +130,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     Cat(
       io.fetchQuery.phyTag,
       io.fetchQuery.index,
-      io.fetchQuery.bankIndex,
+      0.U(cacheConfig.bankIndexLen.W),
       0.U(cacheConfig.bankOffsetLen.W)
     ),
-    Cat(mshr.io.extractMiss.addr.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
+    Cat(mshr.io.extractMiss.addr.tag, mshr.io.extractMiss.addr.index, 0.U((cacheConfig.bankIndexLen+cacheConfig.bankOffsetLen).W))
   )
   axi.io.addrReq.valid := newMiss
 

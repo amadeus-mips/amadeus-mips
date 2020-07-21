@@ -62,7 +62,7 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   switch(state) {
     is(sIdle) {
       when(io.bankIndex.valid) {
-        writePtr        := io.bankIndex.bits
+        writePtr        := 0.U
         buffer          := 0.U.asTypeOf(buffer)
         state           := sTransfer
         bufferValidMask := 0.U.asTypeOf(bufferValidMask)

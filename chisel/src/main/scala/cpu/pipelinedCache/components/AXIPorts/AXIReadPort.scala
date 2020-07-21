@@ -46,7 +46,7 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cac
   io.axi.ar.bits.addr  := io.addrReq.bits
   io.axi.ar.bits.len   := (cacheConfig.numOfBanks - 1).U(4.W)
   io.axi.ar.bits.size  := "b010".U(3.W) // always 4 bytes
-  io.axi.ar.bits.burst := "b10".U(2.W) // axi wrap burst
+  io.axi.ar.bits.burst := "b01".U(2.W) // axi wrap burst
 
   io.axi.ar.bits.lock  := 0.U
   io.axi.ar.bits.cache := 0.U
