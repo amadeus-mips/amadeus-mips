@@ -28,7 +28,6 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       val writeTag    = UInt(cacheConfig.tagLen.W)
       val writeData   = Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W))
     })
-
     /** is query handling a miss and preparing for write back? */
     val inAMiss = Output(Bool())
     // axi port wiring
@@ -62,7 +61,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   /** io parts */
 
-  io.ready      := (io.data.fire || passThrough) && !mshr.io.writeBack
+  io.ready      := io.data.fire || passThrough
   io.data.valid := validData
   io.data.bits := MuxCase(
     io.bankData(comparator.io.bankHitWay.bits),
@@ -83,10 +82,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.axi := DontCare
   io.axi <> axi.io.axi
 
-  comparator.io.tagValid  := io.fetchQuery.tagValid
-  comparator.io.phyTag    := io.fetchQuery.phyTag
-  comparator.io.index     := io.fetchQuery.index
-  comparator.io.mshr.bits := mshr.io.mshrInfo
+  comparator.io.tagValid          := io.fetchQuery.tagValid
+  comparator.io.phyTag            := io.fetchQuery.phyTag
+  comparator.io.index             := io.fetchQuery.index
+  comparator.io.mshr.bits         := mshr.io.mshrInfo
   // is the state in a miss
   comparator.io.mshr.valid        := !mshr.io.missAddr.ready
   comparator.io.refillBufferValid := refillBuffer.io.queryResult.valid
