@@ -54,7 +54,7 @@ import chisel3.util._
 import shared.GPIO
 
 /**
-  * If you want to add address map,  you need to modify function [[axi_interfaceHandle()]] at least.
+  * If you want to add request map,  you need to modify function [[axi_interfaceHandle()]] at least.
   *
   * @param simulation is simulate environment
   */

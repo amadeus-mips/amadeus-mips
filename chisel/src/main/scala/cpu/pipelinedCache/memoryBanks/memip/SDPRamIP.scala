@@ -9,7 +9,7 @@ import chisel3.util.log2Ceil
   * @param dataWidth       : width of every data line
   * @param byteWriteWidth  : how many bits to write per mask
   * @param numberOfLines   : how many lines of data are in the ram
-  * @param addrWidth       : how wide is the address (to cover all lines)
+  * @param addrWidth       : how wide is the request (to cover all lines)
   * @param memoryPrimitive : should I use auto, block ram or distributed ram
   */
 class SDPRamIP(
@@ -33,7 +33,7 @@ class SDPRamIP(
   )
 ) {
   override def desiredName: String = "xpm_memory_sdpram"
-  require(addrWidth <= 20, "address width should be 1 to 20")
+  require(addrWidth <= 20, "request width should be 1 to 20")
   require(
     dataWidth - (dataWidth / byteWriteWidth) * byteWriteWidth == 0,
     "data width should be a multiple of byte write width"
@@ -42,7 +42,7 @@ class SDPRamIP(
     List("auto", "block", "distributed", "ultra").contains(memoryPrimitive),
     "memory primitive should be auto, block ram, dist ram or ultra ram"
   )
-  require(addrWidth == log2Ceil(numberOfLines), "address width should be log 2 of number of lines to address all")
+  require(addrWidth == log2Ceil(numberOfLines), "request width should be log 2 of number of lines to request all")
   val io = IO(new Bundle {
     // clock and reset
     val clka = Input(Clock())

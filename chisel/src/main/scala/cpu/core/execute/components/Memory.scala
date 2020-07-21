@@ -22,7 +22,7 @@ class Memory extends Module {
   val memAddr = io.op1 + offset
   io.memAddr := memAddr
 
-  /** Exception caused by address not alignment */
+  /** Exception caused by request not alignment */
   io.exceptLoad := ((io.operation === MEM_LH || io.operation === MEM_LHU) && memAddr(0) =/= 0.U) ||
     (io.operation === MEM_LW && memAddr(1,0) =/= 0.U)
   io.exceptSave := (io.operation === MEM_SH && memAddr(0) =/= 0.U) ||

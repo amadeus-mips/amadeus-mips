@@ -1,9 +1,8 @@
 package memory.axi
 
+import _root_.axi.AXIIO
 import chisel3._
 import chisel3.util._
-import _root_.axi.AXIIO
-import shared.CircularShifter
 
 /**
   * a ram axi slave end with fixed burst length and fixed burst type of wrap
@@ -125,8 +124,8 @@ class AXIWrapToSRAM(id: UInt, burstLength: Int = 8) extends Module {
         io.ram.read.addr := readAddrReg
         assert(io.ram.read.valid === true.B, "combinational ram should always have output")
         readCheckCounter := readCheckCounter + 1.U;
-        assert(readAddrReg(1, 0) === 0.U, "address should be aligned")
-//        assert(readAddrReg.getWidth == 20, "address width should be 20")
+        assert(readAddrReg(1, 0) === 0.U, "request should be aligned")
+//        assert(readAddrReg.getWidth == 20, "request width should be 20")
         readAddrReg := Cat(readAddrReg(31, 2+log2Ceil(burstLength)), (readAddrReg(1+log2Ceil(burstLength), 2) + 1.U), 0.U(2.W))
         io.bus.r.bits.data := io.ram.read.data
       }
