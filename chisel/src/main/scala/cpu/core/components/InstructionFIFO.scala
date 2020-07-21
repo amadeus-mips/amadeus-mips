@@ -4,22 +4,37 @@ import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
+import cpu.core.Constants._
 import firrtl.options.TargetDirAnnotation
+import shared.ValidBundle
+
+class InstructionFIFOEntry(implicit conf: CPUConfig) extends Bundle {
+  val pc          = UInt(addrLen.W)
+  val inst        = UInt(dataLen.W)
+  val except      = Vec(exceptAmount, Bool())
+  val inDelaySlot = Bool()
+  val brPredict   = ValidBundle(UInt(addrLen.W))
+  val valid       = Bool()
+
+  override def cloneType: InstructionFIFOEntry.this.type = new InstructionFIFOEntry().asInstanceOf[this.type ]
+}
 
 class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** enqueue data structure */
-    val enqueue         = Vec(CPUConfig.instructionFIFOWidth, Flipped(Valid(gen)))
+    val enqueue         = Vec(CPUConfig.fetchAmount, Flipped(Valid(gen)))
     val readyForEnqueue = Output(Bool())
 
     /** dequeue data structure */
-    val dequeue         = Vec(CPUConfig.instructionFIFOWidth, Valid(gen))
+    val dequeue         = Vec(CPUConfig.decodeWidth, Valid(gen))
     val readyForDequeue = Input(Bool())
   })
   val capacity: Int = CPUConfig.instructionFIFOLength
-  require(capacity > CPUConfig.instructionFIFOWidth)
-  require(capacity % CPUConfig.instructionFIFOWidth == 0)
+  require(capacity > CPUConfig.fetchAmount)
+  require(capacity % CPUConfig.fetchAmount == 0)
+  require(capacity > CPUConfig.decodeWidth)
+  require(capacity % CPUConfig.decodeWidth == 0)
   val size    = RegInit(0.U((log2Ceil(capacity) + 1).W))
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
   val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
@@ -27,18 +42,18 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   val dataArray  = Mem(capacity, gen)
   val validArray = RegInit(VecInit(Seq.fill(capacity)(false.B)))
 
-  val enqueueRequestValidArray = Wire(Vec(CPUConfig.instructionFIFOWidth, Bool()))
+  val enqueueRequestValidArray = Wire(Vec(CPUConfig.decodeWidth, Bool()))
   enqueueRequestValidArray := io.enqueue.map(entry => entry.valid)
 
-  val dequeueResponseValidArray = Wire(Vec(CPUConfig.instructionFIFOWidth, Bool()))
+  val dequeueResponseValidArray = Wire(Vec(CPUConfig.decodeWidth, Bool()))
 
   /** calculate how many entries are required to accommodate this enqueue request */
   val numOfEnqueueRequests =
-    enqueueRequestValidArray.asTypeOf(Vec(CPUConfig.instructionFIFOWidth, UInt(1.W))).reduce(_ + _)
+    enqueueRequestValidArray.asTypeOf(Vec(CPUConfig.decodeWidth, UInt(1.W))).reduce(_ + _)
 
   /** calculate how many elements can be dequeue-ed */
   val numOfDequeueValidElements =
-    dequeueResponseValidArray.asTypeOf(Vec(CPUConfig.instructionFIFOWidth, UInt(1.W))).reduce(_ + _)
+    dequeueResponseValidArray.asTypeOf(Vec(CPUConfig.decodeWidth, UInt(1.W))).reduce(_ + _)
 
   /** there are capacity - size entries left */
   val spaceLeft = capacity.U - size
@@ -65,7 +80,7 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
     )
   )
 
-  for (i <- 0 until CPUConfig.instructionFIFOWidth) {
+  for (i <- 0 until CPUConfig.decodeWidth) {
     // write signal
     when(enqueueRequestValidArray(i) && enqueueReady) {
       dataArray(tailPTR + i.U) := io.enqueue(i).bits
