@@ -4,20 +4,7 @@ import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.core.Constants._
 import firrtl.options.TargetDirAnnotation
-import shared.ValidBundle
-
-class InstructionFIFOEntry(implicit conf: CPUConfig) extends Bundle {
-  val pc          = UInt(addrLen.W)
-  val inst        = UInt(dataLen.W)
-  val except      = Vec(exceptAmount, Bool())
-  val inDelaySlot = Bool()
-  val brPredict   = ValidBundle(UInt(addrLen.W))
-  val valid       = Bool()
-
-  override def cloneType: InstructionFIFOEntry.this.type = new InstructionFIFOEntry().asInstanceOf[this.type ]
-}
 
 class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
