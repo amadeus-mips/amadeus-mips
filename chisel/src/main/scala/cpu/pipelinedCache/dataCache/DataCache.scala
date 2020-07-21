@@ -57,8 +57,8 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //-----------------------------------------------------------------------------
   //------------------pipeline register seperating fetch and query---------------
   //-----------------------------------------------------------------------------
-  fetch_query.io.stall        := !controller.io.stage2Ready
-  fetch_query.io.in.valid     := io.request.fire
+  fetch_query.io.stall        := false.B
+  fetch_query.io.in.valid     := io.request.fire && !query.io.write.valid
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.index     := fetch.io.addrResult.index
   fetch_query.io.in.phyTag    := fetch.io.addrResult.phyTag
@@ -76,7 +76,8 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   query_commit.io.stall := false.B
   query_commit.io.in    := query.io.queryCommit
 
-  controller.io.stage2Ready := query.io.ready
+  // when query is not write back, it is not ready
+  controller.io.stage2Ready := query.io.ready && !query.io.write.valid
 
   for (i <- 0 until cacheConfig.numOfWays) {
     for (k <- 0 until cacheConfig.numOfBanks) {
@@ -85,12 +86,12 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
       dataBanks.io.way_bank(i)(k).writeMask := Mux(
         query.io.queryCommit.bankIndexSel === k.U && query.io.queryCommit.waySel === i.U && query.io.queryCommit.writeEnable,
         query.io.queryCommit.writeMask,
-        0.U
+        Mux(query.io.write.valid && query.io.write.bits.waySelection === i.U, "b1111".U(4.W), 0.U)
       )
-      dataBanks.io.way_bank(i)(k).writeData := query.io.queryCommit.writeData
+      dataBanks.io.way_bank(i)(k).writeData := query.io.queryCommit.refillData(k)
       dirtyData(k)                          := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
     }
-    readDataWire(i) := dataBanks.io.way_bank(i)(query.io.queryCommit.bankIndexSel).readData
+    readDataWire(i) := dataBanks.io.way_bank(i)(query_commit.io.out.bankIndexSel).readData
   }
 
 }
