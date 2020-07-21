@@ -3,36 +3,22 @@
 package shared
 
 import chisel3._
-import chisel3.experimental.{DataMirror, requireIsChiselType}
-import cpu.core.Constants._
 
-
-class ValidBundle[T <: Data](gen: T)(implicit compileOptions: CompileOptions) extends Bundle {
-  val genType = if (compileOptions.declaredTypeMustBeUnbound) {
-    requireIsChiselType(gen)
-    gen
-  } else {
-    if (DataMirror.internal.isSynthesizable(gen)) {
-      chiselTypeOf(gen)
-    } else {
-      gen
-    }
-  }
+class ValidBundle(len: Int = 32)(implicit compileOptions: CompileOptions) extends Bundle {
 
   val valid = Bool()
-  val bits  = genType
+  val bits  = UInt(len.W)
 
-  override def cloneType: ValidBundle.this.type = new ValidBundle[T](gen).asInstanceOf[this.type]
+  override def cloneType: ValidBundle.this.type = new ValidBundle(len).asInstanceOf[this.type]
 }
 
 object ValidBundle {
-  def apply[T <: Data](valid: Bool, bits: T, len: Int = dataLen): ValidBundle[T] = {
-    val that = Wire(ValidBundle(bits))
+  def apply(valid: Bool, bits: UInt, len: Int = 32): ValidBundle = {
+    val that = Wire(ValidBundle(len))
     that.valid := valid
     that.bits  := bits
     that
   }
-  def apply[T <: Data](gen: T): ValidBundle[T] = new ValidBundle[T](gen)
 
-  def apply(len: Int): ValidBundle[UInt] = new ValidBundle[UInt](UInt(len.W))
+  def apply(len: Int): ValidBundle = new ValidBundle(len)
 }

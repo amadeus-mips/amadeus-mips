@@ -15,5 +15,5 @@ class If1IdBundle(implicit conf: CPUConfig) extends Bundle {
   val instValid   = Bool()
   val except      = Vec(exceptAmount, Bool())
   val inDelaySlot = Dual(Bool())
-  val brPredict   = Vec(conf.fetchAmount, ValidBundle(UInt(32.W)))
+  val brPredict   = Vec(conf.fetchAmount, ValidBundle(32))
 }

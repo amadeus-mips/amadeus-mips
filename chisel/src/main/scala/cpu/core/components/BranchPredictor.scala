@@ -18,22 +18,34 @@ class BranchPredictorIO(fa: Int, predType: BranchPredictorType) extends Bundle {
 
   val update = Flipped(Valid(new BrPrUpdateBundle))
 
-  val prediction = Output(Vec(fa, ValidBundle(new BranchPredictorEntry(predType))))
+  val prediction = Output(Vec(fa, new BranchPredictorEntryBundle(predType)))
 }
 
-class BranchPredictorEntry(predType: BranchPredictorType) extends Bundle {
+class BranchPredictorEntryBundle(predType: BranchPredictorType) extends Bundle {
   val target = UInt(addrLen.W)
   val statistics = UInt(predType match {
     case TwoBit => 2.W
     case _      => 0.W
   })
+  val valid = Bool()
 
-  override def cloneType: BranchPredictorEntry.this.type =
-    new BranchPredictorEntry(predType).asInstanceOf[this.type]
+  override def cloneType: BranchPredictorEntryBundle.this.type =
+    new BranchPredictorEntryBundle(predType).asInstanceOf[this.type]
 }
 
 abstract class BranchPredictor(val c: CPUConfig) extends Module {
   val io = IO(new BranchPredictorIO(c.fetchAmount, c.branchPredictorType))
+
+  class BranchPredictorEntry(predType: BranchPredictorType) extends Bundle {
+    val target = UInt(addrLen.W)
+    val statistics = UInt(predType match {
+      case TwoBit => 2.W
+      case _      => 0.W
+    })
+
+    override def cloneType: BranchPredictorEntry.this.type =
+      new BranchPredictorEntry(predType).asInstanceOf[this.type]
+  }
 
   val predictTable      = Mem(1 << (c.branchPredictorAddrLen - 2), new BranchPredictorEntry(c.branchPredictorType))
   val predictTableValid = RegInit(VecInit(Seq.fill(1 << (c.branchPredictorAddrLen - 2))(false.B)))
@@ -56,7 +68,8 @@ abstract class DynamicPredictor(c: CPUConfig) extends BranchPredictor(c) {
     .foreach(e => {
       val (o, (entry, valid)) = e
       o.valid := valid
-      o.bits  := entry
+      o.target  := entry.target
+      o.statistics := entry.statistics
     })
 
   val updateEntry = Wire(new BranchPredictorEntry(c.branchPredictorType))
