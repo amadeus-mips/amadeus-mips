@@ -44,6 +44,9 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
 
     /** when dequeue is at its last stage */
     val dequeueLast = Output(Bool())
+
+    /** when there is a write query hit in the write queue */
+    val holdOffNewMiss = Output(Bool())
   })
   require(isPow2(capacity))
 
@@ -90,18 +93,18 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   val isQueryHit =
     /**
       * there is a hit in the hit vec
-      * either it's in idle (everthing is good)
-      * or it's in dispatch, but has not performed a handshake yet ( also good )
-      * or it has performed a handshake, but the hit position is not the data in transfer ( also good )
-      * if not, then it is not counted as a query hit. [[cpu.pipelinedCache.dataCache.query.QueryTop]]
+      * if the line is not being dispatched, everything is good
+      * or the query is a read, also good
+      * but if the query is performing a write, then it is not counted as a query hit.
+      * [[cpu.pipelinedCache.dataCache.query.QueryTop]]
       * will issue a new miss. As this handshake has taken place yet, the read will observe this write
       * in transfer
       */
-    queryHitVec.asUInt =/= 0.U && ((dispatchState === dIdle)
-      || (dispatchState === dDispatch)
-        && (!writeHandshakeReg
-          || (writeHandshakeReg
-            && (queryHitPos =/= headPTR))))
+    queryHitVec.asUInt =/= 0.U && Mux(io.query.writeMask === 0.U, true.B, queryHitPos =/= headPTR)
+
+  io.holdOffNewMiss := queryHitVec.asUInt =/= 0.U && io.query.writeMask =/= 0.U && queryHitPos === headPTR
+  // optimization: off
+//  && !writeHandshakeReg
 
   /** enqueue io, when not full, enqueue is ready */
   io.enqueue.ready := size =/= capacity.U

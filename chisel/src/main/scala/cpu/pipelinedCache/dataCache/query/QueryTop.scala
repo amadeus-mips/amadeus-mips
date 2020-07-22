@@ -132,8 +132,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val resourceFree = isIdle || (isRefill && !axiRead.io.finishTransfer)
 
   /** new miss can only be generated when the state is idle and query is not hit
-    * and query is valid */
-  newMiss := !queryHit && !passThrough && isIdle
+    * and query is valid
+    * and the write miss is not a hit in the line being written */
+  newMiss := !queryHit && !passThrough && isIdle && !writeQueue.io.holdOffNewMiss
 
   /** can only hit in the refill buffer during idle, refill, evict and writeBack back */
   hitInRefillBuffer :=
@@ -168,7 +169,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.writeBack.bits.data           := refillBuffer.io.allData
 
   io.hit   := validData && resourceFree
-  io.ready := ((validData || passThrough) && resourceFree) || isIdle
+  io.ready := ((validData || passThrough) && resourceFree)
 
   io.dirtyWay := lruWayReg
 

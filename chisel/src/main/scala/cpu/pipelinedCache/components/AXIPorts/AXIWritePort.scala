@@ -45,7 +45,7 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
   )
 
   io.addrRequest.ready := writeState === writeIdle
-  io.data.ready        := io.axi.w.fire || wFirstReg
+  io.data.ready        := io.axi.w.fire
   // axi section
   io.axi.ar := DontCare
   io.axi.r  := DontCare
@@ -88,7 +88,7 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
       when(io.axi.aw.fire) {
         awValidReg := false.B
       }
-      when(io.axi.w.fire) {
+      when(io.data.fire) {
         wFirstReg := false.B
       }
       when(io.dataLast) {
