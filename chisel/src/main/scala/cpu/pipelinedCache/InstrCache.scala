@@ -81,6 +81,7 @@ class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extend
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.phyTag    := fetch.io.phyTag
   fetch_query.io.in.bankIndex := fetch.io.bankIndex
+  //TODO: make sure this is invalid during a writeback
   fetch_query.io.in.valid     := io.fetchIO.addr.fire
 
   //-----------------------------------------------------------------------------

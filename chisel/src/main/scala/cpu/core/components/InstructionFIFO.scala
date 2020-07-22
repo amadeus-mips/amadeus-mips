@@ -1,7 +1,7 @@
 package cpu.core.components
 
 import chisel3._
-import chisel3.experimental.{DataMirror, requireIsChiselType}
+import chisel3.experimental.{requireIsChiselType, DataMirror}
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
@@ -68,7 +68,7 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
     * this value *has been handshaked* */
   val numOfDequeueElements = Wire(UInt((log2Ceil(capacity) + 1).W))
   numOfDequeueElements := dequeueResponseValidArray
-    .zip((0 until CPUConfig.decodeWidth).map { case (i: Int) => io.dequeue(i).ready })
+    .zip((0 until CPUConfig.decodeWidth).map { i: Int => io.dequeue(i).ready })
     .map { case (ready: Bool, valid: Bool) => ready && valid }
     .foldLeft(0.U((log2Ceil(capacity) + 1).W))((a: UInt, b: Bool) => a + b.asUInt)
 
@@ -108,16 +108,16 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   tailPTR := tailPTR - numOfDequeueElements
 
   size := Mux(
-    (enqueueReady),
-    (size - numOfDequeueElements + numOfEnqueueRequests),
+    enqueueReady,
+    size - numOfDequeueElements + numOfEnqueueRequests,
     size - numOfDequeueElements
   )
 
   when(io.flushTail) {
-    tailPTR             := headPTR
+    headPTR             := tailPTR - 1.U
     size                := 1.U
     validArray          := 0.U.asTypeOf(validArray)
-    validArray(headPTR) := true.B
+    validArray(tailPTR) := true.B && !io.dequeue.head.ready
   }
 
   assert(!io.flushTail || (io.flushTail && size =/= 0.U))

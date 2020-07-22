@@ -7,6 +7,7 @@ import cpu.pipelinedCache.CacheConfig
 
 class ReadHolder(implicit CPUConfig: CPUConfig, cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
+    val flush = Input(Bool())
 
     /** when input is valid, there is a valid/not ready scenario */
     val input = Flipped(Valid(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W))))
@@ -20,6 +21,6 @@ class ReadHolder(implicit CPUConfig: CPUConfig, cacheConfig: CacheConfig) extend
 
   instruction     := io.input.bits
   io.output.bits  := instruction
-  valid           := io.input.valid
+  valid           := io.input.valid && !io.flush
   io.output.valid := valid
 }

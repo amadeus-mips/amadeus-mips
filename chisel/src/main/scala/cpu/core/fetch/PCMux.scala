@@ -20,7 +20,7 @@ class PCMux(n: Int)(implicit val cpuConf: CPUConfig) extends Module {
 
   val pc = RegInit(startPC)
 
-  val pcCacheBankOffset = pc(cpuConf.iCacheConf.bankOffsetLen + 1, 2)
+  val pcCacheBankOffset = pc(cpuConf.iCacheConf.bankIndexLen + 1, 2)
   val isCacheCornerPc   = (cpuConf.iCacheConf.numOfBanks - 1).U === pcCacheBankOffset
 
   pc := MuxCase(

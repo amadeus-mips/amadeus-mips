@@ -8,23 +8,40 @@ import cpu.core.Constants._
 
 class Hazard extends Module {
   val io = IO(new Bundle {
-    val except   = Input(Vec(exceptAmount, Bool()))
-    val EPC      = Input(UInt(dataLen.W))
-    val stallReq = Input(Vec(5, Bool()))
+    val except = Input(Vec(exceptAmount, Bool()))
+    val EPC    = Input(UInt(dataLen.W))
 
-    val flush   = Output(Bool())
-    val flushPC = Output(UInt(dataLen.W))
-    val stall   = Output(UInt(cpuStallLen.W))
+    val predictFail = Input(Bool())
+    val waitingDS   = Input(Bool())
 
-    val delaySlots = Input(Vec(3, Bool())) // fetch, fetch1, decode
+    val stallReqFromIf0 = Input(Bool())
+    val stallReqFromIf1 = Input(Bool())
 
-    val lastDS = Output(UInt(2.W))
-    val predictFailFlush = Output(Vec(2, Bool())) // if_if1, if1_id
+    val stallReqFromId  = Input(Bool())
+    val stallReqFromExe = Input(Bool())
+    val stallReqFromMem = Input(Bool())
+
+    val stallIf0     = Output(Bool())
+    val stallIf1     = Output(Bool())
+    val fifoDeqReady = Output(Bool())
+    val stallExe     = Output(Bool())
+    val stallMem     = Output(Bool())
+
+    val flushAll = Output(Bool())
+    val flushPC  = Output(UInt(dataLen.W))
+
+    val flushIf1  = Output(Bool())
+    val flushFIFO = Output(Bool())
+    val flushExe  = Output(Bool())
+    val flushMem  = Output(Bool())
+    val flushWb   = Output(Bool())
+
+    val branchValid = Output(Bool())
   })
 
   val hasExcept = io.except.asUInt().orR()
 
-  io.flush   := hasExcept
+  io.flushAll := hasExcept
   io.flushPC := MuxCase(
     generalExceptPC,
     Seq(
@@ -34,24 +51,27 @@ class Hazard extends Module {
     )
   )
 
-  io.stall := MuxCase(
-    0.U,
-    Array(
-      hasExcept -> 0.U,
-      io.stallReq(4) -> "b111111".U,
-      io.stallReq(3) -> "b011111".U,
-      io.stallReq(2) -> "b001111".U,
-      io.stallReq(1) -> "b000111".U,
-      io.stallReq(0) -> "b000011".U
-    )
-  )
+  val branchValid = !io.stallExe && io.predictFail
 
-  val lastDS = WireInit(0.U(2.W))
-  for(i <- 0 until 3){
-    when(io.delaySlots(i)){ lastDS := i.U }
-  }
+  // stalled because inst cache has not accept pc yet, pc won't change
+  io.stallIf0 := io.stallReqFromIf0
+  // if pc is stalled, and data in fetch1 has fired; Or prediction failed
+  io.flushIf1 := io.stallReqFromIf0 && !io.stallReqFromIf1 || branchValid
+  // if data in fetch1 hasn't fired
+  io.stallIf1 := io.stallReqFromIf1
 
-  io.predictFailFlush(0) := lastDS === 2.U || lastDS === 1.U && !io.stall(1)
-  io.predictFailFlush(1) := lastDS === 2.U && !io.stall(2)
-  io.lastDS := lastDS
+  // prediction failed
+  io.flushFIFO := branchValid
+
+  io.fifoDeqReady := !io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem
+
+  io.flushExe := io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem && !io.waitingDS
+  io.stallExe := io.stallReqFromExe || io.stallReqFromMem || io.waitingDS
+
+  io.flushMem := (io.stallReqFromExe || io.waitingDS) && !io.stallReqFromMem
+  io.stallMem := io.stallReqFromMem
+
+  io.flushWb := io.stallReqFromMem
+
+  io.branchValid := branchValid
 }

@@ -3,7 +3,6 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.Valid
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
@@ -19,6 +18,9 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     /** For multi-cycle multiplication and division. */
     val flush = Input(Bool())
 
+    // bypass from decode
+    val decodeValid = Input(Bool())
+
     val rawHILO = Input(new HILOBundle)
     val memHILO = Input(new HILOValidBundle)
     val wbHILO  = Input(new HILOValidBundle)
@@ -30,10 +32,11 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     val memOp = Input(UInt(opLen.W))
     val wbOp  = Input(UInt(opLen.W))
 
-    val out      = Output(new ExeMemBundle)
-    val branch   = Output(ValidBundle(32)) // back to `Fetch`
-    val predUpdate = Valid(new BrPrUpdateBundle)
-    val stallReq = Output(Bool())
+    val out        = Output(new ExeMemBundle)
+    val branch     = Output(ValidBundle(32)) // back to `Fetch`
+    val predUpdate = Output(new BrPrUpdateBundle)
+    val stallReq   = Output(Bool())
+    val waitingDS  = Output(Bool())
   })
 
   val alu        = Module(new ALU)
@@ -116,10 +119,11 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
   io.branch.valid := brPrFail
 
-  io.predUpdate.valid       := brPrFail
-  io.predUpdate.bits.pc     := io.in.pc
-  io.predUpdate.bits.target := branch.io.branch.bits
-  io.predUpdate.bits.taken  := branch.io.branch.valid
+  io.predUpdate.pc     := io.in.pc
+  io.predUpdate.target := branch.io.branch.bits
+  io.predUpdate.taken  := branch.io.branch.valid
+
+  io.waitingDS := io.in.instType === INST_BR && !io.decodeValid
 
   io.stallReq := writeOther.io.stallReq || (io.in.operation === MV_MFC0 &&
     (VecInit(Seq(TLB_R, TLB_P)).contains(io.memOp) || VecInit(Seq(TLB_R, TLB_P)).contains(io.wbOp)))
