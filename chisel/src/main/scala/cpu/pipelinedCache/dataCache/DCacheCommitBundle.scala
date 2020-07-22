@@ -13,10 +13,11 @@ class DCacheCommitBundle(implicit cacheConfig: CacheConfig) extends Bundle {
   /** write data for a normal write query */
   val writeData = UInt(32.W)
 
-  /** refill data for write back stage */
-  val refillData = Vec(cacheConfig.numOfBanks, UInt(32.W))
+  /** writeBack enable signal for data banks. If writeBack is hit in refill buffer, then
+    * writeBack enable is false */
+  val writeEnable = Bool()
 
-  /** NOTE: this also controls if write is enabled. If write miss or other events occur, this
+  /** NOTE: this does not control if writeBack is enabled. If writeBack enable is low, this is ignored
     * should be set to 0 */
   val writeMask = UInt(4.W)
 
@@ -27,11 +28,5 @@ class DCacheCommitBundle(implicit cacheConfig: CacheConfig) extends Bundle {
     * otherwise, select data coming from bank */
   val readDataValid = Bool()
 
-  /** write enable signal for data banks. If write is hit in refill buffer, then
-    * write enable is false */
-  val writeEnable = Bool()
-
-  /** when write back, write all banks back */
-  val isWriteBack        = Bool()
   override def cloneType = (new DCacheCommitBundle).asInstanceOf[this.type]
 }

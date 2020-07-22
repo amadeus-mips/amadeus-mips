@@ -27,8 +27,13 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     /** for query request */
     val index = Input(UInt(cacheConfig.indexLen.W))
 
-    /** contains request and data for write back */
-    val write = Flipped(Valid(new WriteTagValidBundle))
+    val write = Flipped(Valid(new Bundle {
+      val addr = new Bundle {
+        val index  = UInt(cacheConfig.indexLen.W)
+        val waySel = UInt(log2Ceil(cacheConfig.numOfWays).W)
+      }
+      val tagValid = new TagValidBundle
+    }))
 
     /** result for read in all 4 ways */
     val tagValid = Output(Vec(cacheConfig.numOfWays, new TagValidBundle))
@@ -45,12 +50,12 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     tagValidBanks.io.way(i).portA.addr := io.index
     io.tagValid(i)                     := tagValidBanks.io.way(i).portA.data
 
-    // write if required
-    tagValidBanks.io.way(i).portB.addr := io.write.bits.indexSelection
+    // writeBack if required
+    tagValidBanks.io.way(i).portB.addr := io.write.bits.addr.index
     tagValidBanks.io
       .way(i)
       .portB
-      .writeEnable                          := (io.write.valid && io.write.bits.waySelection === i.U) || io.invalidateAllWays
+      .writeEnable                          := (io.write.valid && io.write.bits.addr.waySel === i.U) || io.invalidateAllWays
     tagValidBanks.io.way(i).portB.writeData := io.write.bits.tagValid
   }
 

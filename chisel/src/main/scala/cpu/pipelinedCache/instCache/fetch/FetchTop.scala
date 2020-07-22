@@ -31,12 +31,14 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   )
   val bankIndex = io.addr(cacheConfig.bankOffsetLen - 1 + cacheConfig.bankIndexLen, cacheConfig.bankOffsetLen)
 
-  io.index                      := index
-  tagValid.io.index             := index
-  tagValid.io.write             := io.write
-  tagValid.io.invalidateAllWays := io.invalidateAllWays
-  io.tagValid                   := tagValid.io.tagValid
-  io.bankIndex                  := bankIndex
+  io.index                           := index
+  tagValid.io.index                  := index
+  tagValid.io.write.bits.addr.index  := io.write.bits.indexSelection
+  tagValid.io.write.bits.addr.waySel := io.write.bits.waySelection
+  tagValid.io.write.bits.tagValid    := io.write.bits.tagValid
+  tagValid.io.invalidateAllWays      := io.invalidateAllWays
+  io.tagValid                        := tagValid.io.tagValid
+  io.bankIndex                       := bankIndex
   //TODO: TLB here
   io.phyTag := Cat(0.U(3.W), virtualTag(cacheConfig.tagLen - 4, 0))
 }

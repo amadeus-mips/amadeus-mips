@@ -5,24 +5,31 @@ import chisel3._
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.AXIPorts.{AXIReadPort, AXIWritePort}
+import cpu.pipelinedCache.components.metaBanks.TagValidBundle
 import cpu.pipelinedCache.components.{MSHR, MaskedRefillBuffer, MissComparator, WriteQueue}
 import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheFetchQueryBundle}
-import cpu.pipelinedCache.instCache.fetch.WriteTagValidBundle
 import shared.Constants.DATA_ID
 import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
-//TODO: Don't accept query when write back
+//TODO: Don't accept query when writeBack back
 class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
     val fetchQuery = Input(new DCacheFetchQueryBundle)
-    val write      = Valid(new WriteTagValidBundle)
-    val axi        = AXIIO.master()
+    val writeBack = Valid(new Bundle {
+      val addr = new Bundle {
+        val index  = UInt(cacheConfig.indexLen.W)
+        val waySel = UInt(log2Ceil(cacheConfig.numOfWays).W)
+      }
+      val tagValid = new TagValidBundle
+      val data     = Vec(cacheConfig.numOfBanks, UInt(32.W))
+    })
+    val axi = AXIIO.master()
 
     /** dirty data is connected to [[cpu.pipelinedCache.dataCache.DataBanks]]
-      * and is queried when write queue is not full */
+      * and is queried when writeBack queue is not full */
     val dirtyData = Input(Vec(cacheConfig.numOfBanks, UInt(32.W)))
 
-    /** data path for a read hit */
+    /** query commit will *only* carry data for the query */
     val queryCommit = Output(new DCacheCommitBundle())
 
     /** hit reports to pipeline whether next cycle's returned data is valid */
@@ -34,6 +41,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     val dirtyWay = Output(UInt(log2Ceil(cacheConfig.numOfWays).W))
   })
 
+  //-----------------------------------------------------------------------------
+  //------------------declare all the modules------------------------------------
+  //-----------------------------------------------------------------------------
   val comparator   = Module(new MissComparator)
   val mshr         = Module(new MSHR)
   val refillBuffer = Module(new MaskedRefillBuffer)
@@ -51,7 +61,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val passThrough = WireDefault(!io.fetchQuery.valid)
 
   /** is the query a hit in the bank */
-  val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
+  val hitInBank = Wire(Bool())
 
   /** is the query hit in the refill buffer
     * this requires that the data has not been in bank yet */
@@ -65,7 +75,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** is a new miss generated, but is not guarateed to be accepted */
   val newMiss = Wire(Bool())
 
-  /** is the query a hit in either places */
+  /** the query ( valid or not ) has a hit, and may pass through */
   val queryHit = WireDefault(hitInBank || hitInRefillBuffer || hitInWriteQueue)
 
   /** is the data.valid output high? */
@@ -106,13 +116,32 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
 
-  newMiss := !queryHit && !passThrough && qState === qIdle
-  hitInRefillBuffer :=
-    comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid && qState =/= qIdle && qState =/= qWriteBack
+  /** the cache is in the idle state */
+  val isIdle = qState === qIdle
 
-  val isQueryMissAddress = WireDefault(
-    qState === qWriteBack || qState === qEvict || (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty)
-  )
+  /** the cache is in refill */
+  val isRefill = qState === qRefill
+
+  /** the cache is evicting data from banks to writeBack queue */
+  val isEvict = qState === qEvict
+
+  /** the cache is writing back */
+  val isWriteBack = qState === qWriteBack
+
+  /** when there is no structural hazard for data banks and tag/valid banks */
+  val resourceFree = isIdle || (isRefill && !axiRead.io.finishTransfer)
+
+  /** new miss can only be generated when the state is idle and query is not hit
+    * and query is valid */
+  newMiss := !queryHit && !passThrough && isIdle
+
+  /** can only hit in the refill buffer during idle, refill, evict and writeBack back */
+  hitInRefillBuffer :=
+    comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid && qState =/= qIdle
+
+  /** can only hit in bank when it's not reading( q evict ) and not writing (q writeBack back)  */
+  hitInBank := comparator.io.bankHitWay.valid && resourceFree
+
   axiRead.io.axi  <> DontCare
   axiWrite.io.axi <> DontCare
   io.axi.ar       <> axiRead.io.axi.ar
@@ -122,42 +151,24 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.axi.w  <> axiWrite.io.axi.w
   io.axi.b  <> axiWrite.io.axi.b
 
-  io.queryCommit.indexSel := Mux(
-    isQueryMissAddress,
-    mshr.io.extractMiss.addr.index,
-    io.fetchQuery.index
-  )
-  io.queryCommit.waySel := Mux(isQueryMissAddress, lruWayReg, comparator.io.bankHitWay.bits)
-  io.queryCommit.bankIndexSel := Mux(
-    isQueryMissAddress,
-    mshr.io.extractMiss.addr.bankIndex,
-    io.fetchQuery.bankIndex
-  )
-  //FIXME
-  io.queryCommit.writeData   := io.fetchQuery.writeData
-  io.queryCommit.refillData  := refillBuffer.io.allData
-  io.queryCommit.isWriteBack := qState === qWriteBack
-  io.queryCommit.writeMask   := Mux(qState === qWriteBack, "b1111".U(4.W), io.fetchQuery.writeMask)
-  io.queryCommit.writeEnable := MuxCase(
-    hitInBank,
-    Array(
-      (qState === qWriteBack)                                            -> true.B,
-      (qState === qEvict)                                                -> false.B,
-      (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty) -> false.B
-    )
-  )
+  io.queryCommit.indexSel      := io.fetchQuery.index
+  io.queryCommit.waySel        := comparator.io.bankHitWay.bits
+  io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
+  io.queryCommit.writeData     := io.fetchQuery.writeData
+  io.queryCommit.writeMask     := io.fetchQuery.writeMask
+  io.queryCommit.writeEnable   := hitInBank && io.fetchQuery.writeMask =/= 0.U && resourceFree
   io.queryCommit.readData      := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
   io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue
 
-  io.write.valid               := qState === qWriteBack
-  io.write.bits.indexSelection := mshr.io.extractMiss.addr.index
-  io.write.bits.waySelection   := lruWayReg
-  io.write.bits.tagValid.tag   := mshr.io.extractMiss.addr.tag
-  io.write.bits.tagValid.valid := true.B
+  io.writeBack.valid               := isWriteBack
+  io.writeBack.bits.addr.index     := mshr.io.extractMiss.addr.index
+  io.writeBack.bits.addr.waySel    := lruWayReg
+  io.writeBack.bits.tagValid.tag   := mshr.io.extractMiss.addr.tag
+  io.writeBack.bits.tagValid.valid := true.B
+  io.writeBack.bits.data           := refillBuffer.io.allData
 
-  //FIXME: not sure if this is correct
-  io.hit   := validData && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer)))
-  io.ready := ((validData || passThrough) && (qState === qIdle || (qState === qRefill && !(evictWayDirty && axiRead.io.finishTransfer))))
+  io.hit   := validData && resourceFree
+  io.ready := ((validData || passThrough) && resourceFree) || isIdle
 
   io.dirtyWay := lruWayReg
 
@@ -201,16 +212,16 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
 
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)
     .asTypeOf(writeQueue.io.query.addr)
-  // if the query is valid, then the query could issue to write queue any cycle
+  // if the query is valid, then the query could issue to writeBack queue any cycle
   writeQueue.io.query.writeMask := Mux(io.fetchQuery.valid, 0.U(4.W), io.fetchQuery.writeMask)
   writeQueue.io.query.data      := io.fetchQuery.writeData
 
   axiWrite.io.addrRequest <> writeQueue.io.dequeueAddr
   axiWrite.io.data        <> writeQueue.io.dequeueData
   axiWrite.io.dataLast    := writeQueue.io.dequeueLast
-  // axi write .io .axi has been moved to former place
+  // axi writeBack .io .axi has been moved to former place
 
-  //TODO: don't accept miss when write back
+  //TODO: make it into a FIFO
   mshr.io.recordMiss.valid                := newMiss
   mshr.io.recordMiss.bits.addr.tag        := io.fetchQuery.phyTag
   mshr.io.recordMiss.bits.addr.index      := io.fetchQuery.index

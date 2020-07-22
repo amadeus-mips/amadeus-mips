@@ -32,6 +32,9 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
     val axi = AXIIO.master()
   })
 
+  //-----------------------------------------------------------------------------
+  //------------------instantiate all the modules--------------------------------
+  //-----------------------------------------------------------------------------
   val fetch        = Module(new FetchTop)
   val fetch_query  = Module(new CachePipelineStage(new DCacheFetchQueryBundle))
   val query        = Module(new QueryTop)
@@ -52,14 +55,14 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   )
 
   fetch.io.addr  := io.request.bits.address
-  fetch.io.write := query.io.write
+  fetch.io.write := query.io.writeBack
 
   //-----------------------------------------------------------------------------
   //------------------pipeline register seperating fetch and query---------------
   //-----------------------------------------------------------------------------
 
   fetch_query.io.stall        := !controller.io.stage2Ready
-  fetch_query.io.in.valid     := io.request.fire && !query.io.write.valid
+  fetch_query.io.in.valid     := io.request.fire && !query.io.writeBack.valid
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.index     := fetch.io.addrResult.index
   fetch_query.io.in.phyTag    := fetch.io.addrResult.phyTag
@@ -70,18 +73,18 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   /** update the tag and valid information when there is a write back
     * don't touch the valid signal */
   when(
-    query.io.write.valid && (query.io.write.bits.tagValid.tag === fetch_query.io.out.phyTag) && (query.io.write.bits.indexSelection === fetch_query.io.out.index)
+    query.io.writeBack.valid && (query.io.writeBack.bits.tagValid.tag === fetch_query.io.out.phyTag) && (query.io.writeBack.bits.addr.index === fetch_query.io.out.index)
       && fetch_query.io.out.valid
   ) {
-    fetch_query.io.stall                                         := false.B
-    fetch_query.io.in.valid                                      := io.request.fire && !query.io.write.valid
-    fetch_query.io.in.tagValid                                   := fetch_query.io.out.tagValid
-    fetch_query.io.in.tagValid(query.io.write.bits.waySelection) := query.io.write.bits.tagValid
-    fetch_query.io.in.index                                      := fetch_query.io.out.index
-    fetch_query.io.in.phyTag                                     := fetch_query.io.out.phyTag
-    fetch_query.io.in.bankIndex                                  := fetch_query.io.out.bankIndex
-    fetch_query.io.in.writeData                                  := fetch_query.io.out.writeData
-    fetch_query.io.in.writeMask                                  := fetch_query.io.out.writeMask
+    fetch_query.io.stall                                            := false.B
+    fetch_query.io.in.valid                                         := io.request.fire && !query.io.writeBack.valid
+    fetch_query.io.in.tagValid                                      := fetch_query.io.out.tagValid
+    fetch_query.io.in.tagValid(query.io.writeBack.bits.addr.waySel) := query.io.writeBack.bits.tagValid
+    fetch_query.io.in.index                                         := fetch_query.io.out.index
+    fetch_query.io.in.phyTag                                        := fetch_query.io.out.phyTag
+    fetch_query.io.in.bankIndex                                     := fetch_query.io.out.bankIndex
+    fetch_query.io.in.writeData                                     := fetch_query.io.out.writeData
+    fetch_query.io.in.writeMask                                     := fetch_query.io.out.writeMask
   }
 
   //-----------------------------------------------------------------------------
@@ -95,23 +98,27 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   query_commit.io.in    := query.io.queryCommit
 
   // when query is not write back, it is not ready
-  controller.io.stage2Ready := query.io.ready && !query.io.write.valid
+  controller.io.stage2Ready := query.io.ready && !query.io.writeBack.valid
 
-  val isWriteBack  = query.io.write.valid
   val isWriteQuery = query.io.queryCommit.writeEnable
 
   for (i <- 0 until cacheConfig.numOfWays) {
     for (k <- 0 until cacheConfig.numOfBanks) {
-      //FIXME: this is plain wrong
-      dataBanks.io.way_bank(i)(k).addr := query.io.queryCommit.indexSel
-      dataBanks.io.way_bank(i)(k).writeMask := Mux(
-        query.io.queryCommit.bankIndexSel === k.U && query.io.queryCommit.waySel === i.U && isWriteQuery,
-        query.io.queryCommit.writeMask,
-        Mux(isWriteBack && query.io.write.bits.waySelection === i.U, "b1111".U(4.W), 0.U)
+      dataBanks.io.way_bank(i)(k).addr := Mux(
+        query.io.writeBack.valid,
+        query.io.writeBack.bits.addr.index,
+        query.io.queryCommit.indexSel
+      )
+      dataBanks.io.way_bank(i)(k).writeMask := MuxCase(
+        0.U,
+        Array(
+          (query.io.writeBack.valid && query.io.writeBack.bits.addr.waySel === i.U)                                              -> "b1111".U(4.W),
+          (query.io.queryCommit.writeEnable && query.io.queryCommit.waySel === i.U && query.io.queryCommit.bankIndexSel === k.U) -> query.io.queryCommit.writeMask.asUInt
+        )
       )
       dataBanks.io.way_bank(i)(k).writeData := Mux(
-        isWriteBack,
-        query.io.queryCommit.refillData(k),
+        query.io.writeBack.valid,
+        query.io.writeBack.bits.data(k),
         query.io.queryCommit.writeData
       )
       dirtyData(k) := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
