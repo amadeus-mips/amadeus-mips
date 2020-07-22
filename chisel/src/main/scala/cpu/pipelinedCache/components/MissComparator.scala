@@ -15,15 +15,23 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     val index  = Input(UInt(cacheConfig.indexLen.W))
     val mshr   = Input(new RecordAddressBundle)
 
-    val bankHitWay        = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
+    /** when the cache is not handling a miss, it should not hit in refill buffer */
+    val isCacheInMiss = Input(Bool())
+
+    /** which way is bank is there is a hit
+      * bits refer to the way hit
+      * valid denotes a hit */
+    val bankHitWay = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
+
+    /** truly hit in the refill buffer */
     val addrHitInRefillBuffer = Output(Bool())
   })
 
   val bankHitVec = Wire(Vec(cacheConfig.numOfWays, Bool()))
-  bankHitVec := io.tagValid.map {
-    tagValidBundle => tagValidBundle.valid && tagValidBundle.tag === io.phyTag
+  bankHitVec := io.tagValid.map { tagValidBundle =>
+    tagValidBundle.valid && tagValidBundle.tag === io.phyTag
   }
-  assert(bankHitVec.map(_.asUInt()).reduce(_+_) <= 1.U)
+  assert(bankHitVec.map(_.asUInt()).reduce(_ + _) <= 1.U)
   io.bankHitWay.valid := bankHitVec.contains(true.B)
   io.bankHitWay.bits  := bankHitVec.indexWhere(hit => hit === true.B)
 
@@ -33,5 +41,5 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     */
   io.addrHitInRefillBuffer :=
     io.phyTag === io.mshr.tag &&
-      io.index === io.mshr.index
+      io.index === io.mshr.index && !io.isCacheInMiss
 }
