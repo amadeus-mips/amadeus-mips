@@ -81,9 +81,9 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
 
   /** dequeue io, always dequeue when fifo is not empty */
   io.dequeueAddr.bits  := addrBank(headPTR)
-  io.dequeueAddr.valid := Mux(dispatchState === dDispatch, true.B, size =/= 0.U)
+  io.dequeueAddr.valid := dispatchState === dDispatch
   io.dequeueData.bits  := dispatchDataWire
-  io.dequeueData.valid := Mux(dispatchState === dDispatch, true.B, size =/= 0.U)
+  io.dequeueData.valid := dispatchState === dDispatch
 
   io.dequeueLast := (lineWritePTR === (cacheConfig.numOfBanks - 1).U) && dispatchState === dDispatch
 
