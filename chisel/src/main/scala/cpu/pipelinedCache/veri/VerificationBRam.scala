@@ -13,7 +13,8 @@ class VerificationBRam(depth: Int, width: Int, way: Int, bankIndex: Int) extends
     val inData      = Input(UInt(width.W))
     val outData     = Output(UInt(width.W))
   })
-  val bank             = RegInit(VecInit(Seq.tabulate(depth)(i => (way << 2 + i << 1 + bankIndex).U(32.W))))
+  val bank             = RegInit(VecInit(Seq.tabulate(depth)(i => (way * 8 + i * 4 + i * 2 + bankIndex).U(32.W))))
+  require(depth == 2)
   val readHoldRegister = Reg(UInt(32.W))
   io.outData       := readHoldRegister
   readHoldRegister := bank(io.addr)
