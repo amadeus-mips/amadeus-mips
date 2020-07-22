@@ -36,6 +36,12 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
     /** dequeue data information, to dispatch to [[cpu.pipelinedCache.components.AXIPorts.AXIWritePort]] */
     val dequeueData = Decoupled(UInt(32.W))
 
+    /** write handshake represents a aw handshake or a w handshake
+      * once this handshake has been made, subsequent read to the same location in write queue is treated as miss
+      * according to axi ordering rules, read miss now will read newly written value
+      * this will impose ordering requests on [[axi.AXIArbiter]]*/
+    val writeHandshake = Input(Bool())
+
     /** when dequeue is at its last stage */
     val dequeueLast = Output(Bool())
   })
@@ -53,6 +59,9 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
 
   /** write ptr within a cache line */
   val lineWritePTR = RegInit(0.U(log2Ceil(cacheConfig.numOfBanks).W))
+
+  /** whether there has been a hand shake yet in this transaction */
+  val writeHandshakeReg = RegInit(false.B)
 
   val dIdle :: dDispatch :: Nil = Enum(2)
   val dispatchState             = RegInit(dIdle)
@@ -78,7 +87,21 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   }
   val queryHitPos = Wire(UInt(log2Ceil(capacity).W))
   queryHitPos := queryHitVec.indexWhere(queryHit => queryHit)
-  val isQueryHit = queryHitVec.asUInt =/= 0.U
+  val isQueryHit =
+    /**
+      * there is a hit in the hit vec
+      * either it's in idle (everthing is good)
+      * or it's in dispatch, but has not performed a handshake yet ( also good )
+      * or it has performed a handshake, but the hit position is not the data in transfer ( also good )
+      * if not, then it is not counted as a query hit. [[cpu.pipelinedCache.dataCache.query.QueryTop]]
+      * will issue a new miss. As this handshake has taken place yet, the read will observe this write
+      * in transfer
+      */
+    queryHitVec.asUInt =/= 0.U && ((dispatchState === dIdle)
+      || (dispatchState === dDispatch)
+        && (!writeHandshakeReg
+          || (writeHandshakeReg
+            && (queryHitPos =/= headPTR))))
 
   /** enqueue io, when not full, enqueue is ready */
   io.enqueue.ready := size =/= capacity.U
@@ -102,11 +125,18 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
     size               := size + 1.U
   }
 
+  when(io.writeHandshake) {
+    writeHandshakeReg := true.B
+  }
   // write query
   when(io.query.writeMask.asUInt =/= 0.U && isQueryHit) {
     dataBanks(queryHitPos)(io.query.addr.bankIndex) := Cat(
       (3 to 0 by -1).map(i =>
-        Mux(io.query.writeMask(i), io.query.data(7+8*i, 8*i), dataBanks(queryHitPos)(io.query.addr.bankIndex)(7+8*i, 8*i))
+        Mux(
+          io.query.writeMask(i),
+          io.query.data(7 + 8 * i, 8 * i),
+          dataBanks(queryHitPos)(io.query.addr.bankIndex)(7 + 8 * i, 8 * i)
+        )
       )
     )
   }
@@ -114,8 +144,9 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   switch(dispatchState) {
     is(dIdle) {
       when(size =/= 0.U) {
-        dispatchState := dDispatch
-        lineWritePTR  := 0.U
+        dispatchState     := dDispatch
+        lineWritePTR      := 0.U
+        writeHandshakeReg := false.B
       }
     }
     is(dDispatch) {
@@ -123,7 +154,8 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
         lineWritePTR := lineWritePTR + 1.U
       }
       when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
-        dispatchState := dIdle
+        writeHandshakeReg := false.B
+        dispatchState     := dIdle
       }
     }
   }

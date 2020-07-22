@@ -202,19 +202,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   writeQueue.io.enqueue.bits.addr.tag   := mshr.io.extractMiss.tagValidAtIndex(lruWayReg).tag
   writeQueue.io.enqueue.bits.addr.index := mshr.io.extractMiss.addr.index
   writeQueue.io.enqueue.bits.data       := io.dirtyData
-
-  when(writeQueue.io.enqueue.fire) {
-    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := false.B
-  }
-  when(qState === qWriteBack) {
-    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := refillBuffer.io.dataDirty
-  }
-
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)
     .asTypeOf(writeQueue.io.query.addr)
   // if the query is valid, then the query could issue to writeBack queue any cycle
   writeQueue.io.query.writeMask := Mux(!io.fetchQuery.valid, 0.U(4.W), io.fetchQuery.writeMask)
   writeQueue.io.query.data      := io.fetchQuery.writeData
+
+  writeQueue.io.writeHandshake := axiWrite.io.writeHandshake
 
   axiWrite.io.addrRequest <> writeQueue.io.dequeueAddr
   axiWrite.io.data        <> writeQueue.io.dequeueData
@@ -227,6 +221,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   mshr.io.recordMiss.bits.addr.index      := io.fetchQuery.index
   mshr.io.recordMiss.bits.addr.bankIndex  := io.fetchQuery.bankIndex
   mshr.io.recordMiss.bits.tagValidAtIndex := io.fetchQuery.tagValid
+
+  when(writeQueue.io.enqueue.fire) {
+    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := false.B
+  }
+  when(qState === qWriteBack) {
+    dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := refillBuffer.io.dataDirty
+  }
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

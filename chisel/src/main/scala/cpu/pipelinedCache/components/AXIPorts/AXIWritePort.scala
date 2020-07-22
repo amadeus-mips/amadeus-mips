@@ -24,6 +24,9 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
 
     /** standard axi interface */
     val axi = AXIIO.master()
+
+    /** see [[cpu.pipelinedCache.components.WriteQueue.io.writeHandshake]] */
+    val writeHandshake = Output(Bool())
   })
 
   val writeIdle :: writeTransfer :: Nil = Enum(2)
@@ -69,6 +72,9 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
 
   // always ignore b channel response ( no cache error )
   io.axi.b.ready := true.B
+
+  io.writeHandshake := io.axi.w.fire || io.axi.aw.fire
+
   switch(writeState) {
     is(writeIdle) {
       when(io.addrRequest.fire) {
