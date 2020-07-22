@@ -6,7 +6,7 @@ import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.QueryAddressBundle
 import cpu.pipelinedCache.components.metaBanks.TagValidBundle
-import cpu.pipelinedCache.instCache.fetch.{TagValid, WriteTagValidBundle}
+import cpu.pipelinedCache.instCache.fetch.TagValid
 
 class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
@@ -15,8 +15,14 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
       * we don't use them anyway */
     val addr = Input(UInt(32.W))
 
-    /** write tag valid from refill stage */
-    val write = Flipped(Valid(new WriteTagValidBundle))
+    /** writeBack tag valid from refill stage */
+    val write = Flipped(Valid(new Bundle {
+      val addr = new Bundle {
+        val index  = UInt(cacheConfig.indexLen.W)
+        val waySel = UInt(log2Ceil(cacheConfig.numOfWays).W)
+      }
+      val tagValid = new TagValidBundle
+    }))
 
     /** the query result of the physical request for cache request */
     val addrResult = Output(new QueryAddressBundle)
