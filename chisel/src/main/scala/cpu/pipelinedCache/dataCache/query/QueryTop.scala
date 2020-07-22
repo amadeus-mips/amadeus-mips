@@ -213,7 +213,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)
     .asTypeOf(writeQueue.io.query.addr)
   // if the query is valid, then the query could issue to writeBack queue any cycle
-  writeQueue.io.query.writeMask := Mux(io.fetchQuery.valid, 0.U(4.W), io.fetchQuery.writeMask)
+  writeQueue.io.query.writeMask := Mux(!io.fetchQuery.valid, 0.U(4.W), io.fetchQuery.writeMask)
   writeQueue.io.query.data      := io.fetchQuery.writeData
 
   axiWrite.io.addrRequest <> writeQueue.io.dequeueAddr

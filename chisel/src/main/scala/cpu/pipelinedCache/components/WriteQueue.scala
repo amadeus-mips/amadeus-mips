@@ -1,6 +1,7 @@
 package cpu.pipelinedCache.components
 
 import chisel3._
+import chisel3.experimental.BundleLiterals._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
@@ -41,14 +42,14 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   require(isPow2(capacity))
 
   /** size of the queue: how many entries are in this queue */
-  val size = RegInit(0.U((log2Ceil(capacity) + 1).W))
+  val size = RegInit(2.U((log2Ceil(capacity) + 1).W))
 
   /** points to the head of the queue */
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
   dontTouch(headPTR)
 
   /** points to the head of the queue */
-  val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
+  val tailPTR = RegInit(1.U(log2Ceil(capacity).W))
 
   /** write ptr within a cache line */
   val lineWritePTR = RegInit(0.U(log2Ceil(cacheConfig.numOfBanks).W))
@@ -57,11 +58,17 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   val dispatchState             = RegInit(dIdle)
 
   // separate the associative request, data and valid
-  val addrBank = Reg(Vec(capacity, new RecordAddressBundle))
+  val addrBank = RegInit(
+    VecInit(Seq.tabulate(capacity)(i => (new RecordAddressBundle).Lit(_.tag -> 7.U, _.index -> i.U)))
+  )
   // valid bank
-  val validBank = RegInit(VecInit(Seq.fill(capacity)(false.B)))
+  val validBank = RegInit(VecInit(Seq.fill(capacity)(true.B)))
   // data banks
-  val dataBanks = Reg(Vec(capacity, Vec(cacheConfig.numOfBanks, UInt(32.W))))
+  val dataBanks = RegInit(
+    VecInit(
+      Seq.tabulate(capacity)(i => VecInit(Seq.tabulate(cacheConfig.numOfBanks)(k => (7 * 4 + i * 2 + k).U(32.W))))
+    )
+  )
 
   val dispatchDataWire = WireInit(dataBanks(headPTR)(lineWritePTR))
 
@@ -99,7 +106,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   when(io.query.writeMask.asUInt =/= 0.U && isQueryHit) {
     dataBanks(queryHitPos)(io.query.addr.bankIndex) := Cat(
       (3 to 0 by -1).map(i =>
-        Mux(io.query.writeMask(i), io.query.data(i), dataBanks(queryHitPos)(io.query.addr.bankIndex)(i))
+        Mux(io.query.writeMask(i), io.query.data(7+8*i, 8*i), dataBanks(queryHitPos)(io.query.addr.bankIndex)(7+8*i, 8*i))
       )
     )
   }
