@@ -57,7 +57,8 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //-----------------------------------------------------------------------------
   //------------------pipeline register seperating fetch and query---------------
   //-----------------------------------------------------------------------------
-  fetch_query.io.stall        := false.B
+
+  fetch_query.io.stall        := !controller.io.stage2Ready
   fetch_query.io.in.valid     := io.request.fire && !query.io.write.valid
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.index     := fetch.io.addrResult.index
@@ -65,6 +66,23 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   fetch_query.io.in.bankIndex := fetch.io.addrResult.bankIndex
   fetch_query.io.in.writeData := io.request.bits.writeData
   fetch_query.io.in.writeMask := io.request.bits.writeMask
+
+  /** update the tag and valid information when there is a write back
+    * don't touch the valid signal */
+  when(
+    query.io.write.valid && (query.io.write.bits.tagValid.tag === fetch_query.io.out.phyTag) && (query.io.write.bits.indexSelection === fetch_query.io.out.index)
+      && fetch_query.io.out.valid
+  ) {
+    fetch_query.io.stall                                         := false.B
+    fetch_query.io.in.valid                                      := io.request.fire && !query.io.write.valid
+    fetch_query.io.in.tagValid                                   := fetch_query.io.out.tagValid
+    fetch_query.io.in.tagValid(query.io.write.bits.waySelection) := query.io.write.bits.tagValid
+    fetch_query.io.in.index                                      := fetch_query.io.out.index
+    fetch_query.io.in.phyTag                                     := fetch_query.io.out.phyTag
+    fetch_query.io.in.bankIndex                                  := fetch_query.io.out.bankIndex
+    fetch_query.io.in.writeData                                  := fetch_query.io.out.writeData
+    fetch_query.io.in.writeMask                                  := fetch_query.io.out.writeMask
+  }
 
   //-----------------------------------------------------------------------------
   //------------------query stage--------------------------------------

@@ -61,29 +61,32 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   /** have I written to buffer since refill? */
   val bufferDirty = RegInit(false.B)
 
-  val readData = Cat(
-    (0 to cacheConfig.numOfBanks).map(bankIndex =>
-      Cat(
-        (3 to 0 by -1).map(byteOffset =>
-          Mux(
-            writeHoldBufferMaskArray(bankIndex)(byteOffset),
-            writeHoldBuffer(bankIndex)(8 * byteOffset + 7, 8 * byteOffset),
-            refillBuffer(bankIndex)(8 * byteOffset + 7, 8 * byteOffset)
+  val readData =
+    VecInit(
+      (0 until cacheConfig.numOfBanks).map(bankIndex =>
+        Cat(
+          (3 to 0 by -1).map(byteOffset =>
+            Mux(
+              writeHoldBufferMaskArray(bankIndex)(byteOffset),
+              writeHoldBuffer(bankIndex)(8 * byteOffset + 7, 8 * byteOffset),
+              refillBuffer(bankIndex)(8 * byteOffset + 7, 8 * byteOffset)
+            )
           )
         )
       )
     )
-  )
 
   val requestedWriteHoldBuffer = writeHoldBuffer(io.request.bits.bankIndex)
 
   val requestedRefillBuffer = refillBuffer(io.request.bits.bankIndex)
 
-  /** write query is always valid, read query is valid when there is a hit in InputData or
+  /** write query is always valid during transfer, read query is valid when there is a hit in InputData or
     * the read position is all valid */
-  io.queryResult.valid := refillBufferValidArray(io.request.bits.bankIndex) || (writeHoldBufferMaskArray(
+  io.queryResult.valid := (refillBufferValidArray(io.request.bits.bankIndex) || (writeHoldBufferMaskArray(
     io.request.bits.bankIndex
-  ).asUInt === "b1111".U(4.W)) || (io.request.bits.writeMask =/= 0.U)
+  ).asUInt === "b1111".U(
+    4.W
+  )) && (io.request.bits.writeMask === 0.U)) || ((io.request.bits.writeMask =/= 0.U) && state === sTransfer)
 
   io.queryResult.bits := readData(io.request.bits.bankIndex)
 
@@ -105,6 +108,11 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
       when(io.request.bits.writeMask =/= 0.U) {
         bufferDirty := true.B
+        for (i <- 0 until 4) {
+          writeHoldBufferMaskArray(io.request.bits.bankIndex)(i) := writeHoldBufferMaskArray(io.request.bits.bankIndex)(
+            i
+          ) | io.request.bits.writeMask(i)
+        }
         writeHoldBuffer(io.request.bits.bankIndex) := Cat(
           (3 to 0 by -1).map(byteOffset =>
             Mux(
@@ -118,7 +126,7 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
       when(io.inputData.valid) {
         writePtr                         := writePtr + 1.U
-        refillBuffer(writePtr)           := true.B
+        refillBuffer(writePtr)           := io.inputData.bits
         refillBufferValidArray(writePtr) := true.B
       }
 
