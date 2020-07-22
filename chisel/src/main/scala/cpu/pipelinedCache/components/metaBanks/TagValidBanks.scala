@@ -31,10 +31,11 @@ class TagValidBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) ext
     val tagBank = Module(
       new LUTRam(
         depth = numOfSets,
-        width = cacheConfig.tagLen
+        width = cacheConfig.tagLen,
+        wayNum = i
       )
     )
-    val validBank = RegInit(VecInit(Seq.fill(numOfSets)(false.B)))
+    val validBank = RegInit(VecInit(Seq.fill(numOfSets)(true.B)))
     tagBank.suggestName(s"tag_bank_way_$i")
     validBank.suggestName(s"valid_bank_way_$i")
 

@@ -2,11 +2,9 @@ package cpu.pipelinedCache.memoryBanks
 
 import chisel3._
 import chisel3.internal.naming.chiselName
-import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.pipelinedCache.memoryBanks.memip.LUTRamIP
-import firrtl.options.TargetDirAnnotation
 
 /**
   * LUT ram for XPM, one port for read/write, one port for read
@@ -15,7 +13,7 @@ import firrtl.options.TargetDirAnnotation
   * @param cpuCFG implicit configuration to control generate ram for simulation or elaboration
   */
 @chiselName
-class LUTRam(depth: Int, width: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Build) extends Module {
+class LUTRam(depth: Int, width: Int, wayNum: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Build) extends Module {
   require(isPow2(depth))
   val addrLen = log2Ceil(depth)
   val io = IO(new Bundle {
@@ -50,11 +48,7 @@ class LUTRam(depth: Int, width: Int)(implicit cpuCFG: CPUConfig = CPUConfig.Buil
     bank.io.addrb := io.readAddr
     io.readData   := bank.io.doutb
   } else {
-//    assert(
-//      !(io.writeEnable && io.readAddr === io.writeAddr),
-//      s"there has been an request collision, the request is ${io.readAddr}"
-//    )
-val bank = RegInit(VecInit(Seq.fill(depth)(0.U(width.W))))
+    val bank = RegInit(VecInit(Seq.tabulate(depth)(i => (wayNum * 2 + i).U(width.W))))
     io.readData    := bank(io.readAddr)
     io.writeOutput := DontCare
     when(io.writeEnable) {
@@ -65,10 +59,10 @@ val bank = RegInit(VecInit(Seq.fill(depth)(0.U(width.W))))
   }
 }
 
-object LUTRamElaborate extends App {
-  val conf = new CPUConfig(build = true)
-  (new ChiselStage).execute(
-    Array(),
-    Seq(ChiselGeneratorAnnotation(() => new LUTRam(32, 32)), TargetDirAnnotation("generation"))
-  )
-}
+//object LUTRamElaborate extends App {
+//  val conf = new CPUConfig(build = true)
+//  (new ChiselStage).execute(
+//    Array(),
+//    Seq(ChiselGeneratorAnnotation(() => new LUTRam(32, 32)), TargetDirAnnotation("generation"))
+//  )
+//}

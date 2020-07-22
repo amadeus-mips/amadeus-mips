@@ -40,7 +40,8 @@ class TagValidDirtyBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig
     val tagBank = Module(
       new LUTRam(
         depth = numOfSets,
-        width = cacheConfig.tagLen
+        width = cacheConfig.tagLen,
+        wayNum = i
       )
     )
     val validBank = RegInit(VecInit(Seq.fill(numOfSets)(false.B)))
