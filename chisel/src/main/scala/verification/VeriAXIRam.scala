@@ -7,6 +7,7 @@ import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFile
 import shared.{Constants, Util}
 
+//noinspection DuplicatedCode
 @chiselName
 class VeriAXIRam(memFile: String = "./perfMon/mem.txt") extends Module {
   val size = 1 << 32 // in byte
@@ -52,13 +53,21 @@ class VeriAXIRam(memFile: String = "./perfMon/mem.txt") extends Module {
   switch(rState) {
     is(sRIdle) {
       when(instRQ.io.deq.ready) {
-        initRead(instRQ.io.deq.bits)
+        when(r.ready) {
+          initNextRead(instRQ.io.deq.bits)
+        }.otherwise {
+          initRead(instRQ.io.deq.bits)
+        }
         rID    := Constants.INST_ID
-        rState := sRBurst
+        rState := Mux(instRQ.io.deq.bits.len === 0.U, sRIdle, sRBurst)
       }.elsewhen(dataRQ.io.deq.ready) {
-        initRead(dataRQ.io.deq.bits)
+        when(r.ready) {
+          initNextRead(dataRQ.io.deq.bits)
+        }.otherwise {
+          initRead(dataRQ.io.deq.bits)
+        }
         rID    := Constants.DATA_ID
-        rState := sRBurst
+        rState := Mux(dataRQ.io.deq.bits.len === 0.U, sRIdle, sRBurst)
       }
     }
     is(sRBurst) {
@@ -81,12 +90,20 @@ class VeriAXIRam(memFile: String = "./perfMon/mem.txt") extends Module {
   dataRQ.io.enq.bits  := ar.bits
   dataRQ.io.deq.ready := rState === sRIdle && dataRQ.io.deq.valid && currentID === Constants.DATA_ID
 
-  ar.ready    := instRQ.io.enq.ready && dataRQ.io.enq.ready
-  r.bits.id   := rID
-  r.bits.data := mem.read((rRamAddr >> 2).asUInt())
+  ar.ready  := instRQ.io.enq.ready && dataRQ.io.enq.ready
+  r.bits.id := Mux(rState === sRIdle, Mux(instRQ.io.deq.ready, Constants.INST_ID, Constants.DATA_ID), rID)
+  r.bits.data := Mux(
+    rState === sRIdle,
+    Mux(instRQ.io.deq.ready, mem.read(instRQ.io.deq.bits.addr(31, 2)), mem.read(dataRQ.io.deq.bits.addr(31, 2))),
+    mem.read((rRamAddr >> 2).asUInt())
+  )
   r.bits.resp := 0.U // fixed OKAY
-  r.bits.last := rLen === 0.U
-  r.valid     := rState === sRBurst
+  r.bits.last := Mux(
+    rState === sRIdle,
+    Mux(instRQ.io.deq.ready, instRQ.io.deq.bits.len, dataRQ.io.deq.bits.len),
+    rLen === 0.U
+  )
+  r.valid := rState === sRBurst || rState === sRIdle && (instRQ.io.deq.ready || dataRQ.io.deq.ready)
   val wLen     = RegInit(0.U(4.W))
   val wBurst   = RegInit(0.U(2.W))
   val wWrapSel = RegInit(0.U(3.W))
@@ -132,6 +149,13 @@ class VeriAXIRam(memFile: String = "./perfMon/mem.txt") extends Module {
     rLen     := a.len
     rBurst   := a.burst
     rRamAddr := a.addr
+    rWrapSel := MuxLookup(a.len, 0.U, wrapMap)
+  }
+
+  def initNextRead(a: AXIAddrBundle): Unit = {
+    rLen     := a.len - 1.U
+    rBurst   := a.burst
+    rRamAddr := nextAddr(a.addr, a.burst, MuxLookup(a.len, 0.U, wrapMap))
     rWrapSel := MuxLookup(a.len, 0.U, wrapMap)
   }
 
