@@ -39,8 +39,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val refillBuffer = Module(new MaskedRefillBuffer)
   val axiRead      = Module(new AXIReadPort(addrReqWidth = 32, AXIID = DATA_ID))
   val axiWrite     = Module(new AXIWritePort(AXIID = DATA_ID))
-  val lru          = if (cacheConfig.numOfWays >2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val writeQueue   = Module(new WriteQueue)
+  val lru =
+    if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+    else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val writeQueue = Module(new WriteQueue)
 
   /** keep all the dirty information, dirty(way)(index) */
   val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))))
@@ -51,8 +53,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** is the query a hit in the bank */
   val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
 
-  /** is the query hit in the refill buffer */
-  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid)
+  /** is the query hit in the refill buffer
+    * this requires that the data has not been in bank yet */
+  val hitInRefillBuffer = Wire(Bool())
 
   val hitInWriteQueue = WireDefault(writeQueue.io.resp.valid)
 
@@ -104,18 +107,20 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   }
 
   newMiss := !queryHit && !passThrough && qState === qIdle
+  hitInRefillBuffer :=
+    comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid && qState =/= qIdle && qState =/= qWriteBack
 
   val isQueryMissAddress = WireDefault(
     qState === qWriteBack || qState === qEvict || (qState === qRefill && axiRead.io.finishTransfer && evictWayDirty)
   )
-  axiRead.io.axi <> DontCare
+  axiRead.io.axi  <> DontCare
   axiWrite.io.axi <> DontCare
-  io.axi.ar <> axiRead.io.axi.ar
-  io.axi.r <> axiRead.io.axi.r
+  io.axi.ar       <> axiRead.io.axi.ar
+  io.axi.r        <> axiRead.io.axi.r
 
   io.axi.aw <> axiWrite.io.axi.aw
-  io.axi.w <> axiWrite.io.axi.w
-  io.axi.b <> axiWrite.io.axi.b
+  io.axi.w  <> axiWrite.io.axi.w
+  io.axi.b  <> axiWrite.io.axi.b
 
   io.queryCommit.indexSel := Mux(
     isQueryMissAddress,

@@ -15,15 +15,17 @@ class MissComparator(implicit cacheConfig: CacheConfig) extends MultiIOModule {
     val index  = Input(UInt(cacheConfig.indexLen.W))
     val mshr   = Input(new RecordAddressBundle)
 
-    val bankHitWay        = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
+    val bankHitWay = Valid(UInt(log2Ceil(cacheConfig.numOfWays).W))
+
+    /** this only denotes if the address hit in refill buffer */
     val addrHitInRefillBuffer = Output(Bool())
   })
 
   val bankHitVec = Wire(Vec(cacheConfig.numOfWays, Bool()))
-  bankHitVec := io.tagValid.map {
-    tagValidBundle => tagValidBundle.valid && tagValidBundle.tag === io.phyTag
+  bankHitVec := io.tagValid.map { tagValidBundle =>
+    tagValidBundle.valid && tagValidBundle.tag === io.phyTag
   }
-  assert(bankHitVec.map(_.asUInt()).reduce(_+_) <= 1.U)
+  assert(bankHitVec.map(_.asUInt()).reduce(_ + _) <= 1.U)
   io.bankHitWay.valid := bankHitVec.contains(true.B)
   io.bankHitWay.bits  := bankHitVec.indexWhere(hit => hit === true.B)
 
