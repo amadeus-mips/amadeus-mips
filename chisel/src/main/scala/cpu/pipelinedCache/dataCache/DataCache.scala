@@ -97,17 +97,24 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   // when query is not write back, it is not ready
   controller.io.stage2Ready := query.io.ready && !query.io.write.valid
 
+  val isWriteBack  = query.io.write.valid
+  val isWriteQuery = query.io.queryCommit.writeEnable
+
   for (i <- 0 until cacheConfig.numOfWays) {
     for (k <- 0 until cacheConfig.numOfBanks) {
       //FIXME: this is plain wrong
       dataBanks.io.way_bank(i)(k).addr := query.io.queryCommit.indexSel
       dataBanks.io.way_bank(i)(k).writeMask := Mux(
-        query.io.queryCommit.bankIndexSel === k.U && query.io.queryCommit.waySel === i.U && query.io.queryCommit.writeEnable,
+        query.io.queryCommit.bankIndexSel === k.U && query.io.queryCommit.waySel === i.U && isWriteQuery,
         query.io.queryCommit.writeMask,
-        Mux(query.io.write.valid && query.io.write.bits.waySelection === i.U, "b1111".U(4.W), 0.U)
+        Mux(isWriteBack && query.io.write.bits.waySelection === i.U, "b1111".U(4.W), 0.U)
       )
-      dataBanks.io.way_bank(i)(k).writeData := query.io.queryCommit.refillData(k)
-      dirtyData(k)                          := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
+      dataBanks.io.way_bank(i)(k).writeData := Mux(
+        isWriteBack,
+        query.io.queryCommit.refillData(k),
+        query.io.queryCommit.writeData
+      )
+      dirtyData(k) := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
     }
     readDataWire(i) := dataBanks.io.way_bank(i)(query_commit.io.out.bankIndexSel).readData
   }

@@ -97,11 +97,12 @@ class MaskedRefillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   switch(state) {
     is(sIdle) {
       when(io.request.valid) {
-        writePtr               := io.request.bits.bankIndex
-        refillBuffer           := 0.U.asTypeOf(refillBuffer)
-        bufferDirty            := false.B
-        state                  := sTransfer
-        refillBufferValidArray := 0.U.asTypeOf(refillBufferValidArray)
+        writePtr                 := io.request.bits.bankIndex
+        refillBuffer             := 0.U.asTypeOf(refillBuffer)
+        bufferDirty              := false.B
+        state                    := sTransfer
+        refillBufferValidArray   := 0.U.asTypeOf(refillBufferValidArray)
+        writeHoldBufferMaskArray := 0.U.asTypeOf(writeHoldBufferMaskArray)
       }
     }
     is(sTransfer) {
