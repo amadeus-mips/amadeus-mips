@@ -48,21 +48,25 @@ class LUTRam(depth: Int, width: Int, wayNum: Int)(implicit cpuCFG: CPUConfig = C
     bank.io.addrb := io.readAddr
     io.readData   := bank.io.doutb
   } else {
-    val bank = RegInit(VecInit(Seq.tabulate(depth)(i => (wayNum * 2 + i).U(width.W))))
-    io.readData    := bank(io.readAddr)
-    io.writeOutput := DontCare
-    when(io.writeEnable) {
-      bank(io.writeAddr) := io.writeData
-    }.otherwise {
-      io.writeOutput := bank(io.writeAddr)
+    if (!cpuCFG.verification) {
+      val bank = RegInit(VecInit(Seq.fill(depth)(0.U(width.W))))
+      io.readData    := bank(io.readAddr)
+      io.writeOutput := DontCare
+      when(io.writeEnable) {
+        bank(io.writeAddr) := io.writeData
+      }.otherwise {
+        io.writeOutput := bank(io.writeAddr)
+      }
+    } else {
+      val bank = RegInit(VecInit(Seq.tabulate(depth)(i => (wayNum * 2 + i).U(width.W))))
+      io.readData    := bank(io.readAddr)
+      io.writeOutput := DontCare
+      when(io.writeEnable) {
+        bank(io.writeAddr) := io.writeData
+      }.otherwise {
+        io.writeOutput := bank(io.writeAddr)
+      }
     }
   }
 }
 
-//object LUTRamElaborate extends App {
-//  val conf = new CPUConfig(build = true)
-//  (new ChiselStage).execute(
-//    Array(),
-//    Seq(ChiselGeneratorAnnotation(() => new LUTRam(32, 32)), TargetDirAnnotation("generation"))
-//  )
-//}

@@ -3,6 +3,7 @@ package cpu.pipelinedCache.dataCache.query
 import axi.AXIIO
 import chisel3._
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.AXIPorts.{AXIReadPort, AXIWritePort}
 import cpu.pipelinedCache.components.metaBanks.TagValidBundle
@@ -12,7 +13,7 @@ import shared.Constants.DATA_ID
 import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
 //TODO: Don't accept query when writeBack back
-class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
+class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val fetchQuery = Input(new DCacheFetchQueryBundle)
     val writeBack = Valid(new Bundle {
@@ -55,7 +56,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val writeQueue = Module(new WriteQueue)
 
   /** keep all the dirty information, dirty(way)(index) */
-  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))))
+  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(CPUConfig.verification.B)))))
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid)

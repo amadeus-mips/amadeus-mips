@@ -35,7 +35,7 @@ class TagValidBanks(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) ext
         wayNum = i
       )
     )
-    val validBank = RegInit(VecInit(Seq.fill(numOfSets)(true.B)))
+    val validBank = RegInit(VecInit(Seq.fill(numOfSets)((CPUConfig.verification).B)))
     tagBank.suggestName(s"tag_bank_way_$i")
     validBank.suggestName(s"valid_bank_way_$i")
 
