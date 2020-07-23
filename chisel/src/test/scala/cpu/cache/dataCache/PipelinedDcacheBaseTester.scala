@@ -5,8 +5,7 @@ import chisel3.iotesters.PeekPokeTester
 import chisel3.util.Decoupled
 import cpu.CPUConfig
 import cpu.cache.PerfectMemory
-import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.dataCache.DataCache
+import cpu.pipelinedCache.{CacheConfig, DataCache}
 import verification.VeriAXIRam
 
 import scala.collection.mutable

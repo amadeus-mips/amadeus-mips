@@ -1,11 +1,11 @@
-package cpu.pipelinedCache.dataCache
+package cpu.pipelinedCache
 
 import axi.AXIIO
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.pipelineRegister.CachePipelineStage
+import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheController, DCacheFetchQueryBundle, DataBanks}
 import cpu.pipelinedCache.dataCache.fetch.FetchTop
 import cpu.pipelinedCache.dataCache.query.QueryTop
 

@@ -4,8 +4,7 @@ import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
-import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.dataCache.DataCache
+import cpu.pipelinedCache.{CacheConfig, DataCache}
 import firrtl.options.TargetDirAnnotation
 import verification.SymbiyosysAXIRam
 
