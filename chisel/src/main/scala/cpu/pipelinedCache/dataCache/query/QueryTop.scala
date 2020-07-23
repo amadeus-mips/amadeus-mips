@@ -157,7 +157,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
   io.queryCommit.writeData     := io.fetchQuery.writeData
   io.queryCommit.writeMask     := io.fetchQuery.writeMask
-  io.queryCommit.writeEnable   := hitInBank && io.fetchQuery.writeMask =/= 0.U && resourceFree
+  io.queryCommit.writeEnable   := hitInBank && io.fetchQuery.writeMask =/= 0.U && resourceFree && !passThrough
   io.queryCommit.readData      := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
   io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue
 
