@@ -13,7 +13,14 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
 
     /** request information, no need for decoupled interface because this is the data path
       * we don't use them anyway */
-    val addr = Input(UInt(32.W))
+    val addr = Input(new Bundle {
+
+      /** see [[cpu.common.MemReqBundle.virtualTag]] */
+      val translatedTag = UInt(20.W)
+
+      /** see [[cpu.common.MemReqBundle.physicalIndex]] */
+      val physicalIndex = UInt(12.W)
+    })
 
     /** writeBack tag valid from refill stage */
     val write = Flipped(Valid(new Bundle {
@@ -32,15 +39,14 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   })
   val tagValid = Module(new TagValid)
 
-  val bankIndex = io.addr(cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen - 1, cacheConfig.bankOffsetLen)
-  val virtualIndex = io.addr(
+  val bankIndex =
+    io.addr.physicalIndex(cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen - 1, cacheConfig.bankOffsetLen)
+  val virtualIndex = io.addr.physicalIndex(
     cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen + cacheConfig.indexLen - 1,
     cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen
   )
-  val virtualTag = io.addr(31, cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen + cacheConfig.indexLen)
 
-  //TODO: interface with TLB
-  val physicalTag = Cat(0.U(3.W), virtualTag(cacheConfig.tagLen - 4, 0))
+  val physicalTag = Cat(io.addr.translatedTag, io.addr.physicalIndex(11, 32 - cacheConfig.tagLen))
 
   io.addrResult.phyTag    := physicalTag
   io.addrResult.index     := virtualIndex

@@ -4,10 +4,11 @@ import axi.AXIIO
 import chisel3._
 import chisel3.util._
 import cpu.CPUConfig
+import cpu.common.MemReqBundle
 import cpu.pipelinedCache.components.pipelineRegister.CachePipelineStage
-import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheController, DCacheFetchQueryBundle, DataBanks}
 import cpu.pipelinedCache.dataCache.fetch.FetchTop
 import cpu.pipelinedCache.dataCache.query.QueryTop
+import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheController, DCacheFetchQueryBundle, DataBanks}
 
 //TODO: freshess of tag and valid
 //TODO: hit in writing entry in write queue
@@ -16,11 +17,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
 
     /** input request io, ready decitates whether it's ready to
       * accecpt next request query */
-    val request = Flipped(Decoupled(new Bundle {
-      val address   = UInt(32.W)
-      val writeMask = UInt(4.W)
-      val writeData = UInt(32.W)
-    }))
+    val request = Flipped(Decoupled(new MemReqBundle))
 
     /** denotes whether a read or a write has successfully been executed */
     val commit = Output(Bool())
@@ -54,7 +51,8 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
     readDataWire(query_commit.io.out.waySel)
   )
 
-  fetch.io.addr  := io.request.bits.address
+  fetch.io.addr.translatedTag  := io.request.bits.virtualTag
+  fetch.io.addr.physicalIndex := io.request.bits.physicalIndex
   fetch.io.write := query.io.writeBack
 
   //-----------------------------------------------------------------------------
