@@ -15,7 +15,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
       * we don't use them anyway */
     val addr = Input(new Bundle {
 
-      /** see [[cpu.common.MemReqBundle.virtualTag]] */
+      /** see [[cpu.common.MemReqBundle.tag]] */
       val translatedTag = UInt(20.W)
 
       /** see [[cpu.common.MemReqBundle.physicalIndex]] */

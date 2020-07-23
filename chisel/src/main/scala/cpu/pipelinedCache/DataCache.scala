@@ -51,7 +51,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
     readDataWire(query_commit.io.out.waySel)
   )
 
-  fetch.io.addr.translatedTag  := io.request.bits.virtualTag
+  fetch.io.addr.translatedTag  := io.request.bits.tag
   fetch.io.addr.physicalIndex := io.request.bits.physicalIndex
   fetch.io.write := query.io.writeBack
 

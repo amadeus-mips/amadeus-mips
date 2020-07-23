@@ -9,7 +9,7 @@ class MemReqBundle extends Bundle {
     * it's different from the tag of a cache line
     * which uniquely identify a line in the cache
     * */
-  val virtualTag = UInt(20.W)
+  val tag = UInt(20.W)
 
   /** physical index *within a virtual page*
     * this is, again, different from the index of a cache
