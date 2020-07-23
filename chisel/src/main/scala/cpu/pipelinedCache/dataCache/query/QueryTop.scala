@@ -142,7 +142,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid && qState =/= qIdle
 
   /** can only hit in bank when it's not reading( q evict ) and not writing (q writeBack back)  */
-  hitInBank := comparator.io.bankHitWay.valid && resourceFree
+  hitInBank := comparator.io.bankHitWay.valid
 
   axiRead.io.axi  <> DontCare
   axiWrite.io.axi <> DontCare

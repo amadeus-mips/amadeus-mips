@@ -168,7 +168,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
   }
 
   assert(size === 0.U || (size =/= 0.U && validBank(headPTR)))
-  assert(headPTR =/= tailPTR || (headPTR === tailPTR && (size === 0.U || size === (cacheConfig.numOfBanks - 1).U)))
+  assert(headPTR =/= tailPTR || (headPTR === tailPTR && (size === 0.U || size === capacity.U)))
 }
 
 object WriteQueueElaborate extends App {
