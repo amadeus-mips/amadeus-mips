@@ -73,11 +73,11 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   /** update the tag and valid information when there is a write back
     * don't touch the valid signal */
   when(
-    query.io.writeBack.valid && (query.io.writeBack.bits.tagValid.tag === fetch_query.io.out.phyTag) && (query.io.writeBack.bits.addr.index === fetch_query.io.out.index)
+    query.io.writeBack.valid && (query.io.writeBack.bits.addr.index === fetch_query.io.out.index)
       && fetch_query.io.out.valid
   ) {
     fetch_query.io.stall                                            := false.B
-    fetch_query.io.in.valid                                         := io.request.fire && !query.io.writeBack.valid
+    fetch_query.io.in.valid                                         := fetch_query.io.out.valid
     fetch_query.io.in.tagValid                                      := fetch_query.io.out.tagValid
     fetch_query.io.in.tagValid(query.io.writeBack.bits.addr.waySel) := query.io.writeBack.bits.tagValid
     fetch_query.io.in.index                                         := fetch_query.io.out.index
