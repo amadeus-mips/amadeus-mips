@@ -33,6 +33,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
 
   io.index                           := index
   tagValid.io.index                  := index
+  tagValid.io.write.valid            := io.write.valid
   tagValid.io.write.bits.addr.index  := io.write.bits.indexSelection
   tagValid.io.write.bits.addr.waySel := io.write.bits.waySelection
   tagValid.io.write.bits.tagValid    := io.write.bits.tagValid
