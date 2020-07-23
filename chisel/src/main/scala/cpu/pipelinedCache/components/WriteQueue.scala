@@ -58,7 +58,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   dontTouch(headPTR)
 
   /** points to the head of the queue */
-  val tailPTR = RegInit(1.U(log2Ceil(capacity).W))
+  val tailPTR = RegInit(0.U(log2Ceil(capacity).W))
 
   /** write ptr within a cache line */
   val lineWritePTR = RegInit(0.U(log2Ceil(cacheConfig.numOfBanks).W))
@@ -125,12 +125,13 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
     validBank(tailPTR) := true.B
     dataBanks(tailPTR) := io.enqueue.bits.data
     tailPTR            := tailPTR - 1.U
-    size               := size + 1.U
   }
 
   when(io.writeHandshake) {
     writeHandshakeReg := true.B
   }
+  size := size - ((dispatchState === dDispatch) && (io.dequeueData.fire) && (lineWritePTR === (cacheConfig.numOfBanks - 1).U)).asUInt + io.enqueue.fire.asUInt
+
   // write query
   when(io.query.writeMask.asUInt =/= 0.U && isQueryHit) {
     dataBanks(queryHitPos)(io.query.addr.bankIndex) := Cat(
@@ -155,10 +156,11 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
     is(dDispatch) {
       when(io.dequeueData.fire) {
         lineWritePTR := lineWritePTR + 1.U
-      }
-      when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
-        writeHandshakeReg := false.B
-        dispatchState     := dIdle
+        when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
+          dispatchState := dIdle
+          writeHandshakeReg := false.B
+          headPTR := headPTR - 1.U
+        }
       }
     }
   }

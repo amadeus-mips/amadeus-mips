@@ -55,7 +55,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val writeQueue = Module(new WriteQueue)
 
   /** keep all the dirty information, dirty(way)(index) */
-  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(true.B)))))
+  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))))
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid)
