@@ -81,17 +81,17 @@ class SocLiteTopUnitTester(
       reInit()
       result &= run()
       info(s"${tcfg.perfMap(i)} finished.")
-      afterRun()
+      if(result) afterRun()
     }
   } else {
     resetConfreg()
     reInit()
     result &= run()
-    afterRun()
+    if(result)afterRun()
   }
   if (tcfg.needAssert) require(result)
   step(5)
-  afterAllRun()
+  if(result)afterAllRun()
 
   /**
     *
@@ -172,6 +172,7 @@ class SocLiteTopUnitTester(
     info("Finished!")
     info(s"run $cCount cycles, $iCount instructions")
     info(s"IPC is ${iCount.toFloat / cCount}")
+    step(5)
     printPerfRes()
   }
 

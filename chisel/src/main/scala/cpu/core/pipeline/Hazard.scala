@@ -13,6 +13,7 @@ class Hazard extends Module {
 
     val predictFail = Input(Bool())
     val waitingDS   = Input(Bool())
+    val exeIsBranch = Input(Bool())
 
     val stallReqFromIf0 = Input(Bool())
     val stallReqFromIf1 = Input(Bool())
@@ -65,10 +66,10 @@ class Hazard extends Module {
 
   io.fifoDeqReady := !io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem
 
-  io.flushExe := io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem && !io.waitingDS
-  io.stallExe := io.stallReqFromExe || io.stallReqFromMem || io.waitingDS
+  io.flushExe := io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem && !io.waitingDS && !io.exeIsBranch
+  io.stallExe := io.stallReqFromExe || io.stallReqFromMem || io.waitingDS || io.stallReqFromId && io.exeIsBranch
 
-  io.flushMem := (io.stallReqFromExe || io.waitingDS) && !io.stallReqFromMem
+  io.flushMem := ((io.stallReqFromExe || io.waitingDS)  || io.stallReqFromId && io.exeIsBranch) && !io.stallReqFromMem
   io.stallMem := io.stallReqFromMem
 
   io.flushWb := io.stallReqFromMem

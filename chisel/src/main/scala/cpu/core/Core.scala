@@ -146,6 +146,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hazard.io.predictFail := executeTop.io.branch.valid
   hazard.io.waitingDS   := executeTop.io.waitingDS
+  hazard.io.exeIsBranch := executeTop.io.isBranch
 
   mem_wb.io.in    := memoryTop.io.out
   mem_wb.io.stall := false.B

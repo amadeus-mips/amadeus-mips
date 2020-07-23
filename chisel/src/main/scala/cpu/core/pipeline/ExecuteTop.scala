@@ -37,6 +37,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     val predUpdate = Output(new BrPrUpdateBundle)
     val stallReq   = Output(Bool())
     val waitingDS  = Output(Bool())
+    val isBranch   = Output(Bool())
   })
 
   val alu        = Module(new ALU)
@@ -124,6 +125,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.predUpdate.taken  := branch.io.branch.valid
 
   io.waitingDS := io.in.instType === INST_BR && !io.decodeValid
+  io.isBranch  := io.in.instType === INST_BR
 
   io.stallReq := writeOther.io.stallReq || (io.in.operation === MV_MFC0 &&
     (VecInit(Seq(TLB_R, TLB_P)).contains(io.memOp) || VecInit(Seq(TLB_R, TLB_P)).contains(io.wbOp)))

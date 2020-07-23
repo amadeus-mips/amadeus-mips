@@ -12,7 +12,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle() {
     val in   = Input(new IfIf1Bundle)
     val inst = Flipped(Decoupled(Vec(conf.fetchAmount, UInt(dataLen.W))))
-    
+
     val fifoReady = Input(Bool())
     val flushFIFO = Input(Bool())
 
