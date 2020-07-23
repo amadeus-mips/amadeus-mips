@@ -4,13 +4,14 @@ import chisel3._
 import chisel3.experimental.BundleLiterals._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.{QueryAddressBundle, RecordAddressBundle}
 import firrtl.options.TargetDirAnnotation
 
 //TODO: hit in bust write queue?
 //TODO: reduce wire usage
-class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends Module {
+class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig:CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** enqueue io, for the data cache to dispatch dirty lines into the write queue
@@ -51,7 +52,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
   require(isPow2(capacity))
 
   /** size of the queue: how many entries are in this queue */
-  val size = RegInit(2.U((log2Ceil(capacity) + 1).W))
+  val size = RegInit((if (CPUConfig.verification) 2 else 0).U((log2Ceil(capacity) + 1).W))
 
   /** points to the head of the queue */
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
@@ -74,10 +75,11 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
     VecInit(Seq.tabulate(capacity)(i => (new RecordAddressBundle).Lit(_.tag -> 7.U, _.index -> i.U)))
   )
   // valid bank
-  val validBank = RegInit(VecInit(Seq.fill(capacity)(true.B)))
+  val validBank = RegInit(VecInit(Seq.fill(capacity)((CPUConfig.verification).B)))
   // data banks
   val dataBanks = RegInit(
     VecInit(
+      // this reset value is for verification, but there is no convenient way to swap this to mem
       Seq.tabulate(capacity)(i => VecInit(Seq.tabulate(cacheConfig.numOfBanks)(k => (7 * 4 + i * 2 + k).U(32.W))))
     )
   )
@@ -171,6 +173,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends M
 
 object WriteQueueElaborate extends App {
   implicit val cacheConfig = new CacheConfig
+  implicit val CPUConfig = new CPUConfig(build = false, verification = true)
   (new ChiselStage).execute(
     Array(),
     Seq(ChiselGeneratorAnnotation(() => new WriteQueue), TargetDirAnnotation("verification"))
