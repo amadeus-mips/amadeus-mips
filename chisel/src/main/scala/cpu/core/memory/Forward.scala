@@ -10,6 +10,7 @@ import cpu.core.Constants._
 import cpu.core.bundles.CPBundle
 import cpu.core.components.{ExceptionHandleBundle, TLBHandleBundle}
 
+@deprecated
 class Forward(implicit cfg: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val inExceptionCP0  = Input(new ExceptionHandleBundle)

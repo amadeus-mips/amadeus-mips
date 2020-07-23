@@ -10,9 +10,9 @@ import cpu.core.bundles.WriteBundle
 /**
   * Handle hazard
   */
-class Hazard extends Module {
+class Hazard(n: Int) extends Module {
   val io = IO(new Bundle {
-    val wrs = Input(Vec(3, new WriteBundle))
+    val wrs = Input(Vec(n, new WriteBundle))
 
     val ops = Vec(2, new Bundle() {
       val addr    = Input(UInt(regAddrLen.W))

@@ -15,7 +15,9 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     val in = Input(new If1IdBundle)
 
     val exeWR = Input(new WriteBundle)
-    val memWR = Input(new WriteBundle)
+    val mem0WR = Input(new WriteBundle)
+    val mem1WR = Input(new WriteBundle)
+    val mem2WR = Input(new WriteBundle)
     val wbWR  = Input(new WriteBundle)
 
     val rsData = Input(UInt(dataLen.W)) // from register-file
@@ -28,7 +30,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
 
   val inst = io.in.inst
 
-  val hazard  = Module(new cpu.core.decode.Hazard)
+  val hazard  = Module(new cpu.core.decode.Hazard(5))
   val decode  = Module(new cpu.core.decode.Decode)
   val control = Module(new cpu.core.decode.Control)
 
@@ -40,8 +42,10 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   val imm26 = inst(25, 0)
 
   hazard.io.wrs(0) := io.exeWR
-  hazard.io.wrs(1) := io.memWR
-  hazard.io.wrs(2) := io.wbWR
+  hazard.io.wrs(1) := io.mem0WR
+  hazard.io.wrs(2) := io.mem1WR
+  hazard.io.wrs(3) := io.mem2WR
+  hazard.io.wrs(4) := io.wbWR
 
   hazard.io.ops(0).addr   := rs
   hazard.io.ops(0).inData := io.rsData

@@ -10,7 +10,7 @@ class Hazard extends Module {
   val io = IO(new Bundle {
     val except   = Input(Vec(exceptAmount, Bool()))
     val EPC      = Input(UInt(dataLen.W))
-    val stallReq = Input(Vec(5, Bool()))
+    val stallReq = Input(Vec(6, Bool()))
 
     val flush   = Output(Bool())
     val flushPC = Output(UInt(dataLen.W))
@@ -38,11 +38,12 @@ class Hazard extends Module {
     0.U,
     Array(
       hasExcept -> 0.U,
+      io.stallReq(5) -> "b1111111".U,
       io.stallReq(4) -> "b111111".U,
-      io.stallReq(3) -> "b011111".U,
-      io.stallReq(2) -> "b001111".U,
-      io.stallReq(1) -> "b000111".U,
-      io.stallReq(0) -> "b000011".U
+      io.stallReq(3) -> "b11111".U,
+      io.stallReq(2) -> "b1111".U,
+      io.stallReq(1) -> "b111".U,
+      io.stallReq(0) -> "b11".U
     )
   )
 

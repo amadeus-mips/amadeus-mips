@@ -13,8 +13,8 @@ class Core_ls(implicit conf: CPUConfig) extends Core {
     val debug = Output(new DebugBundle)
   })
 
-  io_ls.debug.wbPC := wbTop.io.out.pc
-  io_ls.debug.wbRegFileWEn := Fill(4, wbTop.io.out.write.enable)
-  io_ls.debug.wbRegFileWNum := wbTop.io.out.write.address
-  io_ls.debug.wbRegFileWData := wbTop.io.out.write.data
+  io_ls.debug.wbPC := mem2_wb.io.out.pc
+  io_ls.debug.wbRegFileWEn := Fill(4, mem2_wb.io.out.write.enable)
+  io_ls.debug.wbRegFileWNum := mem2_wb.io.out.write.address
+  io_ls.debug.wbRegFileWData := mem2_wb.io.out.write.data
 }

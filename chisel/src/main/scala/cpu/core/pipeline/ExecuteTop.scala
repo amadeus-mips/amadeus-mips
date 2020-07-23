@@ -19,21 +19,18 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     /** For multi-cycle multiplication and division. */
     val flush = Input(Bool())
 
-    val rawHILO = Input(new HILOBundle)
-    val memHILO = Input(new HILOValidBundle)
-    val wbHILO  = Input(new HILOValidBundle)
+    val rawHILO  = Input(new HILOBundle)
+    val mem0HILO = Input(new HILOValidBundle)
 
     val cp0Data = Input(UInt(dataLen.W)) // from cp0
-    val memCP0  = Input(new CPBundle)
-    val wbCP0   = Input(new CPBundle)
+    val mem0CP0 = Input(new CPBundle)
 
-    val memOp = Input(UInt(opLen.W))
-    val wbOp  = Input(UInt(opLen.W))
+    val mem0Op = Input(UInt(opLen.W))
 
-    val out      = Output(new ExeMemBundle)
-    val branch   = Output(new ValidBundle) // back to `Fetch`
+    val out        = Output(new ExeMemBundle)
+    val branch     = Output(new ValidBundle) // back to `Fetch`
     val predUpdate = ValidIO(new BrPrUpdateBundle)
-    val stallReq = Output(Bool())
+    val stallReq   = Output(Bool())
   })
 
   val alu        = Module(new ALU)
@@ -47,18 +44,16 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   val branch = Module(new Branch)
 
   /** Only used in `move` module */
-  val forward = Module(new cpu.core.execute.Forward)
+  val forward = Module(new cpu.core.execute.Forward(1, 1))
   val control = Module(new cpu.core.execute.Control)
 
   forward.io.rawHILO   := io.rawHILO
-  forward.io.fwHILO(0) := io.memHILO
-  forward.io.fwHILO(1) := io.wbHILO
+  forward.io.fwHILO(0) := io.mem0HILO
 
   // cp0 come from decode, data come from CP0 regfile
   forward.io.rawCP0      := io.in.cp0
   forward.io.rawCP0.data := io.cp0Data
-  forward.io.fwCP0(0)    := io.memCP0
-  forward.io.fwCP0(1)    := io.wbCP0
+  forward.io.fwCP0(0)    := io.mem0CP0
 
   alu.io.op1       := io.in.op1
   alu.io.op2       := io.in.op2
@@ -121,8 +116,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.predUpdate.bits.target := branch.io.branch.bits
   io.predUpdate.bits.taken  := branch.io.branch.valid
 
-  io.stallReq := writeOther.io.stallReq || (io.in.operation === MV_MFC0 &&
-    (VecInit(Seq(TLB_R, TLB_P)).contains(io.memOp) || VecInit(Seq(TLB_R, TLB_P)).contains(io.wbOp)))
+  io.stallReq := writeOther.io.stallReq ||
+   VecInit(Seq(TLB_R, TLB_P, WO_MTC0)).contains(io.mem0Op)
 
   // performance
   val brPrTotal = RegInit(0.U.asTypeOf(new BrPrPerfBundle))

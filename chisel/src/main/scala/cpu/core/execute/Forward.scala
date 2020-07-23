@@ -10,13 +10,15 @@ import cpu.core.bundles._
 /**
   * For CP0 and HILO.
   */
-class Forward extends Module {
+class Forward(nHILO: Int, nCP0: Int) extends Module {
   val io = IO(new Bundle {
-    val rawHILO = Input(new HILOBundle) // from HILO regfile
-    val fwHILO  = Input(Vec(2, new HILOValidBundle))
+    /** from HILO regfile */
+    val rawHILO = Input(new HILOBundle)
+    val fwHILO  = Input(Vec(nHILO, new HILOValidBundle))
 
-    val rawCP0 = Input(new CPBundle) // control from decode, data from CP0
-    val fwCP0  = Input(Vec(2, new CPBundle))
+    /** control from decode, data from CP0 */
+    val rawCP0 = Input(new CPBundle)
+    val fwCP0  = Input(Vec(nCP0, new CPBundle))
 
     val outHILO = Output(new HILOBundle)
     val outCP0  = Output(UInt(dataLen.W))

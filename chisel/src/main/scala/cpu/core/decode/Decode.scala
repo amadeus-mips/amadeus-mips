@@ -98,7 +98,7 @@ class Decode extends Module {
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
 
 
-  // 例外指令
+      // 例外指令
       SYSCALL   -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_SC  , WR_N  , WRA_X  , IMM_N  ),
       BREAK     -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_BR  , WR_N  , WRA_X  , IMM_N  ),
       ERET      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
