@@ -155,7 +155,12 @@ class SocLiteTopUnitTester(
 
   def afterRun(): Unit = {
     if (isPerf) {
-      perfAllRes += new PerfResult(perfRes.toString())
+      val thisResult = new PerfResult(perfRes.toString())
+      perfAllRes += thisResult
+      if (!thisResult.pass) {
+        err(s"${thisResult.name} has failed")
+        expect(good = false, s"                      ${thisResult.name} has failed")
+      }
       printPerfLog()
       branchPerformanceMonitor()
     }
