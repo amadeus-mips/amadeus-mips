@@ -28,10 +28,8 @@ class UnCachedUnit extends Module {
   val readIdle :: readWaitForAR :: readWaitForR :: Nil = Enum(3)
   val readState                                        = RegInit(readIdle)
   val readAddressReg                                   = Reg(UInt(32.W))
-  // delay the read data a cycle
-  val readDataReg = Reg(UInt(32.W))
 
-  val writeIdle :: writeAW :: writeTransfer :: writeFinish :: Nil = Enum(4)
+  val writeIdle :: writeAW :: writeTransfer :: Nil = Enum(3)
   val writeState                                                  = RegInit(writeIdle)
   val writeAddressReg                                             = Reg(UInt(32.W))
   val writeDataReg                                                = Reg(UInt(32.W))
@@ -40,10 +38,10 @@ class UnCachedUnit extends Module {
   //-----------------------------------------------------------------------------
   //------------------default IO--------------------------------------
   //-----------------------------------------------------------------------------
-  io.readData := readDataReg
+  io.readData := RegNext(io.axi.r.bits.data)
 
   /** when the last ( and only ) r data came, or both w and aw has performed a handshake */
-  io.commit := io.axi.r.fire || (writeState === writeFinish)
+  io.commit := io.axi.r.fire || (writeState === writeTransfer && io.axi.w.fire())
 
   io.request.ready := writeState === writeIdle && readState === readIdle
 
@@ -83,7 +81,7 @@ class UnCachedUnit extends Module {
   switch(readState) {
     is(readIdle) {
       // check the delayed read data register
-      when(io.request.fire && io.request.bits.writeData === 0.U) {
+      when(io.request.fire && io.request.bits.writeMask === 0.U) {
         readAddressReg := Cat(io.request.bits.tag, io.request.bits.physicalIndex)
         readState      := readWaitForAR
       }
@@ -102,7 +100,7 @@ class UnCachedUnit extends Module {
 
   switch(writeState) {
     is(writeIdle) {
-      when(io.request.fire && io.request.bits.writeData =/= 0.U) {
+      when(io.request.fire && io.request.bits.writeMask =/= 0.U) {
         writeAddressReg := Cat(io.request.bits.tag, io.request.bits.physicalIndex)
         writeMaskReg    := io.request.bits.writeMask
         writeDataReg    := io.request.bits.writeData

@@ -62,7 +62,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.out.write    := io.in.write
   io.out.pc       := io.in.pc
   io.out.uncached := io.uncached
-  io.out.valid    := except.io.outExcept.asUInt().orR()
+  io.out.valid    := !except.io.outExcept.asUInt().orR()
 
   io.tlbWrite  := io.tlb
   io.cp0Write  := io.in.cp0
