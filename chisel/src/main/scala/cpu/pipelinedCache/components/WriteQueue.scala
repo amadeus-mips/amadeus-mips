@@ -52,7 +52,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
   require(isPow2(capacity))
 
   /** size of the queue: how many entries are in this queue */
-  val size = RegInit((if (CPUConfig.verification) 2 else 0).U((log2Ceil(capacity) + 1).W))
+  val size = RegInit((if (CPUConfig.verification) 0 else 0).U((log2Ceil(capacity) + 1).W))
 
   /** points to the head of the queue */
   val headPTR = RegInit(0.U(log2Ceil(capacity).W))
@@ -75,7 +75,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
     VecInit(Seq.tabulate(capacity)(i => (new RecordAddressBundle).Lit(_.tag -> 7.U, _.index -> i.U)))
   )
   // valid bank
-  val validBank = RegInit(VecInit(Seq.fill(capacity)((CPUConfig.verification).B)))
+  val validBank = RegInit(VecInit(Seq.fill(capacity)((false).B)))
   // data banks
   val dataBanks = RegInit(
     VecInit(
@@ -162,6 +162,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
           dispatchState := dIdle
           writeHandshakeReg := false.B
           headPTR := headPTR - 1.U
+          validBank(headPTR) := false.B
         }
       }
     }

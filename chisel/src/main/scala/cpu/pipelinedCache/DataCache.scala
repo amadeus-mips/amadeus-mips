@@ -59,7 +59,7 @@ class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends
   //------------------pipeline register seperating fetch and query---------------
   //-----------------------------------------------------------------------------
 
-  fetch_query.io.stall        := !controller.io.stage2Ready
+  fetch_query.io.stall        := !controller.io.inputReady
   fetch_query.io.in.valid     := io.request.fire && !query.io.writeBack.valid
   fetch_query.io.in.tagValid  := fetch.io.tagValid
   fetch_query.io.in.index     := fetch.io.addrResult.index

@@ -2,7 +2,7 @@ package cpu
 
 import cpu.common.WriteMask
 
-class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: Int = 32, val compareRamDirectly: Boolean = false, val verification: Boolean = true) {
+class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: Int = 32, val compareRamDirectly: Boolean = false, val verification: Boolean = false) {
   WriteMask.tlbSize = tlbSize
 
   val branchPredictorAddrLen = 10

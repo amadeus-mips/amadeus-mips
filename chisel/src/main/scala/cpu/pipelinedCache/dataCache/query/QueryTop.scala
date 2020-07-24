@@ -56,31 +56,32 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   val writeQueue = Module(new WriteQueue)
 
   /** keep all the dirty information, dirty(way)(index) */
-  val dirtyBanks = RegInit(VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(CPUConfig.verification.B)))))
+  val dirtyBanks = RegInit(
+    VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(CPUConfig.verification.B))))
+  )
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid)
 
-  /** is the query a hit in the bank */
+  /** is the query a hit in the bank
+    * This is to simply test if there is a hit
+    * it is irrelevant to whether io_hit would be high*/
   val hitInBank = Wire(Bool())
 
   /** is the query hit in the refill buffer
     * this requires that the data has not been in bank yet */
   val hitInRefillBuffer = Wire(Bool())
 
-  val hitInWriteQueue = WireDefault(writeQueue.io.resp.valid)
+  val hitInWriteQueue = writeQueue.io.resp.valid
 
   /** a successful handshake with the write queue */
-  val dispatchToWriteQSucessful = WireDefault(writeQueue.io.enqueue.ready)
+  val dispatchToWriteQSucessful = writeQueue.io.enqueue.ready
 
   /** is a new miss generated, but is not guarateed to be accepted */
   val newMiss = Wire(Bool())
 
   /** the query ( valid or not ) has a hit, and may pass through */
-  val queryHit = WireDefault(hitInBank || hitInRefillBuffer || hitInWriteQueue)
-
-  /** is the data.valid output high? */
-  val validData = WireDefault(queryHit && !passThrough)
+  val queryHit = hitInBank || hitInRefillBuffer || hitInWriteQueue
 
   /** lru way records the way to evict, as eviction could last serveral cycles if
     * the write queue if full */
@@ -153,7 +154,11 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.axi.w  <> axiWrite.io.axi.w
   io.axi.b  <> axiWrite.io.axi.b
 
-  io.queryCommit.indexSel      := io.fetchQuery.index
+  io.queryCommit.indexSel := Mux(
+    (isRefill && axiRead.io.finishTransfer) || isEvict,
+    mshr.io.extractMiss.addr.index,
+    io.fetchQuery.index
+  )
   io.queryCommit.waySel        := comparator.io.bankHitWay.bits
   io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
   io.queryCommit.writeData     := io.fetchQuery.writeData
@@ -169,8 +174,8 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.tagValid.valid := true.B
   io.writeBack.bits.data           := refillBuffer.io.allData
 
-  io.hit   := validData && resourceFree
-  io.ready := ((validData || passThrough) && resourceFree)
+  io.hit   := ((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough
+  io.ready := passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue
 
   io.dirtyWay := lruWayReg
 

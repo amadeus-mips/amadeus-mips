@@ -4,17 +4,14 @@ import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
+import cpu.common.MemReqBundle
 import cpu.pipelinedCache.{CacheConfig, DataCache}
 import firrtl.options.TargetDirAnnotation
 import verification.SymbiyosysAXIRam
 
 class VeriDCache extends Module {
   val io = IO(new Bundle {
-    val request = Flipped(Decoupled(new Bundle {
-      val address   = UInt(32.W)
-      val writeMask = UInt(4.W)
-      val writeData = UInt(32.W)
-    }))
+    val request = Flipped(Decoupled(new MemReqBundle))
     val data = Valid(UInt(32.W))
   })
   implicit val cacheConfig: CacheConfig = new CacheConfig
