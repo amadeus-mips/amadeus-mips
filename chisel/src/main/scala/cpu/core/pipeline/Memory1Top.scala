@@ -19,7 +19,7 @@ class Memory1Top extends Module {
   io.out.valid    := io.in.valid
   io.out.uncached := io.in.uncached
   when(!io.in.valid) {
-    io.out := DontCare
+    io.out := 0.U.asTypeOf(io.out)
   }
 
   io.stallReq := io.in.valid && (opIsLoad(io.in.op) || opIsStore(io.in.op)) && !io.commit
