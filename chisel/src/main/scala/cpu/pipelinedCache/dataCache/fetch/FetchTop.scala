@@ -46,7 +46,7 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen
   )
 
-  val physicalTag = Cat(io.addr.translatedTag, io.addr.physicalIndex(11, 32 - cacheConfig.tagLen))
+  val physicalTag = if (cacheConfig.tagLen > 20) Cat(io.addr.translatedTag, io.addr.physicalIndex(11, 32 - cacheConfig.tagLen)) else io.addr.translatedTag
 
   io.addrResult.phyTag    := physicalTag
   io.addrResult.index     := virtualIndex
