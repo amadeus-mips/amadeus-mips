@@ -28,18 +28,25 @@ class AXIArbiter(sCount: Int = 3) extends Module {
   //---------------------------------------------------------------------------
   val rChosen = chosen(io.slaves.map(_.ar.valid))
 
-  val sRIdle :: sRTran :: Nil = Enum(2)
+  val sRIdle :: sRTran :: sRBusy :: Nil = Enum(3)
 
   val rState      = RegInit(sRIdle)
   val rSelect_reg = RegInit(0.U(log2Ceil(sCount).W))
   switch(rState) {
     is(sRIdle) {
       when(io.slaves(rChosen).ar.valid) {
-        rState      := sRTran
+        rState      := Mux(io.master.ar.ready, sRBusy, sRTran)
         rSelect_reg := rChosen
       }
     }
     is(sRTran) {
+      when(io.master.r.fire() && io.master.r.bits.last) {
+        rState := sRIdle
+      }.elsewhen(io.master.ar.fire()) {
+        rState := sRBusy
+      }
+    }
+    is(sRBusy) {
       when(io.master.r.fire() && io.master.r.bits.last) {
         rState := sRIdle
       }
@@ -52,6 +59,7 @@ class AXIArbiter(sCount: Int = 3) extends Module {
       ar.ready := false.B
     })
   io.master.ar <> io.slaves(rSelect).ar
+  io.slaves(rSelect).ar.ready := rState =/= sRBusy && io.master.ar.ready
   io.slaves
     .map(_.r)
     .foreach(r => {
@@ -64,22 +72,37 @@ class AXIArbiter(sCount: Int = 3) extends Module {
   //--------------------------write--------------------------------------------
   //---------------------------------------------------------------------------
   val wChosen                 = chosen(io.slaves.map(_.aw.valid))
-  val sWIdle :: sWTran :: Nil = Enum(2)
+  val sWIdle :: sWTran :: sWBusy :: Nil = Enum(3)
 
   val wState      = RegInit(sWIdle)
   val wSelect_reg = RegInit(0.U(log2Ceil(sCount).W))
+
+  val wHandShake = RegInit(false.B)
   switch(wState) {
     is(sWIdle) {
       when(io.slaves(wChosen).aw.valid) {
-        wState      := sWTran
+        wState      := Mux(io.master.aw.ready, sWBusy, sWTran)
         wSelect_reg := wChosen
       }
     }
     is(sWTran) {
       when(io.master.b.fire()) {
         wState := sWIdle
+      }.elsewhen(io.master.aw.fire()) {
+        wState := sWBusy
       }
     }
+    is(sWBusy) {
+      when(io.master.b.fire()) {
+        wState := sWIdle
+      }
+    }
+  }
+
+  when(wHandShake && io.master.w.fire() && io.master.w.bits.last){
+    wHandShake := false.B
+  }.elsewhen(wState === sWIdle) {
+    wHandShake := true.B
   }
 
   val wSelect = Mux(wState === sWIdle, wChosen, wSelect_reg)
@@ -89,12 +112,14 @@ class AXIArbiter(sCount: Int = 3) extends Module {
       aw.ready := false.B
     })
   io.master.aw <> io.slaves(wSelect).aw
+  io.slaves(wSelect).aw.ready := wState =/= sWBusy && io.master.aw.ready
   io.slaves
     .map(_.w)
     .foreach(w => {
       w.ready := false.B
     })
   io.master.w <> io.slaves(wSelect).w
+  io.slaves(wSelect).w.ready := wState =/= sWIdle && wHandShake && io.master.w.ready
   io.slaves
     .map(_.b)
     .foreach(b => {
