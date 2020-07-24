@@ -58,7 +58,8 @@ class AXIArbiter(sCount: Int = 3) extends Module {
     .foreach(ar => {
       ar.ready := false.B
     })
-  io.master.ar <> io.slaves(rSelect).ar
+  io.master.ar.bits := io.slaves(rSelect).ar.bits
+  io.master.ar.valid := rState =/= sRBusy && io.slaves(rSelect).ar.valid
   io.slaves(rSelect).ar.ready := rState =/= sRBusy && io.master.ar.ready
   io.slaves
     .map(_.r)
@@ -111,14 +112,16 @@ class AXIArbiter(sCount: Int = 3) extends Module {
     .foreach(aw => {
       aw.ready := false.B
     })
-  io.master.aw <> io.slaves(wSelect).aw
+  io.master.aw.bits := io.slaves(wSelect).aw.bits
+  io.master.aw.valid := wState =/= sWBusy && io.slaves(wSelect).aw.valid
   io.slaves(wSelect).aw.ready := wState =/= sWBusy && io.master.aw.ready
   io.slaves
     .map(_.w)
     .foreach(w => {
       w.ready := false.B
     })
-  io.master.w <> io.slaves(wSelect).w
+  io.master.w.bits := io.slaves(wSelect).w.bits
+  io.master.w.valid := wState =/= sWIdle && wHandShake && io.slaves(wSelect).w.valid
   io.slaves(wSelect).w.ready := wState =/= sWIdle && wHandShake && io.master.w.ready
   io.slaves
     .map(_.b)
