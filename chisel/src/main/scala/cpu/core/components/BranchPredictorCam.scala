@@ -30,12 +30,17 @@ abstract class BranchPredictorRam(val c: CPUConfig, predictBits: Int = 0) extend
     override def cloneType: BranchPredictorEntry.this.type =
       new BranchPredictorEntry(predictBits).asInstanceOf[this.type]
   }
-  val predictTable      = Mem(1 << (c.branchPredictorAddrLen - 2), new BranchPredictorEntry(predictBits))
+  val predictTable      = RegInit(VecInit(Seq.fill(1 << (c.branchPredictorAddrLen -2))({
+    val bundle = Wire(new BranchPredictorEntry(predictBits))
+    bundle.target := 0.U
+    bundle.statistics := 2.U
+    bundle
+  })))
   val predictTableValid = RegInit(VecInit(Seq.fill(1 << (c.branchPredictorAddrLen - 2))(false.B)))
 
   def get(pc: UInt): (BranchPredictorEntry, Bool) = {
     require(pc.getWidth == addrLen)
-    (predictTable.read(pc), predictTableValid(pc(c.branchPredictorAddrLen - 1, 2)))
+    (predictTable(pc(c.branchPredictorAddrLen-1, 2)), predictTableValid(pc(c.branchPredictorAddrLen - 1, 2)))
   }
 }
 
@@ -45,9 +50,9 @@ abstract class DynamicPredictor(c: CPUConfig, bit: Int) extends BranchPredictorR
   def update(statistics: UInt): UInt
   val updateEntry = Wire(new BranchPredictorEntry(bit))
   updateEntry.target     := io.update.bits.target
-  updateEntry.statistics := update(predictTable.read(io.update.bits.pc).statistics)
+  updateEntry.statistics := update(predictTable(io.update.bits.pc(c.branchPredictorAddrLen-1,2)).statistics)
   when(io.update.valid) {
-    predictTable.write(io.update.bits.pc, updateEntry)
+    predictTable(io.update.bits.pc(c.branchPredictorAddrLen-1, 2)) := updateEntry
     predictTableValid(io.update.bits.pc(c.branchPredictorAddrLen - 1, 2)) := true.B
   }
 }

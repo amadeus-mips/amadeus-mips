@@ -89,9 +89,10 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   if (conf.compareRamDirectly) {
     val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
     loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)
-    when (!(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))) {
+    val error = !(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2))) && io.in.pc >= "h9fc00000".U
+    when (error) {
       printf(p"the request is ${io.in.pc}, the wrong instruction is ${io.in.inst}, the correct instruction should be ${veriMem.read(io.in.pc(19, 2))}")
     }
-    assert(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2)))
+    assert(!error)
   }
 }
