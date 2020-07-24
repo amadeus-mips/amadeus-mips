@@ -164,6 +164,10 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.queryCommit.writeData     := io.fetchQuery.writeData
   io.queryCommit.writeMask     := io.fetchQuery.writeMask
   io.queryCommit.writeEnable   := hitInBank && io.fetchQuery.writeMask =/= 0.U && resourceFree && !passThrough
+  //FIXME
+  when(io.queryCommit.writeEnable) {
+    dirtyBanks(comparator.io.bankHitWay.bits)(io.queryCommit.indexSel) := true.B
+  }
   io.queryCommit.readData      := Mux(writeQueue.io.resp.valid, writeQueue.io.resp.bits, refillBuffer.io.queryResult.bits)
   io.queryCommit.readDataValid := hitInRefillBuffer || hitInWriteQueue
 
@@ -189,7 +193,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   refillBuffer.io.request.valid          := newMiss
   refillBuffer.io.request.bits.bankIndex := io.fetchQuery.bankIndex
   refillBuffer.io.request.bits.writeData := io.fetchQuery.writeData
-  refillBuffer.io.request.bits.writeMask := Mux(comparator.io.addrHitInRefillBuffer, io.fetchQuery.writeMask, 0.U)
+  refillBuffer.io.request.bits.writeMask := Mux(comparator.io.addrHitInRefillBuffer && io.fetchQuery.valid, io.fetchQuery.writeMask, 0.U)
   refillBuffer.io.inputData              := axiRead.io.transferData
   refillBuffer.io.finish                 := axiRead.io.finishTransfer
 
