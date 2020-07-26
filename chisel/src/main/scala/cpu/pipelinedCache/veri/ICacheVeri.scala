@@ -8,12 +8,12 @@ import cpu.pipelinedCache.{CacheConfig, InstrCache}
 import firrtl.options.TargetDirAnnotation
 import verification.SymbiyosysAXIRam
 
-class ICacheVeri(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+class ICacheVeri(implicit CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Decoupled(UInt(32.W))
   })
-  val insCache = Module(new InstrCache)
+  val insCache = Module(new InstrCache(CPUConfig.iCacheConfig))
   val ram      = Module(new SymbiyosysAXIRam)
   insCache.io.axi   <> ram.io.axi
   insCache.io.addr  <> io.addr

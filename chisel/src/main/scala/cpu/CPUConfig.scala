@@ -1,15 +1,22 @@
 package cpu
 
-import cpu.common.WriteMask
+import cpu.pipelinedCache.CacheConfig
 
-class CPUConfig(val build: Boolean, val memoryFile: String = "", val tlbSize: Int = 32, val compareRamDirectly: Boolean = false, val verification: Boolean = false) {
-  WriteMask.tlbSize = tlbSize
+case class CPUConfig(
+  build:              Boolean,
+  memoryFile:         String  = "",
+  tlbSize:            Int     = 32,
+  compareRamDirectly: Boolean = false,
+  verification:       Boolean = false
+) {
+  val iCacheConfig = CacheConfig()
+  val dCacheConfig = CacheConfig()
 
-  val branchPredictorAddrLen = 10
+  val branchPredictorAddrLen       = 10
   val branchPredictorTableEntryNum = 64
 //  require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
 }
 
-object CPUConfig{
+object CPUConfig {
   val Build = new CPUConfig(build = true, memoryFile = "", compareRamDirectly = false)
 }

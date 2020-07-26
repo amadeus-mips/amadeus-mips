@@ -15,7 +15,8 @@ import cpu.pipelinedCache.instCache.query.QueryTop
 //TODO: optional enable for most banks
 
 @chiselName
-class InstrCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends Module {
+  implicit val config = cacheConfig
   val io = IO(new Bundle {
     val addr = Flipped(Decoupled(UInt(32.W)))
     val data = Decoupled(UInt(32.W))

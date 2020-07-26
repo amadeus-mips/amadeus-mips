@@ -18,37 +18,6 @@ trait CP0Constants {
   val con_EPC      = CP0Struct(14)
 }
 
-/** for forward write mask, not used, get from nontrivial-mips */
-object WriteMask extends CP0Constants {
-  var tlbSize  = 32
-  def tlbWidth = log2Ceil(tlbSize)
-  val map = Seq(
-    con_Index.index    -> (tlbSize - 1).U(32.W),
-    con_Random.index   -> 0.U(32.W),
-    con_EntryLo0.index -> "h7fffffff".U(32.W),
-    con_EntryLo1.index -> "h7fffffff".U(32.W),
-    con_PageMask.index -> "b0001_1111_1111_1111_1111_0000_0000_0000".U(32.W),
-    con_Wired.index    -> (tlbSize - 1).U(32.W),
-    con_BadVAddr.index -> 0.U(32.W),
-    con_Count.index    -> "hffffffff".U(32.W),
-    con_EntryHi.index  -> "hfffff0ff".U(32.W),
-    con_Status.index   -> "b1111_1010_0111_1000_1111_1111_0001_0111".U(32.W),
-    con_Cause.index    -> "b0000_0000_1100_0000_0000_0011_0000_0000".U(32.W),
-    con_EPC.index      -> "hffffffff".U(32.W)
-  )
-  def apply(index: Int): UInt = {
-    map.filter(e => e._1 == index).head._2
-  }
-  def apply(index: UInt): UInt = {
-    require(index.getWidth == 8)
-    MuxLookup(
-      index,
-      0.U,
-      map.map(e => e._1.U -> e._2)
-    )
-  }
-}
-
 class CP0Struct(val addr: Int, val sel: Int, val writeMask: UInt) {
   require(addr >= 0 && addr <= 31 && sel >= 0 && sel <= 8)
   val index = addr * 8 + sel
@@ -67,7 +36,6 @@ trait BaseCP0 {
     require(from.getWidth == 32)
   }
   def raw:       UInt = reg.asUInt()
-  val writeMask: UInt = WriteMask(index)
   val sel:       Int  = 0
   def index:     Int  = addr * 8 + sel
 

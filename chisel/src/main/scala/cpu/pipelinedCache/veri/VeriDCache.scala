@@ -14,9 +14,8 @@ class VeriDCache extends Module {
     val request = Flipped(Decoupled(new MemReqBundle))
     val data = Valid(UInt(32.W))
   })
-  implicit val cacheConfig: CacheConfig = new CacheConfig
   implicit val cpuConfig:   CPUConfig   = new CPUConfig(build = false, verification = true)
-  val dcache  = Module(new DataCache)
+  val dcache  = Module(new DataCache(cpuConfig.dCacheConfig))
   val veriRam = Module(new SymbiyosysAXIRam)
   dcache.io.axi     <> veriRam.io.axi
   dcache.io.request <> io.request

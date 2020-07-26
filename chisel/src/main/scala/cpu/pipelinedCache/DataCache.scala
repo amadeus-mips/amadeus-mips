@@ -12,11 +12,13 @@ import cpu.pipelinedCache.dataCache.{DCacheCommitBundle, DCacheController, DCach
 
 //TODO: freshess of tag and valid
 //TODO: hit in writing entry in write queue
-class DataCache(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends Module {
+  implicit val config = cacheConfig
+  //noinspection DuplicatedCode
   val io = IO(new Bundle {
 
     /** input request io, ready decitates whether it's ready to
-      * accecpt next request query */
+      * accept next request query */
     val request = Flipped(Decoupled(new MemReqBundle))
 
     /** denotes whether a read or a write has successfully been executed */

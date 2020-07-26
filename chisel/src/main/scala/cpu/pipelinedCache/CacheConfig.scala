@@ -2,11 +2,12 @@ package cpu.pipelinedCache
 
 import chisel3.util._
 
-class CacheConfig {
-  val numOfSets:    Int = 64
-  val numOfWays:    Int = 4
-  val numOfBanks:   Int = 8
-  val bankWidth:    Int = 4 // bytes per bank
+case class CacheConfig(
+  numOfSets:  Int = 64,
+  numOfWays:  Int = 4,
+  numOfBanks: Int = 8,
+  bankWidth:  Int = 4 // bytes per bank
+) {
   val indexLen:     Int = log2Ceil(numOfSets)
   val bankIndexLen: Int = log2Ceil(numOfBanks)
   // byte addressable memory, 1 bit -> 1 byte change in memory

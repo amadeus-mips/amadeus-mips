@@ -33,8 +33,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   val axiArbiter = Module(new AXIArbiter())
 
-  val iCache   = Module(new InstrCache())
-  val dCache   = Module(new DataCache())
+  val iCache   = Module(new InstrCache(conf.iCacheConfig))
+  val dCache   = Module(new DataCache(conf.dCacheConfig))
   val unCached = Module(new UnCachedUnit)
 
   val mmu = Module(new MMU)
