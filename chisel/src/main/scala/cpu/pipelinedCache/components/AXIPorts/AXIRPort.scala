@@ -23,8 +23,8 @@ class AXIRPort(addrReqWidth : Int= 32,AXIID: UInt)(implicit cacheConfig: CacheCo
     val finishTransfer = Output(Bool())
   })
 
-  io.finishTransfer     := io.r.bits.last
+  io.finishTransfer     := io.r.bits.last && io.r.fire
   io.transferData.bits  := io.r.bits.data
-  io.transferData.valid := io.r.valid
+  io.transferData.valid := io.r.fire
   io.r.ready            := io.transferData.ready
 }

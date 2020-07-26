@@ -6,7 +6,7 @@ import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.AXIPorts.{AXIARPort, AXIRPort}
-import cpu.pipelinedCache.components.{MSHR, MissComparator, ReFillBuffer, ReadHolder}
+import cpu.pipelinedCache.components._
 import cpu.pipelinedCache.instCache.fetch.{ICacheFetchQueryBundle, WriteTagValidBundle}
 import shared.Constants.INST_ID
 import shared.LRU.{PLRUMRUNM, TrueLRUNM}
@@ -32,11 +32,12 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     val axi = AXIIO.master()
   })
   // declare all the modules
-  val mshr         = Module(new MSHR)
+  val mshr         = Module(new MSHRQ)
   val comparator   = Module(new MissComparator)
   val axiAR        = Module(new AXIARPort(addrReqWidth = 32, AXIID = INST_ID))
   val axiR         = Module(new AXIRPort(addrReqWidth = 32, AXIID = INST_ID))
   val refillBuffer = Module(new ReFillBuffer)
+  val queryQueue   = Module(new AddressQueryQueue)
   val lru =
     if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
     else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
@@ -63,27 +64,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   /** is the data.valid output high? */
   val validData = WireDefault(queryHit && !passThrough)
 
-  val qIdle :: qRefill :: qWriteBack :: Nil = Enum(3)
-  val qState                                = RegInit(qIdle)
-  switch(qState) {
-    is(qIdle) {
-      when(newMiss) {
-        qState := qRefill
-      }
-    }
-    is(qRefill) {
-      when(axiR.io.finishTransfer) {
-        qState := qWriteBack
-      }
-    }
-    is(qWriteBack) {
-      qState := Mux(newMiss, qRefill, qIdle)
-    }
-  }
-  newMiss := (!queryHit && !passThrough && (qState === qIdle || qState === qWriteBack))
-  val oldqState = RegNext(qState)
+  /** if we write back this cycle */
+  val writeBackThisCycle = RegNext(axiR.io.finishTransfer)
 
-  hitInBank := comparator.io.bankHitWay.valid && oldqState =/= qWriteBack
+  newMiss := !queryHit && !passThrough && mshr.io.recordMiss.ready && !queryQueue.io.queryResult
+
+  /** the next cycle of write back, bank data is invalid, so is tag and valid data */
+  hitInBank := comparator.io.bankHitWay.valid && !RegNext(writeBackThisCycle)
 
   /** io parts */
 
@@ -97,12 +84,12 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     )
   )
 
-  io.inAMiss := qState === qRefill
+  io.inAMiss := mshr.io.pendingMiss
 
-  io.write.valid               := qState === qWriteBack
-  io.write.bits.waySelection   := lru.getLRU(mshr.io.extractMiss.addr.index)
-  io.write.bits.indexSelection := mshr.io.extractMiss.addr.index
-  io.write.bits.tagValid.tag   := mshr.io.extractMiss.addr.tag
+  io.write.valid               := writeBackThisCycle
+  io.write.bits.waySelection   := lru.getLRU(mshr.io.writeBackInfo.bits.index)
+  io.write.bits.indexSelection := mshr.io.writeBackInfo.bits.index
+  io.write.bits.tagValid.tag   := mshr.io.writeBackInfo.bits.tag
   io.write.bits.tagValid.valid := true.B
   io.instructionWriteBack      := refillBuffer.io.allData
 
@@ -113,13 +100,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
   comparator.io.index    := io.fetchQuery.index
-  comparator.io.mshr     := mshr.io.extractMiss.addr
+  comparator.io.mshr     := mshr.io.writeBackInfo.bits
 
   // when is in miss
-  refillBuffer.io.bankIndex.valid := newMiss
-  refillBuffer.io.bankIndex.bits  := io.fetchQuery.bankIndex
-  refillBuffer.io.inputData       := axiR.io.transferData
-  refillBuffer.io.finish          := axiR.io.finishTransfer
+  refillBuffer.io.queryBankIndex := io.fetchQuery.bankIndex
+  refillBuffer.io.newRefillBankIndex := queryQueue.io.dequeue.bits.bankIndex
+  refillBuffer.io.inputData <> axiR.io.transferData
+  refillBuffer.io.finish    := axiR.io.finishTransfer
 
   readHolder.io.input.valid := validData && !io.data.ready
   readHolder.io.input.bits := MuxCase(
@@ -138,20 +125,26 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       io.fetchQuery.bankIndex,
       0.U(cacheConfig.bankOffsetLen.W)
     ),
-    Cat(mshr.io.extractMiss.addr.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
+    Cat(mshr.io.extractMiss.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
   )
-  //FIXME: this is wrong
   axiAR.io.addrReq.valid := newMiss
 
-  //FIXME: this is mostly wrong
-  axiR.io.transferData.ready := qState =/= qWriteBack
-
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.recordMiss.valid                := newMiss
-  mshr.io.recordMiss.bits.addr.tag        := io.fetchQuery.phyTag
-  mshr.io.recordMiss.bits.addr.index      := io.fetchQuery.index
-  mshr.io.recordMiss.bits.addr.bankIndex  := io.fetchQuery.bankIndex
-  mshr.io.recordMiss.bits.tagValidAtIndex := DontCare
+  mshr.io.recordMiss.valid          := newMiss
+  mshr.io.recordMiss.bits.tag       := io.fetchQuery.phyTag
+  mshr.io.recordMiss.bits.index     := io.fetchQuery.index
+  mshr.io.recordMiss.bits.bankIndex := io.fetchQuery.bankIndex
+  mshr.io.writeBackInfo.ready       := writeBackThisCycle
+  mshr.io.arComplete                := axiAR.io.arCommit
+
+  queryQueue.io.enqueue.valid          := newMiss
+  queryQueue.io.enqueue.bits.tag       := io.fetchQuery.phyTag
+  queryQueue.io.enqueue.bits.index     := io.fetchQuery.index
+  queryQueue.io.enqueue.bits.bankIndex := io.fetchQuery.bankIndex
+  queryQueue.io.queryAddress.tag       := io.fetchQuery.phyTag
+  queryQueue.io.queryAddress.index     := io.fetchQuery.index
+  queryQueue.io.queryAddress.bankIndex := io.fetchQuery.bankIndex
+  queryQueue.io.dequeue.ready          := axiR.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

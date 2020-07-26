@@ -13,12 +13,15 @@ import cpu.pipelinedCache.CacheConfig
 class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
+    /** new bank index for the next refill */
+    val newRefillBankIndex = Input(UInt(log2Ceil(cacheConfig.numOfBanks).W))
+
     /** request bank index, valid is asserted when there is a new miss */
-    val bankIndex = Flipped(Valid(UInt(log2Ceil(cacheConfig.numOfBanks).W)))
+    val queryBankIndex = Input(UInt(log2Ceil(cacheConfig.numOfBanks).W))
 
     /** input data from [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]]
       * valid means the data in this beat is valid */
-    val inputData = Flipped(Valid(UInt(32.W)))
+    val inputData = Flipped(Decoupled(UInt(32.W)))
 
     /** axi r last signal from [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]]
       * this serves as a wire from axi port to centrol cache control */
@@ -33,9 +36,6 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
     val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
   })
 
-  val sIdle :: sTransfer :: Nil = Enum(2)
-  val state                     = RegInit(sIdle)
-
   val buffer = Reg(
     Vec(cacheConfig.numOfBanks, UInt(32.W))
   )
@@ -43,41 +43,40 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
   val writePtr = Reg(UInt(log2Ceil(cacheConfig.numOfBanks).W))
 
-  val hitInInputData = WireInit(io.inputData.valid && io.bankIndex.bits === writePtr)
+  val hitInInputData = WireInit(io.inputData.valid && io.queryBankIndex === writePtr)
+
+  val waitForDataReg = RegInit(false.B)
 
   io.queryResult.valid := Mux(
     hitInInputData,
     true.B,
-    bufferValidMask(io.bankIndex.bits)
+    bufferValidMask(io.queryBankIndex)
   )
 
   io.queryResult.bits := Mux(
     hitInInputData,
     io.inputData.bits,
-    buffer(io.bankIndex.bits)
+    buffer(io.queryBankIndex)
   )
 
   io.allData := buffer
 
-  switch(state) {
-    is(sIdle) {
-      when(io.bankIndex.valid) {
-        writePtr        := io.bankIndex.bits
-        buffer          := 0.U.asTypeOf(buffer)
-        state           := sTransfer
-        bufferValidMask := 0.U.asTypeOf(bufferValidMask)
-      }
-    }
-    is(sTransfer) {
-      when(io.inputData.valid) {
-        writePtr                  := writePtr + 1.U
-        bufferValidMask(writePtr) := true.B
-        buffer(writePtr)          := io.inputData.bits
-      }
-      when(io.finish) {
-        bufferValidMask := 0.U.asTypeOf(bufferValidMask)
-        state           := sIdle
-      }
+  val writeBackThisCycle = RegNext(io.finish && io.inputData.valid)
+
+  io.inputData.ready := !writeBackThisCycle
+
+  when(!io.inputData.fire && !waitForDataReg) {
+    writePtr := io.newRefillBankIndex
+  }
+
+  when(io.inputData.valid) {
+    waitForDataReg := true.B
+    writePtr                  := writePtr + 1.U
+    bufferValidMask(writePtr) := true.B
+    buffer(writePtr)          := io.inputData.bits
+    when(io.finish) {
+      bufferValidMask := 0.U.asTypeOf(bufferValidMask)
+      waitForDataReg := false.B
     }
   }
 }

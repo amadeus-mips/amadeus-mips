@@ -6,28 +6,25 @@ import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.addressBundle.QueryAddressBundle
 
+/** stream buffer generate cache miss. When r data arrives, it first arrives at the refill buffer */
 @chiselName
 class StreamBuffer(size: Int)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
-    /** flush the whole stream buffer */
-    val flush = Input(Bool())
+    /** request a new miss in the stream buffer
+      * when valid is asserted, flush the stream buffer */
+    val newAddress = Flipped(Valid(new QueryAddressBundle()))
 
-    /** request bank index, valid is asserted when there is a new miss */
-    val address = Flipped(Valid(new QueryAddressBundle()))
-
-    /** input data from [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]]
+    /** input data from [[ReFillBuffer]]
       * valid means the data in this beat is valid */
-    val inputData = Flipped(Valid(UInt(32.W)))
-
-    /** axi r last signal from [[cpu.pipelinedCache.components.AXIPorts.AXIReadPort]]
-      * this serves as a wire from axi port to centrol cache control */
-    val finish = Input(Bool())
+    val inputData = Flipped(Valid(Vec(cacheConfig.numOfBanks, UInt(32.W))))
 
     /** valid is asserted in following scenarios:
-      * 1. write is successful
-      * 2. read data is valid at bank index in refill buffer*/
-    val queryResult = Valid(UInt(32.W))
+      * the line is valid
+      */
+    val queryResult = Valid(Vec(2, UInt(32.W)))
+
+    val writeBack = Output(Bool())
 
     /** connect directly to [[cpu.pipelinedCache.dataCache.DataBanks]], used for write back */
     val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
