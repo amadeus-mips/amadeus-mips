@@ -4,6 +4,7 @@ package cpu.core.components
 
 import chisel3._
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.common._
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, TLBReadBundle}
@@ -48,7 +49,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
   override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
 }
 
-class CP0(tlbSize: Int = 32) extends Module {
+class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val tlbWidth = log2Ceil(tlbSize)
   val io       = IO(new CP0IO(tlbSize))
 
@@ -62,12 +63,36 @@ class CP0(tlbSize: Int = 32) extends Module {
   val badVAddr = new BadVAddrCP0
   val count    = new CountCP0
   val entryHi  = new EntryHiCP0
+  // TODO add interrupt support for [[compare]]
+  val compare  = new CompareCP0
   val status   = new StatusCP0
   val cause    = new CauseCP0
   val epc      = new EPCCP0
   val ebase    = new EBaseCP0
+  val prid     = new PRIDCP0
+  val config0  = new Config0CP0()
+  val config1  = new Config1CP0()
 
-  val cp0Seq = Seq(index, random, entryLo0, entryLo1, context, pageMask, wired, badVAddr, count, entryHi, status, cause, epc, ebase)
+  val cp0Seq = Seq(
+    index,
+    random,
+    entryLo0,
+    entryLo1,
+    context,
+    pageMask,
+    wired,
+    badVAddr,
+    count,
+    entryHi,
+    compare,
+    status,
+    cause,
+    epc,
+    ebase,
+    prid,
+    config0,
+    config1
+  )
 
   // soft write
   when(io.cp0Write.enable) {

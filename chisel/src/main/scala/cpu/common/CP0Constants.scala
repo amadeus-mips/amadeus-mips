@@ -2,6 +2,7 @@ package cpu.common
 
 import chisel3._
 import chisel3.util.{MuxLookup, log2Ceil}
+import cpu.CPUConfig
 
 trait CP0Constants {
   val con_Index    = CP0Struct(0)
@@ -295,6 +296,7 @@ class EBaseCP0 extends BaseCP0 {
     reg       := from.asTypeOf(new EBaseBundle)
     reg.upper := "b10".U(2.W)
     reg.zero  := 0.U(2.W)
+    reg.CPUNum := 0.U
   }
 }
 
@@ -314,4 +316,148 @@ class ContextCP0 extends BaseCP0 {
     reg.trailingZero := 0.U(4.W)
   }
 
+}
+
+class Config0Bundle extends Bundle {
+  /** denotes the config1 is implemented */
+  val m = Bool()
+  val k23 = UInt(3.W)
+  val ku = UInt(3.W)
+  val impl = UInt(9.W)
+  val be = Bool()
+  val at = UInt(2.W)
+  val ar = UInt(3.W)
+  val mt = UInt(3.W)
+  val non = UInt(3.W)
+  val vi = Bool()
+  val k0 = UInt(3.W)
+}
+
+class Config0CP0(implicit conf: CPUConfig) extends BaseCP0 {
+  override val addr: Int = 16
+  override val reg = RegInit({
+    val bundle = WireInit(0.U.asTypeOf(new Config0Bundle))
+    bundle.m := true.B
+    bundle.k0 := 2.U
+    bundle
+  })
+
+  override def softWrite(from: UInt): Unit = {
+    super.softWrite(from)
+    reg  := from.asTypeOf(new Config0Bundle)
+    reg.m := true.B
+    // not fixed mapping mmu
+    reg.k23 := 0.U
+    reg.ku := 0.U
+    // little endian
+    reg.be := false.B
+    // MIPS32
+    reg.at := 0.U
+    reg.ar := 1.U
+    reg.mt := 1.U
+    reg.non := 0.U
+    reg.vi := 0.U
+  }
+}
+
+class Config1Bundle extends Bundle {
+  val m = Bool()
+  val mmuSize = UInt(6.W)
+  val is = UInt(3.W)
+  val il = UInt(3.W)
+  val ia = UInt(3.W)
+  val ds = UInt(3.W)
+  val dl = UInt(3.W)
+  val da = UInt(3.W)
+  val c2 = Bool()
+  val md = Bool()
+  val pc = Bool()
+  val wr = Bool()
+  val ca = Bool()
+  val ep = Bool()
+  val fp = Bool()
+}
+
+class Config1CP0(implicit conf:CPUConfig) extends BaseCP0 {
+  override val addr: Int = 16
+  override val sel: Int = 1
+
+  override val reg = RegInit({
+    val bundle = WireInit(0.U.asTypeOf(new Config1Bundle))
+    bundle.m := false.B
+    bundle.mmuSize := (conf.tlbSize - 1).U
+    bundle.is := {
+      conf.iCacheConfig.numOfSets match {
+        case 64 => 0.U
+        case 128 => 1.U
+        case 256 => 2.U
+        case 512 => 3.U
+        case 1024 => 4.U
+        case 2048 => 5.U
+        case 4096 => 6.U
+        case 32 => 7.U
+      }
+    }
+    bundle.il := {
+      conf.iCacheConfig.numOfBanks * 4 match {
+        case 4 => 1.U
+        case 8 => 2.U
+        case 16 => 3.U
+        case 32 => 4.U
+        case 64 => 5.U
+        case 128 => 6.U
+        case _ => 0.U
+      }
+    }
+    bundle.ia := (conf.iCacheConfig.numOfWays-1).U
+    bundle.ds := {
+      conf.dCacheConfig.numOfSets match {
+        case 64 => 0.U
+        case 128 => 1.U
+        case 256 => 2.U
+        case 512 => 3.U
+        case 1024 => 4.U
+        case 2048 => 5.U
+        case 4096 => 6.U
+        case 32 => 7.U
+      }
+    }
+    bundle.dl := {
+      conf.dCacheConfig.numOfBanks * 4 match {
+        case 4 => 1.U
+        case 8 => 2.U
+        case 16 => 3.U
+        case 32 => 4.U
+        case 64 => 5.U
+        case 128 => 6.U
+        case _ => 0.U
+      }
+    }
+    bundle.da := (conf.dCacheConfig.numOfWays-1).U
+    bundle.c2 := false.B
+    bundle.md := false.B
+    bundle.pc := false.B
+    bundle.wr := false.B
+    bundle.ca := false.B
+    bundle.ep := false.B
+    bundle.fp := false.B
+    bundle
+  })
+}
+
+class CompareCP0 extends BaseCP0 {
+  override val addr: Int = 11
+
+  override val reg = RegInit(0.U(32.W))
+
+  override def softWrite(from: UInt): Unit = {
+    super.softWrite(from)
+    reg := from
+  }
+}
+
+class PRIDCP0 extends BaseCP0 {
+  override val addr: Int = 15
+
+  override val reg = RegInit("hffffffff".U)
 }
