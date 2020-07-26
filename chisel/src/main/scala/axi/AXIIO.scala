@@ -28,6 +28,11 @@ class AXIMasterIO(dataWidth: Int = 32, addrWidth: Int = 32) extends Bundle {
 object AXIIO {
   def master(dataWidth: Int = 32, addrWidth: Int = 32): AXIMasterIO = new AXIMasterIO(dataWidth, addrWidth)
   def slave(dataWidth:  Int = 32, addrWidth: Int = 32): AXIMasterIO = Flipped(new AXIMasterIO(dataWidth, addrWidth))
+  def arChannel(addrWidth: Int = 32): AXIAddrBundle= new AXIAddrBundle(addrWidth)
+  def rChannel(dataWidth:  Int = 32): AXIDataReadBundle = new AXIDataReadBundle(dataWidth)
+  def awChannel(dataWidth:  Int = 32, addrWidth: Int = 32): DecoupledIO[AXIAddrBundle] = new AXIMasterIO(dataWidth, addrWidth).aw
+  def wChannel(dataWidth:  Int = 32, addrWidth: Int = 32): DecoupledIO[AXIDataWriteBundle] = new AXIMasterIO(dataWidth, addrWidth).w
+  def bChannel(dataWidth:  Int = 32, addrWidth: Int = 32): DecoupledIO[AXIDataWriteRespBundle] = new AXIMasterIO(dataWidth, addrWidth).b
 }
 
 class AXIDataWriteRespBundle extends Bundle {

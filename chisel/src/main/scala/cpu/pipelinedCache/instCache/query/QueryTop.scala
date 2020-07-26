@@ -5,7 +5,7 @@ import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
-import cpu.pipelinedCache.components.AXIPorts.AXIReadPort
+import cpu.pipelinedCache.components.AXIPorts.{AXIARPort, AXIRPort}
 import cpu.pipelinedCache.components.{MSHR, MissComparator, ReFillBuffer, ReadHolder}
 import cpu.pipelinedCache.instCache.fetch.{ICacheFetchQueryBundle, WriteTagValidBundle}
 import shared.Constants.INST_ID
@@ -34,16 +34,19 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   // declare all the modules
   val mshr         = Module(new MSHR)
   val comparator   = Module(new MissComparator)
-  val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID))
+  val axiAR        = Module(new AXIARPort(addrReqWidth = 32, AXIID = INST_ID))
+  val axiR         = Module(new AXIRPort(addrReqWidth = 32, AXIID = INST_ID))
   val refillBuffer = Module(new ReFillBuffer)
-  val lru          = if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val readHolder   = Module(new ReadHolder)
+  val lru =
+    if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+    else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val readHolder = Module(new ReadHolder)
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid || io.flush)
 
   /** is the query a hit in the bank */
-  val hitInBank = WireDefault(comparator.io.bankHitWay.valid)
+  val hitInBank = Wire(Bool())
 
   /** is the query hit in the refill buffer */
   val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid)
@@ -69,7 +72,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       }
     }
     is(qRefill) {
-      when(axi.io.finishTransfer) {
+      when(axiR.io.finishTransfer) {
         qState := qWriteBack
       }
     }
@@ -78,6 +81,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
   newMiss := (!queryHit && !passThrough && (qState === qIdle || qState === qWriteBack))
+  val oldqState = RegNext(qState)
+
+  hitInBank := comparator.io.bankHitWay.valid && oldqState =/= qWriteBack
+
   /** io parts */
 
   io.ready      := io.data.fire || passThrough
@@ -99,8 +106,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.write.bits.tagValid.valid := true.B
   io.instructionWriteBack      := refillBuffer.io.allData
 
-  io.axi := DontCare
-  io.axi <> axi.io.axi
+  io.axi    := DontCare
+  io.axi.ar <> axiAR.io.ar
+  io.axi.r  <> axiR.io.r
 
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
@@ -110,8 +118,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   // when is in miss
   refillBuffer.io.bankIndex.valid := newMiss
   refillBuffer.io.bankIndex.bits  := io.fetchQuery.bankIndex
-  refillBuffer.io.inputData       := axi.io.transferData
-  refillBuffer.io.finish          := axi.io.finishTransfer
+  refillBuffer.io.inputData       := axiR.io.transferData
+  refillBuffer.io.finish          := axiR.io.finishTransfer
 
   readHolder.io.input.valid := validData && !io.data.ready
   readHolder.io.input.bits := MuxCase(
@@ -122,7 +130,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     )
   )
 
-  axi.io.addrReq.bits := Mux(
+  axiAR.io.addrReq.bits := Mux(
     newMiss,
     Cat(
       io.fetchQuery.phyTag,
@@ -132,7 +140,11 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     ),
     Cat(mshr.io.extractMiss.addr.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
   )
-  axi.io.addrReq.valid := newMiss
+  //FIXME: this is wrong
+  axiAR.io.addrReq.valid := newMiss
+
+  //FIXME: this is mostly wrong
+  axiR.io.transferData.ready := qState =/= qWriteBack
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
   mshr.io.recordMiss.valid                := newMiss
