@@ -12,32 +12,32 @@ class Hazard extends Module {
     val EPC    = Input(UInt(dataLen.W))
 
     val predictFail = Input(Bool())
-    val waitingDS   = Input(Bool())
-    val exeIsBranch = Input(Bool())
-
-    val stallReqFromIf0 = Input(Bool())
-    val stallReqFromIf1 = Input(Bool())
-
-    val stallReqFromId  = Input(Bool())
-    val stallReqFromExe = Input(Bool())
-    val stallReqFromMem = Input(Bool())
-
-    val stallIf0     = Output(Bool())
-    val stallIf1     = Output(Bool())
-    val fifoDeqReady = Output(Bool())
-    val stallExe     = Output(Bool())
-    val stallMem     = Output(Bool())
 
     val flushAll = Output(Bool())
     val flushPC  = Output(UInt(dataLen.W))
 
-    val flushIf1  = Output(Bool())
-    val flushFIFO = Output(Bool())
-    val flushExe  = Output(Bool())
-    val flushMem  = Output(Bool())
-    val flushWb   = Output(Bool())
-
     val branchValid = Output(Bool())
+
+    val frontend = new Bundle {
+      val stallReqFromIf0 = Input(Bool())
+      val stallReqFromIf1 = Input(Bool())
+      val stall           = Output(UInt(cpuStallLen.W))
+      val flushIf1        = Output(Bool())
+    }
+    val fifo = new Bundle {
+      val deqReady = Output(Bool())
+      val flush    = Output(Bool())
+    }
+    val backend = new Bundle {
+      val stallReqFromId  = Input(Bool())
+      val stallReqFromExe = Input(Bool())
+      val stallReqFromMem = Input(Bool())
+
+      val exeIsBranch  = Input(Bool())
+      val exeWaitingDS = Input(Bool())
+
+      val stall = Output(UInt(cpuStallLen.W))
+    }
   })
 
   val hasExcept = io.except.asUInt().orR()
@@ -52,27 +52,31 @@ class Hazard extends Module {
     )
   )
 
-  val branchValid = !io.stallExe && io.predictFail
+  val branchValid = !io.backend.stall(1) && io.predictFail
 
-  // stalled because inst cache has not accept pc yet, pc won't change
-  io.stallIf0 := io.stallReqFromIf0
-  // if pc is stalled, and data in fetch1 has fired; Or prediction failed
-  io.flushIf1 := io.stallReqFromIf0 && !io.stallReqFromIf1 || branchValid
-  // if data in fetch1 hasn't fired
-  io.stallIf1 := io.stallReqFromIf1
+  io.frontend.stall := MuxCase(
+    0.U,
+    Seq(
+      io.frontend.stallReqFromIf1 -> "b111".U,
+      io.frontend.stallReqFromIf0 -> "b11".U
+    )
+  )
+  io.frontend.flushIf1 := branchValid
 
-  // prediction failed
-  io.flushFIFO := branchValid
+  io.fifo.flush    := branchValid
+  io.fifo.deqReady := !io.backend.stall(0)
 
-  io.fifoDeqReady := !io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem
+  io.backend.stall := MuxCase(
+    0.U,
+    Seq(
+      io.backend.stallReqFromMem -> "b1111".U,
+      io.backend.stallReqFromExe -> "b111".U,
+      io.backend.exeWaitingDS    -> "b110".U,
+      io.backend.stallReqFromId  -> Mux(io.backend.exeIsBranch, "b111".U, "b11".U)
+    )
+  )
 
-  io.flushExe := io.stallReqFromId && !io.stallReqFromExe && !io.stallReqFromMem && !io.waitingDS && !io.exeIsBranch
-  io.stallExe := io.stallReqFromExe || io.stallReqFromMem || io.waitingDS || io.stallReqFromId && io.exeIsBranch
-
-  io.flushMem := ((io.stallReqFromExe || io.waitingDS)  || io.stallReqFromId && io.exeIsBranch) && !io.stallReqFromMem
-  io.stallMem := io.stallReqFromMem
-
-  io.flushWb := io.stallReqFromMem
+  assert(!(io.backend.exeWaitingDS && io.backend.stallReqFromId))
 
   io.branchValid := branchValid
 }

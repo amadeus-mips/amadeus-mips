@@ -46,13 +46,13 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val hazard  = Module(new Hazard)
 
   // stages
-  val if_if1   = Module(new Stage(new IfIf1Bundle))
+  val if_if1   = Module(new Stage(1, new IfIf1Bundle))
   val instFIFO = Module(new InstructionFIFO(new InstructionFIFOEntry()))
-  val id_exe   = Module(new Stage(new IdExeBundle))
-  val exe_mem  = Module(new Stage(new ExeMemBundle))
-  val mem_wb   = Module(new Stage(new MemWbBundle))
+  val id_exe   = Module(new Stage(1, new IdExeBundle))
+  val exe_mem  = Module(new Stage(2, new ExeMemBundle))
+  val mem_wb   = Module(new Stage(3, new MemWbBundle))
 
-  fetchTop.io.stall   := hazard.io.stallIf0
+  fetchTop.io.stall   := hazard.io.frontend.stall(0)
   fetchTop.io.flush   := hazard.io.flushAll
   fetchTop.io.flushPC := hazard.io.flushPC
 
@@ -71,19 +71,19 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetchTop.io.tlbExcept.invalid := io.tlb.except.inst.invalid
 
   if_if1.io.in    := fetchTop.io.out
-  if_if1.io.stall := hazard.io.stallIf1
-  if_if1.io.flush := hazard.io.flushAll || hazard.io.flushIf1
+  if_if1.io.stall := hazard.io.frontend.stall
+  if_if1.io.flush := hazard.io.flushAll || hazard.io.frontend.flushIf1
 
   fetch1Top.io.in         := if_if1.io.out
   fetch1Top.io.fifoReady  := instFIFO.io.readyForEnqueue
-  fetch1Top.io.flushFIFO  := hazard.io.flushFIFO
+  fetch1Top.io.flushFIFO  := hazard.io.fifo.flush
   fetch1Top.io.inst.bits  := io.rInst.data.bits
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
-  instFIFO.reset                 := reset.asBool() || hazard.io.flushAll || hazard.io.flushFIFO
+  instFIFO.reset                 := reset.asBool() || hazard.io.flushAll || hazard.io.fifo.flush
   instFIFO.io.flushTail          := false.B
   instFIFO.io.enqueue            := fetch1Top.io.out
-  instFIFO.io.dequeue.head.ready := hazard.io.fifoDeqReady
+  instFIFO.io.dequeue.head.ready := hazard.io.fifo.deqReady
 
   decodeTop.io.in      := instFIFO.io.dequeue.head.bits
   decodeTop.io.inValid := instFIFO.io.dequeue.head.valid
@@ -98,8 +98,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   regFile.io.rt    := instFIFO.io.dequeue.head.bits.inst(20, 16)
 
   id_exe.io.in    := decodeTop.io.out
-  id_exe.io.stall := hazard.io.stallExe
-  id_exe.io.flush := hazard.io.flushAll || hazard.io.flushExe
+  id_exe.io.stall := hazard.io.backend.stall
+  id_exe.io.flush := hazard.io.flushAll
 
   executeTop.io.in          := id_exe.io.out
   executeTop.io.flush       := hazard.io.flushAll
@@ -114,8 +114,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.wbOp        := mem_wb.io.out.operation
 
   exe_mem.io.in    := executeTop.io.out
-  exe_mem.io.stall := hazard.io.stallMem
-  exe_mem.io.flush := hazard.io.flushAll || hazard.io.flushMem
+  exe_mem.io.stall := hazard.io.backend.stall
+  exe_mem.io.flush := hazard.io.flushAll
 
   memoryTop.io.in           := exe_mem.io.out
   memoryTop.io.exceptionCP0 := cp0.io.exceptionCP0
@@ -136,21 +136,22 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hilo.io.in := wbTop.io.out.hilo
 
-  hazard.io.except          := memoryTop.io.except
-  hazard.io.EPC             := memoryTop.io.EPC
-  hazard.io.stallReqFromIf0 := fetchTop.io.stallReq
-  hazard.io.stallReqFromIf1 := fetch1Top.io.stallReq
-  hazard.io.stallReqFromId  := decodeTop.io.stallReq
-  hazard.io.stallReqFromExe := executeTop.io.stallReq
-  hazard.io.stallReqFromMem := memoryTop.io.stallReq
+  hazard.io.except := memoryTop.io.except
+  hazard.io.EPC    := memoryTop.io.EPC
 
-  hazard.io.predictFail := executeTop.io.branch.valid
-  hazard.io.waitingDS   := executeTop.io.waitingDS
-  hazard.io.exeIsBranch := executeTop.io.isBranch
+  hazard.io.frontend.stallReqFromIf0 := fetchTop.io.stallReq
+  hazard.io.frontend.stallReqFromIf1 := fetch1Top.io.stallReq
+  hazard.io.backend.stallReqFromId   := decodeTop.io.stallReq
+  hazard.io.backend.stallReqFromExe  := executeTop.io.stallReq
+  hazard.io.backend.stallReqFromMem  := memoryTop.io.stallReq
+
+  hazard.io.predictFail          := executeTop.io.branch.valid
+  hazard.io.backend.exeWaitingDS := executeTop.io.waitingDS
+  hazard.io.backend.exeIsBranch  := executeTop.io.isBranch
 
   mem_wb.io.in    := memoryTop.io.out
-  mem_wb.io.stall := false.B
-  mem_wb.io.flush := hazard.io.flushAll || hazard.io.flushWb
+  mem_wb.io.stall := hazard.io.backend.stall
+  mem_wb.io.flush := hazard.io.flushAll
 
   wbTop.io.in    := mem_wb.io.out
   wbTop.io.rData := io.rChannel.data
