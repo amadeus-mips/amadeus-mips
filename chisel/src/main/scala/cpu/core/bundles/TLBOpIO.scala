@@ -5,7 +5,7 @@ import cpu.mmu.{TLBEntry, TLBRWReq}
 
 class TLBOpIO(tlbSize: Int = 32) extends Bundle {
   val asid          = Output(UInt(8.W))
-  val kseg0Uncached = Output(UInt(8.W))
+  val kseg0Uncached = Output(Bool())
   val instrReq      = Output(new TLBRWReq(tlbSize))
   val readResp      = Input(new TLBEntry())
   val probeReq      = Output(UInt(20.W))

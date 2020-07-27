@@ -180,6 +180,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   io.memAccess.request <> memory0Top.io.request
   io.tlb               <> memory0Top.io.tlb
+  io.tlb.kseg0Uncached := cp0.io.kseg0Uncached
 
   io.rInst.change := fetchTop.io.pcChange
 }
