@@ -27,7 +27,7 @@ class AXIARPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cache
   val addressReg = Reg(UInt(addrReqWidth.W))
 
   // axi signals
-  io.ar.valid      := arState === arWait || io.addrReq.fire
+  io.ar.valid      := arState === arWait
   io.ar.bits.id    := AXIID
   io.ar.bits.addr  := Mux(io.addrReq.fire, io.addrReq.bits, addressReg)
   io.ar.bits.len   := (cacheConfig.numOfBanks - 1).U(4.W)

@@ -53,7 +53,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val hitInBank = Wire(Bool())
 
   /** is the query hit in the refill buffer */
-  val hitInRefillBuffer = WireDefault(comparator.io.addrHitInRefillBuffer && refillBuffer.io.queryResult.valid)
+  val hitInRefillBuffer =  queryQueue.io.dequeue.valid && refillBuffer.io.queryResult.valid && comparator.io.addrHitInRefillBuffer
 
   /** if the read holder value is valid, don't generate a new miss  */
   val hitInReadHolder = WireDefault(readHolder.io.output.valid)
@@ -90,7 +90,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     hitPrefetcherAddress := queryQueue.io.dequeue.bits.addr
   }
 
-  val prefetchContinueQueue = Module(new Queue(new MSHREntry(), 4, true, true))
+  val prefetchContinueQueue = Module(new Queue(new MSHREntry(), 2, true, true))
   //TODO: back pressure query queue
   prefetchContinueQueue.io.enq.bits  := queryQueue.io.dequeue.bits.addr
   prefetchContinueQueue.io.enq.valid := hitPrefecherValid && hitPrefetcherFirstTime && writeBackThisLineReg
@@ -121,9 +121,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.inAMiss := mshr.io.pendingMiss
 
   io.write.valid               := writeBackThisCycle
-  io.write.bits.waySelection   := lru.getLRU(queryQueue.io.dequeue.bits.addr.index)
-  io.write.bits.indexSelection := queryQueue.io.dequeue.bits.addr.index
-  io.write.bits.tagValid.tag   := queryQueue.io.dequeue.bits.addr.tag
+  io.write.bits.waySelection   := lru.getLRU(RegNext(queryQueue.io.dequeue.bits.addr.index))
+  io.write.bits.indexSelection := RegNext(queryQueue.io.dequeue.bits.addr.index)
+  io.write.bits.tagValid.tag   := RegNext(queryQueue.io.dequeue.bits.addr.tag)
   io.write.bits.tagValid.valid := true.B
   io.instructionWriteBack      := refillBuffer.io.allData
 
@@ -193,7 +193,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
       0.U(cacheConfig.bankOffsetLen.W)
     )
   )
-  axiAR.io.addrReq.valid := arSel =/= arIdle
+  axiAR.io.addrReq.valid := arSel =/= arIdle && queryQueue.io.enqueue.ready
 
   //FIXME: this newMiss is wrong
   prefetcher.io.newPrefetchRequest.valid := newMiss && arSel === arIdle
@@ -249,7 +249,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     io.fetchQuery.bankIndex
   )
   // query queue will dequeue every time a transfer has finished
-  queryQueue.io.dequeue.ready := RegNext(axiR.io.finishTransfer)
+  queryQueue.io.dequeue.ready := axiR.io.finishTransfer
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

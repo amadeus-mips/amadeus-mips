@@ -100,7 +100,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 }
 
 object elaborateCPU extends App {
-  implicit val cpuCfg = new CPUConfig(build = true)
+  implicit val cpuCfg = new CPUConfig(build = false)
   (new ChiselStage).execute(
     Array(),
     Seq(ChiselGeneratorAnnotation(() => new CPUTop()), TargetDirAnnotation("generation"))

@@ -134,7 +134,7 @@ class SocLiteTopUnitTester(
         lastDebugInfo = debugInfo
         if (current - lastTime > 5000) {
           log(s"running: $lastDebugInfo")
-//          lastTime = current
+          lastTime = current
         }
         if (tcfg.trace) {
           if (!traceCompare()) return false

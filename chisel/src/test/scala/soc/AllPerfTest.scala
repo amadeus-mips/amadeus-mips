@@ -4,7 +4,7 @@ import chisel3.iotesters.{ChiselFlatSpec, Driver}
 class AllPerfTest extends ChiselFlatSpec {
   behavior of ("soc run perf test")
   // soc config
-  implicit val socCfg = SocConfig.perfConfig(simulation = true)
+  implicit val socCfg = SocConfig.perfConfig(simulation = false)
   // test config
   implicit val tcfg = new TestConfig(banLog = true, runAllPerf = true, vcdOn = false)
 

@@ -80,32 +80,8 @@ class AXIOutstandingReadArbiter extends Module {
     }
   }
 
-  val rIdle :: rLocked :: Nil = Enum(2)
-  val rState                  = RegInit(rIdle)
-
-  val lockedRNumReg = Reg(UInt(log2Ceil(masterCount).W))
-
-  when(rState === rLocked) {
-    io.toBus.r <> io.fromMasters(lockedRNumReg).r
-  }
-  readQueue.io.deq.ready := false.B
-  switch(rState) {
-    is(rIdle) {
-      when(io.toBus.r.valid) {
-        when(io.toBus.r.bits.id === shared.Constants.INST_ID) {
-          lockedRNumReg := 0.U
-        }.otherwise {
-          // VERI: queue not empty
-          readQueue.io.deq.ready := true.B
-          lockedRNumReg          := readQueue.io.deq.bits
-        }
-        rState := rLocked
-      }
-    }
-    is(rLocked) {
-      when(io.toBus.r.fire && io.toBus.r.bits.last) {
-        rState := rIdle
-      }
-    }
-  }
+  io.toBus.r <> io.fromMasters(
+    Mux(io.toBus.r.bits.id === shared.Constants.INST_ID, 0.U,readQueue.io.deq.bits)
+  ).r
+  readQueue.io.deq.ready := io.toBus.r.bits.id =/= shared.Constants.INST_ID && io.toBus.r.fire && io.toBus.r.bits.last
 }

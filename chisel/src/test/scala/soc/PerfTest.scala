@@ -27,7 +27,7 @@ class AllTest extends ChiselFlatSpec {
 
 class PerfTest extends ChiselFlatSpec {
   // soc config
-  implicit val socCfg = SocConfig.perfConfig(simulation = false)
+  implicit val socCfg = SocConfig.perfConfig(simulation = true)
   // test config
   implicit val tcfg = new TestConfig(banLog = true, vcdOn = false)
   val option =
