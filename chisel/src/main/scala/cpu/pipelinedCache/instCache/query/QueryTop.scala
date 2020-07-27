@@ -75,21 +75,28 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val writeBackThisLineReg = RegInit(false.B)
 
   /** record if the prefeched address has been hit */
-  val hitPrefecherValid    = RegInit(false.B)
+  val hitPrefecherValid      = RegInit(false.B)
   val hitPrefetcherFirstTime = RegInit(true.B)
-  val hitPrefetcherAddress = Reg(new MSHREntry())
+  val hitPrefetcherAddress   = Reg(new MSHREntry())
 
   //FIXME: this is wrong, there could be a miss at rlast
   when(queryQueue.io.dequeue.fire) {
-    writeBackThisLineReg := false.B
-    hitPrefecherValid    := false.B
+    writeBackThisLineReg   := false.B
+    hitPrefecherValid      := false.B
     hitPrefetcherFirstTime := true.B
   }.elsewhen(hitInRefillBuffer) {
     writeBackThisLineReg := true.B
-    hitPrefecherValid    := true.B
+    hitPrefecherValid    := queryQueue.io.dequeue.bits.isPrefetch
     hitPrefetcherAddress := queryQueue.io.dequeue.bits.addr
   }
-  when(prefetcher.io.continuePrefetch.fire()) {
+
+  val prefetchContinueQueue = Module(new Queue(new MSHREntry(), 4, true, true))
+  //TODO: back pressure query queue
+  prefetchContinueQueue.io.enq.bits  := queryQueue.io.dequeue.bits.addr
+  prefetchContinueQueue.io.enq.valid := hitPrefecherValid && hitPrefetcherFirstTime && writeBackThisLineReg
+  prefetchContinueQueue.io.deq <> prefetcher.io.continuePrefetch
+
+  when(prefetchContinueQueue.io.enq.fire) {
     hitPrefetcherFirstTime := false.B
   }
 
@@ -195,8 +202,8 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     io.fetchQuery.index,
     0.U(cacheConfig.bankIndexLen.W)
   ).asTypeOf(prefetcher.io.newPrefetchRequest.bits)
-  prefetcher.io.continuePrefetch.valid := hitPrefecherValid
-  prefetcher.io.continuePrefetch.bits  := hitPrefetcherAddress
+  //TODO: prefetcher queue release item at the the average speed of ar handshake,
+  // enqueue at the speed of r
   prefetcher.io.nextFetchAddress.ready := prefetcherSelected && axiAR.io.addrReq.fire
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */

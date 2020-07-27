@@ -5,6 +5,7 @@ import chisel3.util._
 import cpu.pipelinedCache.CacheConfig
 
 //TODO: add prefetch depth into cache config
+//TODO: flush the whole address generator
 class PrefetchAddressGenerator(prefetchDepth: Int = 2)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
@@ -38,7 +39,7 @@ class PrefetchAddressGenerator(prefetchDepth: Int = 2)(implicit cacheConfig: Cac
 //    io.continuePrefetch.ready := toPrefetchAddressQueue.io.enq.ready
     toPrefetchAddressQueue.io.enq.valid      := true.B
     toPrefetchAddressQueue.io.enq.bits.tag   := io.continuePrefetch.bits.tag
-    toPrefetchAddressQueue.io.enq.bits.index := io.continuePrefetch.bits.index + (prefetchDepth + 1).U
+    toPrefetchAddressQueue.io.enq.bits.index := io.continuePrefetch.bits.index + prefetchDepth.U
   }.elsewhen(io.newPrefetchRequest.valid) {
       prefetchCounter     := prefetchDepth.U
       prefetchBaseAddress := io.newPrefetchRequest.bits
