@@ -12,6 +12,8 @@ import shared.Constants.INST_ID
 import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
 @chiselName
+//TODO: merge mshr and queryQueue
+//TODO: optimize redundant query address
 class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
     // control path IO
@@ -42,6 +44,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
     else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
   val readHolder = Module(new ReadHolder)
+  val prefetcher = Module(new PrefetchAddressGenerator)
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid || io.flush)
@@ -59,15 +62,39 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val queryHit = WireDefault(hitInBank || hitInRefillBuffer || hitInReadHolder)
 
   /** is a new miss generated, and is guaranteed to be accepted */
-  val newMiss = Wire(Bool())
+  val newMiss = !queryHit && !passThrough && !queryQueue.io.queryResult
 
   /** is the data.valid output high? */
   val validData = WireDefault(queryHit && !passThrough)
 
-  /** if we write back this cycle */
-  val writeBackThisCycle = RegNext(axiR.io.finishTransfer)
+  /** this is to benefit the integration of cache prefetch
+    * In this way, all axi requests are treated equal. If there is a hit in the refill buffer, then
+    * a prefetch request is issued, and the line will be written back
+    * otherwise the line will be discarded, and there will be no further prefetch requests from that
+    * line */
+  val writeBackThisLineReg = RegInit(false.B)
 
-  newMiss := !queryHit && !passThrough && mshr.io.recordMiss.ready && !queryQueue.io.queryResult
+  /** record if the prefeched address has been hit */
+  val hitPrefecherValid    = RegInit(false.B)
+  val hitPrefetcherFirstTime = RegInit(true.B)
+  val hitPrefetcherAddress = Reg(new MSHREntry())
+
+  //FIXME: this is wrong, there could be a miss at rlast
+  when(queryQueue.io.dequeue.fire) {
+    writeBackThisLineReg := false.B
+    hitPrefecherValid    := false.B
+    hitPrefetcherFirstTime := true.B
+  }.elsewhen(hitInRefillBuffer) {
+    writeBackThisLineReg := true.B
+    hitPrefecherValid    := true.B
+    hitPrefetcherAddress := queryQueue.io.dequeue.bits.addr
+  }
+  when(prefetcher.io.continuePrefetch.fire()) {
+    hitPrefetcherFirstTime := false.B
+  }
+
+  /** if we write back this cycle */
+  val writeBackThisCycle = RegNext(axiR.io.finishTransfer && writeBackThisLineReg)
 
   /** the next cycle of write back, bank data is invalid, so is tag and valid data */
   hitInBank := comparator.io.bankHitWay.valid && !RegNext(writeBackThisCycle)
@@ -87,9 +114,9 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   io.inAMiss := mshr.io.pendingMiss
 
   io.write.valid               := writeBackThisCycle
-  io.write.bits.waySelection   := lru.getLRU(mshr.io.writeBackInfo.bits.index)
-  io.write.bits.indexSelection := mshr.io.writeBackInfo.bits.index
-  io.write.bits.tagValid.tag   := mshr.io.writeBackInfo.bits.tag
+  io.write.bits.waySelection   := lru.getLRU(queryQueue.io.dequeue.bits.addr.index)
+  io.write.bits.indexSelection := queryQueue.io.dequeue.bits.addr.index
+  io.write.bits.tagValid.tag   := queryQueue.io.dequeue.bits.addr.tag
   io.write.bits.tagValid.valid := true.B
   io.instructionWriteBack      := refillBuffer.io.allData
 
@@ -100,13 +127,13 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
   comparator.io.index    := io.fetchQuery.index
-  comparator.io.mshr     := mshr.io.writeBackInfo.bits
+  comparator.io.mshr     := queryQueue.io.dequeue.bits.addr
 
   // when is in miss
-  refillBuffer.io.queryBankIndex := io.fetchQuery.bankIndex
-  refillBuffer.io.newRefillBankIndex := queryQueue.io.dequeue.bits.bankIndex
-  refillBuffer.io.inputData <> axiR.io.transferData
-  refillBuffer.io.finish    := axiR.io.finishTransfer
+  refillBuffer.io.queryBankIndex     := io.fetchQuery.bankIndex
+  refillBuffer.io.newRefillBankIndex := queryQueue.io.dequeue.bits.addr.bankIndex
+  refillBuffer.io.inputData          <> axiR.io.transferData
+  refillBuffer.io.finish             := axiR.io.finishTransfer
 
   readHolder.io.input.valid := validData && !io.data.ready
   readHolder.io.input.bits := MuxCase(
@@ -117,34 +144,105 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     )
   )
 
+  val arIdle :: arNewMiss :: arPrefetch :: Nil = Enum(3)
+  val arSel                                    = RegInit(arIdle)
+
+  //TODO: less state overhead
+  // seperate query queue into miss address queue and prefetch queue, use another queue to track
+  switch(arSel) {
+    is(arIdle) {
+      when(newMiss) {
+        arSel := arNewMiss
+      }.elsewhen(prefetcher.io.nextFetchAddress.valid) {
+        arSel := arPrefetch
+      }
+    }
+    is(arNewMiss) {
+      when(axiAR.io.addrReq.fire) {
+        arSel := arIdle
+      }
+    }
+    is(arPrefetch) {
+      when(axiAR.io.addrReq.fire) {
+        arSel := arIdle
+      }
+    }
+  }
+
+  val prefetcherSelected = arSel === arPrefetch
+  val missSelected       = arSel === arNewMiss
+
   axiAR.io.addrReq.bits := Mux(
-    newMiss,
+    prefetcherSelected,
+    Cat(
+      prefetcher.io.nextFetchAddress.bits.tag,
+      prefetcher.io.nextFetchAddress.bits.index,
+      0.U((cacheConfig.bankOffsetLen + cacheConfig.bankIndexLen).W)
+    ),
     Cat(
       io.fetchQuery.phyTag,
       io.fetchQuery.index,
       io.fetchQuery.bankIndex,
       0.U(cacheConfig.bankOffsetLen.W)
-    ),
-    Cat(mshr.io.extractMiss.asUInt, 0.U(cacheConfig.bankOffsetLen.W))
+    )
   )
-  axiAR.io.addrReq.valid := newMiss
+  axiAR.io.addrReq.valid := arSel =/= arIdle
+
+  //FIXME: this newMiss is wrong
+  prefetcher.io.newPrefetchRequest.valid := newMiss && arSel === arIdle
+  prefetcher.io.newPrefetchRequest.bits := Cat(
+    io.fetchQuery.phyTag,
+    io.fetchQuery.index,
+    0.U(cacheConfig.bankIndexLen.W)
+  ).asTypeOf(prefetcher.io.newPrefetchRequest.bits)
+  prefetcher.io.continuePrefetch.valid := hitPrefecherValid
+  prefetcher.io.continuePrefetch.bits  := hitPrefetcherAddress
+  prefetcher.io.nextFetchAddress.ready := prefetcherSelected && axiAR.io.addrReq.fire
 
   /** if there is a legitimate miss, i.e., valid request, didn't hit, and is not flushed */
-  mshr.io.recordMiss.valid          := newMiss
+  mshr.io.recordMiss.valid          := newMiss && arSel === arIdle
   mshr.io.recordMiss.bits.tag       := io.fetchQuery.phyTag
   mshr.io.recordMiss.bits.index     := io.fetchQuery.index
   mshr.io.recordMiss.bits.bankIndex := io.fetchQuery.bankIndex
-  mshr.io.writeBackInfo.ready       := writeBackThisCycle
-  mshr.io.arComplete                := axiAR.io.arCommit
 
-  queryQueue.io.enqueue.valid          := newMiss
-  queryQueue.io.enqueue.bits.tag       := io.fetchQuery.phyTag
-  queryQueue.io.enqueue.bits.index     := io.fetchQuery.index
-  queryQueue.io.enqueue.bits.bankIndex := io.fetchQuery.bankIndex
-  queryQueue.io.queryAddress.tag       := io.fetchQuery.phyTag
-  queryQueue.io.queryAddress.index     := io.fetchQuery.index
-  queryQueue.io.queryAddress.bankIndex := io.fetchQuery.bankIndex
-  queryQueue.io.dequeue.ready          := axiR.io.finishTransfer
+  //FIXME
+  mshr.io.extractMiss.ready := axiAR.io.addrReq.fire && missSelected
+
+  //FIXME: what if query queue is empty
+  queryQueue.io.enqueue.bits.isPrefetch := prefetcherSelected
+  queryQueue.io.enqueue.valid           := axiAR.io.addrReq.fire
+  queryQueue.io.enqueue.bits.addr.tag := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.tag,
+    io.fetchQuery.phyTag
+  )
+  queryQueue.io.enqueue.bits.addr.index := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.index,
+    io.fetchQuery.index
+  )
+  queryQueue.io.enqueue.bits.addr.bankIndex := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.bankIndex,
+    io.fetchQuery.bankIndex
+  )
+  queryQueue.io.queryAddress.tag := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.tag,
+    io.fetchQuery.phyTag
+  )
+  queryQueue.io.queryAddress.index := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.index,
+    io.fetchQuery.index
+  )
+  queryQueue.io.queryAddress.bankIndex := Mux(
+    prefetcherSelected,
+    prefetcher.io.nextFetchAddress.bits.bankIndex,
+    io.fetchQuery.bankIndex
+  )
+  // query queue will dequeue every time a transfer has finished
+  queryQueue.io.dequeue.ready := RegNext(axiR.io.finishTransfer)
 
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {

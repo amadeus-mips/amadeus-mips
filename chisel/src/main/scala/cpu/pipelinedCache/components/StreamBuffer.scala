@@ -31,6 +31,8 @@ class StreamBuffer(size: Int)(implicit cacheConfig: CacheConfig) extends Module 
   })
 
   //TODO: what if flush when rlast comes
+  //TODO: what if 2 write back collides
+
   /** how many returning miss I'm waiting */
   val outstandingMissCountReg = RegInit(0.U((log2Ceil(size) + 1).W))
 

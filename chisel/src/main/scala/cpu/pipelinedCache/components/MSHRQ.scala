@@ -13,15 +13,7 @@ class MSHRQ(capacity: Int = 4)(implicit cacheConfig: CacheConfig) extends Module
 
     /** extract miss information for ar port
       * this is the address to put into [[AddressQueryQueue]] */
-    val extractMiss = Output(new MSHREntry())
-
-    /** address information for write back into banks
-      * this is the first miss address to handle */
-    val writeBackInfo = Decoupled(new MSHREntry())
-
-    /** ar complete denotes that the head of miss Queue has completed ar transfer and about to enter
-      * r transfer */
-    val arComplete = Input(Bool())
+    val extractMiss = Decoupled(new MSHREntry())
 
     /** there are pending un-handled miss */
     val pendingMiss = Output(Bool())
@@ -31,17 +23,8 @@ class MSHRQ(capacity: Int = 4)(implicit cacheConfig: CacheConfig) extends Module
   /** waiting for handshake queue */
   val missQueue = Module(new Queue(new MSHREntry(), 1, false, true))
 
-  /** ready for write back queue */
-  val readyQueue = Module(new Queue(new MSHREntry(), 2, true, true))
+  io.recordMiss  <> missQueue.io.enq
+  io.extractMiss <> missQueue.io.deq
 
-  io.recordMiss            <> missQueue.io.enq
-  missQueue.io.deq.ready   := readyQueue.io.enq.ready && io.arComplete
-  io.extractMiss.tag       := missQueue.io.deq.bits.tag
-  io.extractMiss.index     := missQueue.io.deq.bits.index
-  io.extractMiss.bankIndex := missQueue.io.deq.bits.bankIndex
-  readyQueue.io.enq.valid  := missQueue.io.deq.valid && io.arComplete
-  readyQueue.io.enq.bits   := missQueue.io.deq.bits
-  io.writeBackInfo         <> readyQueue.io.deq
-
-  io.pendingMiss := missQueue.io.count === 0.U && readyQueue.io.count === 0.U
+  io.pendingMiss := missQueue.io.count === 0.U
 }

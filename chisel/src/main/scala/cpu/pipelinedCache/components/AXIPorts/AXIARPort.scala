@@ -19,16 +19,17 @@ class AXIARPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cache
 
     /** axi ar channel */
     val ar = new DecoupledIO(AXIIO.arChannel())
-
-    val arCommit = Output(Bool())
   })
 
   val arIdle :: arWait :: Nil = Enum(2)
   val arState                 = RegInit(arIdle)
 
+  val addressReg = Reg(UInt(addrReqWidth.W))
+
   // axi signals
+  io.ar.valid      := arState === arWait || io.addrReq.fire
   io.ar.bits.id    := AXIID
-  io.ar.bits.addr  := io.addrReq.bits
+  io.ar.bits.addr  := Mux(io.addrReq.fire, io.addrReq.bits, addressReg)
   io.ar.bits.len   := (cacheConfig.numOfBanks - 1).U(4.W)
   io.ar.bits.size  := "b010".U(3.W) // always 4 bytes
   io.ar.bits.burst := "b10".U(2.W) // axi wrap burst
@@ -38,13 +39,12 @@ class AXIARPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cache
   io.ar.bits.prot  := 0.U
 
   io.addrReq.ready := arState === arIdle
-  io.arCommit      := arState === arWait && io.ar.fire
-  io.ar.valid      := arState === arWait || io.addrReq.fire
 
   switch(arState) {
     is(arIdle) {
       when(io.addrReq.fire) {
         arState := arWait
+        addressReg := io.addrReq.bits
       }
     }
     is(arWait) {
@@ -59,6 +59,9 @@ object AXIARPortElaborate extends App {
   implicit val cacheConfig: CacheConfig = new CacheConfig
   (new ChiselStage).execute(
     Array(),
-    Seq(ChiselGeneratorAnnotation(() => new AXIARPort(addrReqWidth= 32,AXIID = 0.U(3.W))), TargetDirAnnotation("verification"))
+    Seq(
+      ChiselGeneratorAnnotation(() => new AXIARPort(addrReqWidth = 32, AXIID = 0.U(3.W))),
+      TargetDirAnnotation("verification")
+    )
   )
 }
