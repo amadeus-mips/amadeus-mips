@@ -3,6 +3,7 @@
 package cpu.core.components
 
 import chisel3._
+import chisel3.experimental.chiselName
 import chisel3.util._
 import cpu.CPUConfig
 import cpu.common._
@@ -49,6 +50,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
   override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
 }
 
+@chiselName
 class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val tlbWidth = log2Ceil(tlbSize)
   val io       = IO(new CP0IO(tlbSize))
