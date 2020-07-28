@@ -46,6 +46,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
   val exceptionCP0 = Output(new ExceptionHandleBundle)
 
   val tlbCP0 = Output(new TLBHandleBundle(tlbSize))
+  val kseg0Uncached = Output(Bool())
 
   override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
 }
@@ -207,4 +208,5 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   io.tlbCP0.entryHi      := entryHi.reg
   io.tlbCP0.entryLo0     := entryLo0.reg
   io.tlbCP0.entryLo1     := entryLo1.reg
+  io.kseg0Uncached       := config0.reg.k0 === 2.U
 }
