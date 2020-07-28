@@ -115,36 +115,40 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.flush    := hazard.io.flush
   executeTop.io.rawHILO  := hilo.io.out
   executeTop.io.mem0HILO := exe_mem.io.out.hilo
+  executeTop.io.mem1HILO := mem0_mem1.io.out.hiloWrite
   executeTop.io.cp0Data  := cp0.io.data
   executeTop.io.mem0CP0  := exe_mem.io.out.cp0
+  executeTop.io.mem1CP0  := mem0_mem1.io.out.cp0Write
   executeTop.io.mem0Op   := exe_mem.io.out.operation
+  executeTop.io.mem1Op   := mem0_mem1.io.out.op
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.stall
   exe_mem.io.flush := hazard.io.flush
 
   memory0Top.io.in           := exe_mem.io.out
-  memory0Top.io.exceptionCP0 := cp0.io.exceptionCP0
-  memory0Top.io.tlbCP0       := cp0.io.tlbCP0
   memory0Top.io.uncached     := io.memAccess.uncached
+  memory0Top.io.tlbCP0       := cp0.io.tlbCP0
+  memory0Top.io.exceptionCP0 := cp0.io.exceptionCP0
+  memory0Top.io.mem1Except   := mem0_mem1.io.out.except.asUInt().orR()
 
   cp0.io.intr        := io.intr
-  cp0.io.cp0Write    := memory0Top.io.cp0Write
   cp0.io.addr        := id_exe.io.out.imm26(15, 11)
   cp0.io.sel         := id_exe.io.out.imm26(2, 0)
-  cp0.io.except      := memory0Top.io.except
-  cp0.io.inDelaySlot := exe_mem.io.out.inDelaySlot
-  cp0.io.pc          := exe_mem.io.out.pc
-  cp0.io.badAddr     := memory0Top.io.badAddr
+  cp0.io.cp0Write    := mem0_mem1.io.out.cp0Write
+  cp0.io.except      := mem0_mem1.io.out.except
+  cp0.io.inDelaySlot := mem0_mem1.io.out.inDelaySlot
+  cp0.io.pc          := mem0_mem1.io.out.pc
+  cp0.io.badAddr     := mem0_mem1.io.out.badAddr
 
-  cp0.io.op  := memory0Top.io.out.op
-  cp0.io.tlb := memory0Top.io.tlbWrite
+  cp0.io.op  := mem0_mem1.io.out.op
+  cp0.io.tlb := mem0_mem1.io.out.tlbWrite
 
-  hilo.io.in := memory0Top.io.hiloWrite
+  hilo.io.in := mem0_mem1.io.out.hiloWrite
 
-  hazard.io.except         := memory0Top.io.except
-  hazard.io.exceptJumpAddr := memory0Top.io.exceptJumpAddr
-  hazard.io.EPC            := memory0Top.io.EPC
+  hazard.io.except         := mem0_mem1.io.out.except
+  hazard.io.exceptJumpAddr := memory1Top.io.exceptJumpAddr
+  hazard.io.EPC            := cp0.io.exceptionCP0.EPC
   hazard.io.stallReq(0)    := fetchTop.io.stallReq
   hazard.io.stallReq(1)    := fetch1Top.io.stallReq
   hazard.io.stallReq(2)    := decodeTop.io.stallReq
@@ -158,10 +162,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   mem0_mem1.io.in    := memory0Top.io.out
   mem0_mem1.io.stall := hazard.io.stall
-  mem0_mem1.io.flush := false.B
+  mem0_mem1.io.flush := hazard.io.flush
 
-  memory1Top.io.in     := mem0_mem1.io.out
-  memory1Top.io.commit := io.memAccess.commit
+  memory1Top.io.in           := mem0_mem1.io.out
+  memory1Top.io.commit       := io.memAccess.commit
+  memory1Top.io.exceptionCP0 := cp0.io.exceptionCP0
 
   mem1_mem2.io.in    := memory1Top.io.out
   mem1_mem2.io.stall := hazard.io.stall

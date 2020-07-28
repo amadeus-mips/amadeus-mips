@@ -17,7 +17,6 @@ class Except extends Module {
 
     val cp0Status = Input(new StatusBundle)
     val cp0Cause  = Input(new CauseBundle)
-    val cp0EBase  = Input(new EBaseBundle)
 
     val inExcept = Input(Vec(exceptAmount, Bool()))
 
@@ -29,7 +28,6 @@ class Except extends Module {
 
     val outExcept  = Output(Vec(exceptAmount, Bool()))
     val badAddr    = Output(UInt(addrLen.W))
-    val exceptAddr = Output(UInt(addrLen.W))
   })
 
   /** interrupt happen */
@@ -47,44 +45,5 @@ class Except extends Module {
     io.inExcept(EXCEPT_FETCH) || io.outExcept(EXCEPT_INST_TLB_REFILL) || io.outExcept(EXCEPT_INST_TLB_INVALID),
     io.pc,
     io.addr
-  )
-  val isRefillExcept = io.outExcept(EXCEPT_INST_TLB_REFILL) || io.outExcept(EXCEPT_DATA_TLB_R_REFILL) || io.outExcept(
-    EXCEPT_DATA_TLB_W_REFILL
-  )
-
-//  val base = Mux(io.cp0Status.bev,  "hbfc00200".U, Cat(io.cp0EBase.asUInt()(31, 12), 0.U(12.U)))
-//
-//  val offset = MuxCase(
-//    "h180".U,
-//    Seq(
-//      io.cp0Status.exl -> "h180".U,
-//      (intrExcept && io.cp0Cause.iv) -> "h200".U,
-//      isRefillExcept -> 0.U,
-//    )
-//  )
-
-//  io.exceptAddr := base + offset
-  /** For possible optimize */
-  io.exceptAddr := Mux(
-    io.cp0Status.bev,
-    MuxCase(
-      "hbfc00380".U,
-      Seq(
-        io.cp0Status.exl               -> "hbfc00380".U,
-        (intrExcept && io.cp0Cause.iv) -> "hbfc00400".U,
-        isRefillExcept                 -> "hbfc00200".U
-      )
-    ),
-    Cat(
-      io.cp0EBase.asUInt()(31, 12),
-      MuxCase(
-        "h180".U,
-        Seq(
-          io.cp0Status.exl               -> "h180".U,
-          (intrExcept && io.cp0Cause.iv) -> "h200".U,
-          isRefillExcept                 -> 0.U
-        )
-      )
-    )
   )
 }

@@ -25,7 +25,7 @@ class ExceptionHandleBundle extends Bundle {
   val status = new StatusBundle
   val cause  = new CauseBundle
   val EPC    = UInt(dataLen.W)
-  val EBase  = new EBaseBundle
+  val ebase  = new EBaseBundle
 }
 
 class CP0IO(tlbSize: Int) extends Bundle {
@@ -204,7 +204,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
 
   io.exceptionCP0.status := status.reg
   io.exceptionCP0.cause  := cause.reg
-  io.exceptionCP0.EBase  := ebase.reg
+  io.exceptionCP0.ebase  := ebase.reg
   io.exceptionCP0.EPC    := epc.reg
   io.tlbCP0.index        := index.reg
   io.tlbCP0.random       := random.reg

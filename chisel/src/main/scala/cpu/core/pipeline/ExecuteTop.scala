@@ -21,11 +21,14 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
     val rawHILO  = Input(new HILOBundle)
     val mem0HILO = Input(new HILOValidBundle)
+    val mem1HILO = Input(new HILOValidBundle)
 
     val cp0Data = Input(UInt(dataLen.W)) // from cp0
     val mem0CP0 = Input(new CPBundle)
+    val mem1CP0 = Input(new CPBundle)
 
     val mem0Op = Input(UInt(opLen.W))
+    val mem1Op = Input(UInt(opLen.W))
 
     val out        = Output(new ExeMemBundle)
     val branch     = Output(new ValidBundle) // back to `Fetch`
@@ -44,16 +47,18 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   val branch = Module(new Branch)
 
   /** Only used in `move` module */
-  val forward = Module(new cpu.core.execute.Forward(1, 1))
+  val forward = Module(new cpu.core.execute.Forward(2, 2))
   val control = Module(new cpu.core.execute.Control)
 
   forward.io.rawHILO   := io.rawHILO
   forward.io.fwHILO(0) := io.mem0HILO
+  forward.io.fwHILO(1) := io.mem1HILO
 
   // cp0 come from decode, data come from CP0 regfile
   forward.io.rawCP0      := io.in.cp0
   forward.io.rawCP0.data := io.cp0Data
   forward.io.fwCP0(0)    := io.mem0CP0
+  forward.io.fwCP0(1)    := io.mem1CP0
 
   alu.io.op1       := io.in.op1
   alu.io.op2       := io.in.op2
@@ -117,7 +122,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.predUpdate.bits.taken  := branch.io.branch.valid
 
   io.stallReq := writeOther.io.stallReq ||
-   VecInit(Seq(TLB_R, TLB_P, WO_MTC0)).contains(io.mem0Op)
+    io.in.operation === MV_MFC0 && VecInit(io.mem0Op, io.mem1Op).contains(TLB_WI) ||
+    VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem0Op) || VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem1Op)
 
   // performance
   val brPrTotal = RegInit(0.U.asTypeOf(new BrPrPerfBundle))
