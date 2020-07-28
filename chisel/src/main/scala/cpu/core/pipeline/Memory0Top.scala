@@ -25,11 +25,12 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
     // with mmu
     val tlb = new TLBOpIO(cfg.tlbSize)
 
-    val out         = Output(new Mem0Mem1Bundle)
-    val badAddr     = Output(UInt(addrLen.W))
-    val EPC         = Output(UInt(dataLen.W))
-    val inDelaySlot = Output(Bool())
-    val except      = Output(Vec(exceptAmount, Bool()))
+    val out            = Output(new Mem0Mem1Bundle)
+    val badAddr        = Output(UInt(addrLen.W))
+    val EPC            = Output(UInt(dataLen.W))
+    val inDelaySlot    = Output(Bool())
+    val except         = Output(Vec(exceptAmount, Bool()))
+    val exceptJumpAddr = Output(UInt(addrLen.W))
 
     val tlbWrite  = Output(new TLBReadBundle)
     val cp0Write  = Output(new CPBundle)
@@ -49,8 +50,9 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   except.io.addr      := io.in.memAddr
   except.io.instValid := io.in.instValid
   except.io.op        := io.in.operation
-  except.io.cp0Status := io.exceptionCP0.status.asUInt()
-  except.io.cp0Cause  := io.exceptionCP0.cause.asUInt()
+  except.io.cp0Status := io.exceptionCP0.status
+  except.io.cp0Cause  := io.exceptionCP0.cause
+  except.io.cp0EBase  := io.exceptionCP0.EBase
   except.io.inExcept  := io.in.except
 
   except.io.tlbExcept.refill   := io.tlb.except.data.refill
@@ -68,11 +70,12 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.cp0Write  := io.in.cp0
   io.hiloWrite := io.in.hilo
 
-  io.badAddr     := except.io.badAddr
-  io.inDelaySlot := io.in.inDelaySlot
-  io.except      := except.io.outExcept
-  io.EPC         := io.exceptionCP0.EPC
-  io.stallReq    := control.io.stallReq
+  io.badAddr        := except.io.badAddr
+  io.inDelaySlot    := io.in.inDelaySlot
+  io.except         := except.io.outExcept
+  io.exceptJumpAddr := except.io.exceptAddr
+  io.EPC            := io.exceptionCP0.EPC
+  io.stallReq       := control.io.stallReq
 
   io.request <> control.io.request
 

@@ -1,7 +1,7 @@
 package cpu.common
 
 import chisel3._
-import chisel3.util.{MuxLookup, log2Ceil}
+import chisel3.util.log2Ceil
 import cpu.CPUConfig
 
 trait CP0Constants {
@@ -36,9 +36,9 @@ trait BaseCP0 {
   def softWrite(from: UInt): Unit = {
     require(from.getWidth == 32)
   }
-  def raw:       UInt = reg.asUInt()
-  val sel:       Int  = 0
-  def index:     Int  = addr * 8 + sel
+  def raw:   UInt = reg.asUInt()
+  val sel:   Int  = 0
+  def index: Int  = addr * 8 + sel
 
 }
 
@@ -206,15 +206,21 @@ class StatusCP0 extends BaseCP0 {
   override val reg = RegInit({
     val bundle = WireDefault(0.U.asTypeOf(new StatusBundle))
     bundle.bev := true.B
+    bundle.erl := true.B
     bundle
   })
 
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
     reg       := from.asTypeOf(new StatusBundle)
+    reg.fr    := reg.fr
+    reg.re    := reg.re
     reg.mx    := reg.mx
+    reg.sr    := reg.sr
+    reg.nmi   := reg.nmi
     reg.ase   := reg.ase
     reg.impl1 := reg.impl1
+    reg.r0    := reg.r0
     reg.non   := reg.non
     reg.non1  := reg.non1
   }
@@ -252,6 +258,7 @@ class CauseCP0 extends BaseCP0 {
     reg.dc      := reg.dc
     reg.pci     := reg.pci
     reg.ase0    := reg.ase0
+    reg.wp      := reg.wp
     reg.ase1    := reg.ase1
     reg.fdci    := reg.fdci
     reg.ipHard  := reg.ipHard
@@ -293,9 +300,9 @@ class EBaseCP0 extends BaseCP0 {
 
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
-    reg       := from.asTypeOf(new EBaseBundle)
-    reg.upper := "b10".U(2.W)
-    reg.zero  := 0.U(2.W)
+    reg        := from.asTypeOf(new EBaseBundle)
+    reg.upper  := "b10".U(2.W)
+    reg.zero   := 0.U(2.W)
     reg.CPUNum := 0.U
   }
 }
@@ -313,127 +320,128 @@ class ContextCP0 extends BaseCP0 {
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
     reg              := from.asTypeOf(new ContextBundle)
+    reg.badVPN2      := reg.badVPN2
     reg.trailingZero := 0.U(4.W)
   }
 
 }
 
 class Config0Bundle extends Bundle {
+
   /** denotes the config1 is implemented */
-  val m = Bool()
-  val k23 = UInt(3.W)
-  val ku = UInt(3.W)
+  val m    = Bool()
+  val k23  = UInt(3.W)
+  val ku   = UInt(3.W)
   val impl = UInt(9.W)
-  val be = Bool()
-  val at = UInt(2.W)
-  val ar = UInt(3.W)
-  val mt = UInt(3.W)
-  val non = UInt(3.W)
-  val vi = Bool()
-  val k0 = UInt(3.W)
+  val be   = Bool()
+  val at   = UInt(2.W)
+  val ar   = UInt(3.W)
+  val mt   = UInt(3.W)
+  val non  = UInt(3.W)
+  val vi   = Bool()
+  val k0   = UInt(3.W)
 }
 
 class Config0CP0(implicit conf: CPUConfig) extends BaseCP0 {
   override val addr: Int = 16
   override val reg = RegInit({
     val bundle = WireInit(0.U.asTypeOf(new Config0Bundle))
-    bundle.m := true.B
+    bundle.m  := true.B
+    bundle.mt := 1.U
     bundle.k0 := 2.U
     bundle
   })
 
   override def softWrite(from: UInt): Unit = {
     super.softWrite(from)
-    reg  := from.asTypeOf(new Config0Bundle)
+    reg   := from.asTypeOf(new Config0Bundle)
     reg.m := true.B
     // not fixed mapping mmu
     reg.k23 := 0.U
-    reg.ku := 0.U
+    reg.ku  := 0.U
     // little endian
     reg.be := false.B
     // MIPS32
-    reg.at := 0.U
-    reg.ar := 1.U
-    reg.mt := 1.U
+    reg.at  := 0.U
+    reg.ar  := 0.U
+    reg.mt  := 1.U
     reg.non := 0.U
-    reg.vi := 0.U
+    reg.vi  := 0.U
   }
 }
 
 class Config1Bundle extends Bundle {
-  val m = Bool()
+  val m       = Bool()
   val mmuSize = UInt(6.W)
-  val is = UInt(3.W)
-  val il = UInt(3.W)
-  val ia = UInt(3.W)
-  val ds = UInt(3.W)
-  val dl = UInt(3.W)
-  val da = UInt(3.W)
-  val c2 = Bool()
-  val md = Bool()
-  val pc = Bool()
-  val wr = Bool()
-  val ca = Bool()
-  val ep = Bool()
-  val fp = Bool()
+  val is      = UInt(3.W)
+  val il      = UInt(3.W)
+  val ia      = UInt(3.W)
+  val ds      = UInt(3.W)
+  val dl      = UInt(3.W)
+  val da      = UInt(3.W)
+  val c2      = Bool()
+  val md      = Bool()
+  val pc      = Bool()
+  val wr      = Bool()
+  val ca      = Bool()
+  val ep      = Bool()
+  val fp      = Bool()
 }
 
-class Config1CP0(implicit conf:CPUConfig) extends BaseCP0 {
+class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
   override val addr: Int = 16
-  override val sel: Int = 1
+  override val sel:  Int = 1
 
   override val reg = RegInit({
     val bundle = WireInit(0.U.asTypeOf(new Config1Bundle))
-    bundle.m := false.B
+    bundle.m       := false.B
     bundle.mmuSize := (conf.tlbSize - 1).U
     bundle.is := {
       conf.iCacheConfig.numOfSets match {
-        case 64 => 0.U
-        case 128 => 1.U
-        case 256 => 2.U
-        case 512 => 3.U
+        case 64   => 0.U
+        case 128  => 1.U
+        case 256  => 2.U
+        case 512  => 3.U
         case 1024 => 4.U
         case 2048 => 5.U
         case 4096 => 6.U
-        case 32 => 7.U
+        case 32   => 7.U
       }
     }
     bundle.il := {
       conf.iCacheConfig.numOfBanks * 4 match {
-        case 4 => 1.U
-        case 8 => 2.U
-        case 16 => 3.U
-        case 32 => 4.U
-        case 64 => 5.U
+        case 4   => 1.U
+        case 8   => 2.U
+        case 16  => 3.U
+        case 32  => 4.U
+        case 64  => 5.U
         case 128 => 6.U
-        case _ => 0.U
       }
     }
-    bundle.ia := (conf.iCacheConfig.numOfWays-1).U
+    bundle.ia := (conf.iCacheConfig.numOfWays - 1).U
     bundle.ds := {
       conf.dCacheConfig.numOfSets match {
-        case 64 => 0.U
-        case 128 => 1.U
-        case 256 => 2.U
-        case 512 => 3.U
+        case 64   => 0.U
+        case 128  => 1.U
+        case 256  => 2.U
+        case 512  => 3.U
         case 1024 => 4.U
         case 2048 => 5.U
         case 4096 => 6.U
-        case 32 => 7.U
+        case 32   => 7.U
       }
     }
     bundle.dl := {
       conf.dCacheConfig.numOfBanks * 4 match {
-        case 4 => 1.U
-        case 8 => 2.U
-        case 16 => 3.U
-        case 32 => 4.U
-        case 64 => 5.U
+        case 4   => 1.U
+        case 8   => 2.U
+        case 16  => 3.U
+        case 32  => 4.U
+        case 64  => 5.U
         case 128 => 6.U
-        case _ => 0.U
       }
     }
-    bundle.da := (conf.dCacheConfig.numOfWays-1).U
+    bundle.da := (conf.dCacheConfig.numOfWays - 1).U
     bundle.c2 := false.B
     bundle.md := false.B
     bundle.pc := false.B

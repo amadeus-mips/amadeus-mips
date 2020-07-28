@@ -142,14 +142,15 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hilo.io.in := memory0Top.io.hiloWrite
 
-  hazard.io.except      := memory0Top.io.except
-  hazard.io.EPC         := memory0Top.io.EPC
-  hazard.io.stallReq(0) := fetchTop.io.stallReq
-  hazard.io.stallReq(1) := fetch1Top.io.stallReq
-  hazard.io.stallReq(2) := decodeTop.io.stallReq
-  hazard.io.stallReq(3) := executeTop.io.stallReq
-  hazard.io.stallReq(4) := memory0Top.io.stallReq
-  hazard.io.stallReq(5) := memory1Top.io.stallReq
+  hazard.io.except         := memory0Top.io.except
+  hazard.io.exceptJumpAddr := memory0Top.io.exceptJumpAddr
+  hazard.io.EPC            := memory0Top.io.EPC
+  hazard.io.stallReq(0)    := fetchTop.io.stallReq
+  hazard.io.stallReq(1)    := fetch1Top.io.stallReq
+  hazard.io.stallReq(2)    := decodeTop.io.stallReq
+  hazard.io.stallReq(3)    := executeTop.io.stallReq
+  hazard.io.stallReq(4)    := memory0Top.io.stallReq
+  hazard.io.stallReq(5)    := memory1Top.io.stallReq
 
   hazard.io.delaySlots(0) := fetchTop.io.out.inDelaySlot
   hazard.io.delaySlots(1) := fetch1Top.io.out.inDelaySlot

@@ -24,6 +24,7 @@ class ExceptionHandleBundle extends Bundle {
   val status = new StatusBundle
   val cause  = new CauseBundle
   val EPC    = UInt(dataLen.W)
+  val EBase  = new EBaseBundle
 }
 
 class CP0IO(tlbSize: Int) extends Bundle {
@@ -44,7 +45,7 @@ class CP0IO(tlbSize: Int) extends Bundle {
 
   val exceptionCP0 = Output(new ExceptionHandleBundle)
 
-  val tlbCP0 = Output(new TLBHandleBundle(tlbSize))
+  val tlbCP0        = Output(new TLBHandleBundle(tlbSize))
   val kseg0Uncached = Output(Bool())
 
   override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
@@ -65,14 +66,14 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val count    = new CountCP0
   val entryHi  = new EntryHiCP0
   // TODO add interrupt support for [[compare]]
-  val compare  = new CompareCP0
-  val status   = new StatusCP0
-  val cause    = new CauseCP0
-  val epc      = new EPCCP0
-  val ebase    = new EBaseCP0
-  val prid     = new PRIDCP0
-  val config0  = new Config0CP0()
-  val config1  = new Config1CP0()
+  val compare = new CompareCP0
+  val status  = new StatusCP0
+  val cause   = new CauseCP0
+  val epc     = new EPCCP0
+  val ebase   = new EBaseCP0
+  val prid    = new PRIDCP0
+  val config0 = new Config0CP0()
+  val config1 = new Config1CP0()
 
   val cp0Seq = Seq(
     index,
@@ -94,6 +95,8 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     config0,
     config1
   )
+
+  val isKernelMode = !status.reg.um || status.reg.erl || status.reg.exl
 
   // soft write
   when(io.cp0Write.enable) {
@@ -181,7 +184,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     status.reg.exl := true.B
   }
 
-  when(except) {
+  when(except && !status.reg.exl) {
     cause.reg.bd := io.inDelaySlot
   }
   cause.reg.ipHard  := io.intr
@@ -199,6 +202,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
 
   io.exceptionCP0.status := status.reg
   io.exceptionCP0.cause  := cause.reg
+  io.exceptionCP0.EBase  := ebase.reg
   io.exceptionCP0.EPC    := epc.reg
   io.tlbCP0.index        := index.reg
   io.tlbCP0.random       := random.reg
