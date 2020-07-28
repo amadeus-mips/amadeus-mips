@@ -36,11 +36,11 @@ class Memory1Top extends Module {
     Cat(
       io.exceptionCP0.ebase.asUInt()(31, 12),
       MuxCase(
-        "h180".U,
+        "h180".U(12.W),
         Seq(
-          io.exceptionCP0.status.exl                      -> "h180".U,
-          (isInterruptExcept && io.exceptionCP0.cause.iv) -> "h200".U,
-          isRefillExcept                                  -> 0.U
+          io.exceptionCP0.status.exl                      -> "h180".U(12.W),
+          (isInterruptExcept && io.exceptionCP0.cause.iv) -> "h200".U(12.W),
+          isRefillExcept                                  -> 0.U(12.W)
         )
       )
     )
