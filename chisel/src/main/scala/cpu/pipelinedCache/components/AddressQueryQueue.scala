@@ -15,7 +15,7 @@ class QueryRecordingBundle(implicit cacheConfig: CacheConfig) extends Bundle {
   * used to hold the address of queries that has performed an ar handshake and is waiting to
   * receive data
   */
-class AddressQueryQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig) extends Module {
+class AddressQueryQueue(capacity: Int = 16)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
     //TODO: merge enqueue and queryAddress.

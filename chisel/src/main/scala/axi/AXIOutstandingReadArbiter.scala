@@ -24,7 +24,7 @@ class AXIOutstandingReadArbiter extends Module {
 
   // VERI: cover queue is full, is empty, neither full or empty
   /** as 2 masters ( uncached unit and dcache unit ) share ID, this queue must tell the difference between them */
-  val readQueue = Module(new Queue(UInt(log2Ceil(masterCount).W), 2, pipe = true, flow = true))
+  val readQueue = Module(new Queue(UInt(log2Ceil(masterCount).W), 16, pipe = true, flow = true))
 
   /** ar arbiting state. As ar dictates that once valid goes high, the address could not change,
     * every cycle, a combinatorial check will be performed on ar valid in every channel

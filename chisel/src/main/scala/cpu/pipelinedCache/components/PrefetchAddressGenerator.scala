@@ -6,7 +6,7 @@ import cpu.pipelinedCache.CacheConfig
 
 //TODO: add prefetch depth into cache config
 //TODO: flush the whole address generator
-class PrefetchAddressGenerator(prefetchDepth: Int = 2)(implicit cacheConfig: CacheConfig) extends Module {
+class PrefetchAddressGenerator(prefetchDepth: Int = 4)(implicit cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
 
     /** when there is new hit in refill buffer or a new miss, consult this address

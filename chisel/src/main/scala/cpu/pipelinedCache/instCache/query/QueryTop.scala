@@ -90,7 +90,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     hitPrefetcherAddress := queryQueue.io.dequeue.bits.addr
   }
 
-  val prefetchContinueQueue = Module(new Queue(new MSHREntry(), 2, true, true))
+  val prefetchContinueQueue = Module(new Queue(new MSHREntry(), 4, true, true))
   //TODO: back pressure query queue
   prefetchContinueQueue.io.enq.bits  := queryQueue.io.dequeue.bits.addr
   prefetchContinueQueue.io.enq.valid := hitPrefecherValid && hitPrefetcherFirstTime && writeBackThisLineReg

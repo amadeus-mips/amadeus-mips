@@ -28,7 +28,7 @@ class AXIOutstandingWriteArbiter extends Module {
   val awState                   = RegInit(awIdle)
 
   // w channels are routed in the order aw handshake is performed
-  val writeQueue = Module(new Queue(UInt(1.W), 2, pipe = true, flow = true))
+  val writeQueue = Module(new Queue(UInt(1.W), 16, pipe = true, flow = true))
 
   val isMastersAWValid = io.fromMasters(0).aw.valid || io.fromMasters(1).aw.valid
 
