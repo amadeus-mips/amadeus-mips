@@ -11,7 +11,7 @@ import firrtl.options.TargetDirAnnotation
 
 //TODO: hit in bust write queue?
 //TODO: reduce wire usage
-class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig:CPUConfig) extends Module {
+class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** enqueue io, for the data cache to dispatch dirty lines into the write queue
@@ -64,8 +64,6 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
   /** write ptr within a cache line */
   val lineWritePTR = RegInit(0.U(log2Ceil(cacheConfig.numOfBanks).W))
 
-  /** whether there has been a hand shake yet in this transaction */
-  val writeHandshakeReg = RegInit(false.B)
 
   val dIdle :: dDispatch :: Nil = Enum(2)
   val dispatchState             = RegInit(dIdle)
@@ -105,8 +103,8 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
     queryHitVec.asUInt =/= 0.U && Mux(io.query.writeMask === 0.U, true.B, queryHitPos =/= headPTR)
 
   io.holdOffNewMiss := queryHitVec.asUInt =/= 0.U && io.query.writeMask =/= 0.U && queryHitPos === headPTR
-  // optimization: off
-//  && !writeHandshakeReg
+
+  val hasAWHandshake = RegInit(false.B)
 
   /** enqueue io, when not full, enqueue is ready */
   io.enqueue.ready := size =/= capacity.U
@@ -116,7 +114,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
 
   /** dequeue io, always dequeue when fifo is not empty */
   io.dequeueAddr.bits  := addrBank(headPTR)
-  io.dequeueAddr.valid := dispatchState === dDispatch
+  io.dequeueAddr.valid := dispatchState === dDispatch && !hasAWHandshake
   io.dequeueData.bits  := dispatchDataWire
   io.dequeueData.valid := dispatchState === dDispatch
 
@@ -129,9 +127,6 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
     tailPTR            := tailPTR - 1.U
   }
 
-  when(io.writeHandshake) {
-    writeHandshakeReg := true.B
-  }
   size := size - ((dispatchState === dDispatch) && (io.dequeueData.fire) && (lineWritePTR === (cacheConfig.numOfBanks - 1).U)).asUInt + io.enqueue.fire.asUInt
 
   // write query
@@ -152,16 +147,18 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
       when(size =/= 0.U) {
         dispatchState     := dDispatch
         lineWritePTR      := 0.U
-        writeHandshakeReg := false.B
+        hasAWHandshake := false.B
       }
     }
     is(dDispatch) {
+      when(io.dequeueAddr.fire) {
+        hasAWHandshake := true.B
+      }
       when(io.dequeueData.fire) {
         lineWritePTR := lineWritePTR + 1.U
         when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
-          dispatchState := dIdle
-          writeHandshakeReg := false.B
-          headPTR := headPTR - 1.U
+          dispatchState      := dIdle
+          headPTR            := headPTR - 1.U
           validBank(headPTR) := false.B
         }
       }
@@ -174,7 +171,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
 
 object WriteQueueElaborate extends App {
   implicit val cacheConfig = new CacheConfig
-  implicit val CPUConfig = new CPUConfig(build = false, verification = true)
+  implicit val CPUConfig   = new CPUConfig(build = false, verification = true)
   (new ChiselStage).execute(
     Array(),
     Seq(ChiselGeneratorAnnotation(() => new WriteQueue), TargetDirAnnotation("verification"))
