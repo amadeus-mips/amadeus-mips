@@ -1299,3 +1299,23 @@
     mul v0, t0, t1; \
     bne v0, v1, inst_error; \
     nop
+
+/* 91 */
+#define TEST_MOVZ(in_a, in_b, in_c, ref) \
+    LI (t0, in_a); \
+    LI (t1, in_b); \
+    LI (v0, in_c); \
+    LI (v1, ref); \
+    movz v0, t0, t1; \
+    bne v0, v1, inst_error; \
+    nop
+
+/* 92 */
+#define TEST_MOVN(in_a, in_b, in_c, ref) \
+    LI (t0, in_a); \
+    LI (t1, in_b); \
+    LI (v0, in_c); \
+    LI (v1, ref); \
+    movn v0, t0, t1; \
+    bne v0, v1, inst_error; \
+    nop

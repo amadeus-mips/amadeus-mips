@@ -88,6 +88,8 @@ trait opConstants {
   val TLB_P     = 49.U(opLen.W)
   val TLB_R     = 50.U(opLen.W)
   val ALU_MUL   = 51.U(opLen.W)
+  val MV_MOVN   = 52.U(opLen.W)
+  val MV_MOVZ   = 53.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {

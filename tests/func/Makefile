@@ -1,7 +1,7 @@
 TOPDIR=$(shell pwd)
 
 #export LD_PRELOAD =
-CFLAGS := -D_KERNEL -fno-builtin -mips1 -DMEMSTART=0x80000000 -DMEMSIZE=0x04000 -DCPU_COUNT_PER_US=1000 -I $(TOPDIR)/include 
+CFLAGS := -D_KERNEL -fno-builtin -mips32 -DMEMSTART=0x80000000 -DMEMSIZE=0x04000 -DCPU_COUNT_PER_US=1000 -I $(TOPDIR)/include 
 CFLAGS += -fno-reorder-blocks -fno-reorder-functions
 
 OBJDIR = ./obj

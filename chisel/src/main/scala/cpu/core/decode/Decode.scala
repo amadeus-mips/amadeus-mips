@@ -47,6 +47,10 @@ class Decode extends Module {
       SRL       -> List(Y , OPn_IMM, OPn_RF , INST_ALU, ALU_SRL , WR_Y  , WRA_T1 , IMM_SHT),
       SRA       -> List(Y , OPn_IMM, OPn_RF , INST_ALU, ALU_SRA , WR_Y  , WRA_T1 , IMM_SHT),
 
+      // Move
+      MOVN      -> List(Y , OPn_RF , OPn_RF , INST_MV , MV_MOVN , WR_Y  , WRA_T1 , IMM_N  ),
+      MOVZ      -> List(Y , OPn_RF , OPn_RF , INST_MV , MV_MOVZ , WR_Y  , WRA_T1 , IMM_N  ),
+
       // HI，LO的Move指令
       MFHI      -> List(Y , OPn_X  , OPn_X  , INST_MV , MV_MFHI , WR_Y  , WRA_T1 , IMM_N  ),
       MFLO      -> List(Y , OPn_X  , OPn_X  , INST_MV , MV_MFLO , WR_Y  , WRA_T1 , IMM_N  ),
