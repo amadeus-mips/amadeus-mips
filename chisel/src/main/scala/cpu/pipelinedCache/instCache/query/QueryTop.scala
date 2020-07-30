@@ -4,6 +4,7 @@ import axi.AXIIO
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 import cpu.pipelinedCache.components.AXIPorts.AXIReadPort
 import cpu.pipelinedCache.components.{MSHR, MissComparator, ReFillBuffer, ReadHolder}
@@ -12,15 +13,15 @@ import shared.Constants.INST_ID
 import shared.LRU.{PLRUMRUNM, TrueLRUNM}
 
 @chiselName
-class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
+class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
     // control path IO
     val flush = Input(Bool())
     val ready = Output(Bool())
     // datapath IO
     val fetchQuery = Input(new ICacheFetchQueryBundle)
-    val bankData   = Input(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
-    val data       = Decoupled(UInt(32.W))
+    val bankData   = Input(Vec(cacheConfig.numOfWays, Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W))))
+    val data       = Decoupled(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W)))
     // also data path, just write to instruction banks
     val write = Valid(new WriteTagValidBundle)
 
@@ -36,8 +37,10 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   val comparator   = Module(new MissComparator)
   val axi          = Module(new AXIReadPort(addrReqWidth = 32, AXIID = INST_ID))
   val refillBuffer = Module(new ReFillBuffer)
-  val lru          = if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays) else TrueLRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
-  val readHolder   = Module(new ReadHolder)
+  val lru =
+    if (cacheConfig.numOfWays > 2) PLRUMRUNM(numOfSets = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+    else TrueLRUNM(numOfSets                           = cacheConfig.numOfSets, numOfWay = cacheConfig.numOfWays)
+  val readHolder = Module(new ReadHolder)
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid || io.flush)
@@ -78,6 +81,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     }
   }
   newMiss := (!queryHit && !passThrough && (qState === qIdle || qState === qWriteBack))
+
   /** io parts */
 
   io.ready      := io.data.fire || passThrough
@@ -113,6 +117,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
   refillBuffer.io.inputData       := axi.io.transferData
   refillBuffer.io.finish          := axi.io.finishTransfer
 
+  readHolder.io.flush       := io.flush
   readHolder.io.input.valid := validData && !io.data.ready
   readHolder.io.input.bits := MuxCase(
     readHolder.io.output.bits,

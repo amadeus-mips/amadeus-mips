@@ -7,15 +7,17 @@ import chisel3.util.Decoupled
 import cpu.CPUConfig
 import cpu.common.MemReqBundle
 import cpu.core.Constants._
-import cpu.core.bundles.TLBOpIO
 import cpu.core.bundles.stages._
-import cpu.core.components.{CP0, HILO, RegFile, Stage}
+import cpu.core.bundles.{InstructionFIFOEntry, TLBOpIO}
+import cpu.core.components._
 import cpu.core.pipeline._
 
-class InstFetchIO extends Bundle {
+class InstFetchIO(implicit conf: CPUConfig) extends Bundle {
   val addr   = Decoupled(UInt(addrLen.W))
-  val data   = Flipped(Decoupled(UInt(dataLen.W)))
+  val data   = Flipped(Decoupled(Vec(conf.fetchAmount, UInt(dataLen.W))))
   val change = Output(Bool())
+
+  override def cloneType: InstFetchIO.this.type = new InstFetchIO().asInstanceOf[this.type]
 }
 
 class MemAccessIO extends Bundle {
@@ -58,63 +60,66 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   // stages
   val if_if1    = Module(new Stage(1, new IfIf1Bundle))
-  val if1_id    = Module(new Stage(2, new If1IdBundle))
-  val id_exe    = Module(new Stage(3, new IdExeBundle))
-  val exe_mem   = Module(new Stage(4, new ExeMemBundle))
-  val mem0_mem1 = Module(new Stage(5, new Mem0Mem1Bundle))
-  val mem1_mem2 = Module(new Stage(6, new Mem1Mem2Bundle))
-  val mem2_wb   = Module(new Stage(7, new Mem2WbBundle))
+  val instFIFO = Module(new InstructionFIFO(new InstructionFIFOEntry()))
+  val id_exe    = Module(new Stage(1, new IdExeBundle))
+  val exe_mem   = Module(new Stage(2, new ExeMemBundle))
+  val mem0_mem1 = Module(new Stage(3, new Mem0Mem1Bundle))
+  val mem1_mem2 = Module(new Stage(4, new Mem1Mem2Bundle))
+  val mem2_wb   = Module(new Stage(5, new Mem2WbBundle))
 
-  fetchTop.io.stall   := hazard.io.stall(0)
-  fetchTop.io.flush   := hazard.io.flush
+  fetchTop.io.stall   := hazard.io.frontend.stall(0)
+  fetchTop.io.flush   := hazard.io.flushAll
   fetchTop.io.flushPC := hazard.io.flushPC
-  fetchTop.io.lastDS  := hazard.io.lastDS
 
-  fetchTop.io.predUpdate := executeTop.io.predUpdate
+  fetchTop.io.predUpdate.bits  := executeTop.io.predUpdate
+  fetchTop.io.predUpdate.valid := hazard.io.branchValid
 
-  fetchTop.io.predict     := fetch1Top.io.predict
-  fetchTop.io.branch      := executeTop.io.branch
-  fetchTop.io.inDelaySlot := fetch1Top.io.nextInstInDelaySlot
+  fetchTop.io.predict       := fetch1Top.io.predict
+  fetchTop.io.predictWithDS := fetch1Top.io.predictWithDS
+  fetchTop.io.branch.bits   := executeTop.io.branch.bits
+  fetchTop.io.branch.valid  := hazard.io.branchValid
+  fetchTop.io.inDelaySlot   := fetch1Top.io.nextInstInDelaySlot
 
-  fetchTop.io.instValid := io.rInst.addr.ready
+  fetchTop.io.ramReady := io.rInst.addr.ready
 
   fetchTop.io.tlbExcept.refill  := io.tlb.except.inst.refill
   fetchTop.io.tlbExcept.invalid := io.tlb.except.inst.invalid
 
   if_if1.io.in    := fetchTop.io.out
-  if_if1.io.stall := hazard.io.stall
-  if_if1.io.flush := hazard.io.flush ||
-    (executeTop.io.branch.valid && hazard.io.predictFailFlush(0))
+  if_if1.io.stall := hazard.io.frontend.stall
+  if_if1.io.flush := hazard.io.flushAll || hazard.io.frontend.flushIf1
 
   fetch1Top.io.in         := if_if1.io.out
-  fetch1Top.io.itReady    := !VecInit(hazard.io.stallReq.tail.tail).asUInt().orR()
+  fetch1Top.io.fifoReady  := instFIFO.io.readyForEnqueue
+  fetch1Top.io.flushFIFO  := hazard.io.fifo.flush
   fetch1Top.io.inst.bits  := io.rInst.data.bits
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
-  if1_id.io.in    := fetch1Top.io.out
-  if1_id.io.stall := hazard.io.stall
-  if1_id.io.flush := hazard.io.flush ||
-    (executeTop.io.branch.valid && hazard.io.predictFailFlush(1))
+  instFIFO.reset                 := reset.asBool() || hazard.io.flushAll || hazard.io.fifo.flush
+  instFIFO.io.flushTail          := false.B
+  instFIFO.io.enqueue            := fetch1Top.io.out
+  instFIFO.io.dequeue.head.ready := hazard.io.fifo.deqReady
 
-  decodeTop.io.in     := if1_id.io.out
-  decodeTop.io.exeWR  := executeTop.io.out.write
+  decodeTop.io.in      := instFIFO.io.dequeue.head.bits
+  decodeTop.io.inValid := instFIFO.io.dequeue.head.valid
+  decodeTop.io.exeWR   := executeTop.io.out.write
   decodeTop.io.mem0WR := memory0Top.io.out.write
   decodeTop.io.mem1WR := memory1Top.io.out.write
-  decodeTop.io.mem2WR := memory2Top.io.out.write
-  decodeTop.io.wbWR   := mem2_wb.io.out.write
-  decodeTop.io.rsData := regFile.io.rsData
-  decodeTop.io.rtData := regFile.io.rtData
+  decodeTop.io.wbWR    := mem2_wb.io.out.write
+  decodeTop.io.rsData  := regFile.io.rsData
+  decodeTop.io.rtData  := regFile.io.rtData
 
   regFile.io.write := mem2_wb.io.out.write
-  regFile.io.rs    := if1_id.io.out.inst(25, 21)
-  regFile.io.rt    := if1_id.io.out.inst(20, 16)
+  regFile.io.rs    := instFIFO.io.dequeue.head.bits.inst(25, 21)
+  regFile.io.rt    := instFIFO.io.dequeue.head.bits.inst(20, 16)
 
   id_exe.io.in    := decodeTop.io.out
-  id_exe.io.stall := hazard.io.stall
-  id_exe.io.flush := hazard.io.flush
+  id_exe.io.stall := hazard.io.backend.stall
+  id_exe.io.flush := hazard.io.flushAll
 
   executeTop.io.in       := id_exe.io.out
-  executeTop.io.flush    := hazard.io.flush
+  executeTop.io.flush    := hazard.io.flushAll
+  executeTop.io.decodeValid := instFIFO.io.dequeue.head.valid
   executeTop.io.rawHILO  := hilo.io.out
   executeTop.io.mem0HILO := exe_mem.io.out.hilo
   executeTop.io.mem1HILO := mem0_mem1.io.out.hiloWrite
@@ -122,11 +127,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.mem0CP0  := exe_mem.io.out.cp0
   executeTop.io.mem1CP0  := mem0_mem1.io.out.cp0Write
   executeTop.io.mem0Op   := exe_mem.io.out.operation
-  executeTop.io.mem1Op   := mem0_mem1.io.out.op
+  executeTop.io.mem1Op   := mem2_wb.io.out.opera
 
   exe_mem.io.in    := executeTop.io.out
-  exe_mem.io.stall := hazard.io.stall
-  exe_mem.io.flush := hazard.io.flush
+  exe_mem.io.stall := hazard.io.backend.stall
+  exe_mem.io.flush := hazard.io.flushAll
 
   memory0Top.io.in           := exe_mem.io.out
   memory0Top.io.uncached     := io.memAccess.uncached
@@ -148,30 +153,30 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hilo.io.in := mem0_mem1.io.out.hiloWrite
 
-  hazard.io.except         := mem0_mem1.io.out.except
-  hazard.io.exceptJumpAddr := memory1Top.io.exceptJumpAddr
-  hazard.io.EPC            := cp0.io.exceptionCP0.EPC
-  hazard.io.stallReq(0)    := fetchTop.io.stallReq
-  hazard.io.stallReq(1)    := fetch1Top.io.stallReq
-  hazard.io.stallReq(2)    := decodeTop.io.stallReq
-  hazard.io.stallReq(3)    := executeTop.io.stallReq
-  hazard.io.stallReq(4)    := memory0Top.io.stallReq
-  hazard.io.stallReq(5)    := memory1Top.io.stallReq
+  hazard.io.except := mem0_mem1.io.out.except
+  hazard.io.EPC    := cp0.io.exceptionCP0.EPC
 
-  hazard.io.delaySlots(0) := fetchTop.io.out.inDelaySlot
-  hazard.io.delaySlots(1) := fetch1Top.io.out.inDelaySlot
-  hazard.io.delaySlots(2) := decodeTop.io.out.inDelaySlot
+  hazard.io.frontend.stallReqFromIf0 := fetchTop.io.stallReq
+  hazard.io.frontend.stallReqFromIf1 := fetch1Top.io.stallReq
+  hazard.io.backend.stallReqFromId   := decodeTop.io.stallReq
+  hazard.io.backend.stallReqFromExe  := executeTop.io.stallReq
+  hazard.io.backend.stallReqFromMem  := memory0Top.io.stallReq
+
+  hazard.io.predictFail          := executeTop.io.branch.valid
+  hazard.io.backend.exeWaitingDS := executeTop.io.waitingDS
+  hazard.io.backend.exeIsBranch  := executeTop.io.isBranch
+
 
   mem0_mem1.io.in    := memory0Top.io.out
-  mem0_mem1.io.stall := hazard.io.stall
-  mem0_mem1.io.flush := hazard.io.flush
+  mem0_mem1.io.stall := hazard.io.backend.stall
+  mem0_mem1.io.flush := hazard.io.flushAll
 
   memory1Top.io.in           := mem0_mem1.io.out
   memory1Top.io.commit       := io.memAccess.commit
   memory1Top.io.exceptionCP0 := cp0.io.exceptionCP0
 
   mem1_mem2.io.in    := memory1Top.io.out
-  mem1_mem2.io.stall := hazard.io.stall
+  mem1_mem2.io.stall := hazard.io.backend.stall
   mem1_mem2.io.flush := false.B
 
   memory2Top.io.in           := mem1_mem2.io.out
@@ -179,7 +184,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   memory2Top.io.uncachedData := io.memAccess.uncachedData
 
   mem2_wb.io.in    := memory2Top.io.out
-  mem2_wb.io.stall := hazard.io.stall
+  mem2_wb.io.stall := hazard.io.backend.stall
   mem2_wb.io.flush := false.B
 
   io.rInst.addr.bits  := fetchTop.io.out.pc

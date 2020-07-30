@@ -3,6 +3,7 @@ package cpu.pipelinedCache.components
 import chisel3._
 import chisel3.internal.naming.chiselName
 import chisel3.util._
+import cpu.CPUConfig
 import cpu.pipelinedCache.CacheConfig
 
 /**
@@ -10,7 +11,7 @@ import cpu.pipelinedCache.CacheConfig
   *
   */
 @chiselName
-class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
+class ReFillBuffer(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** request bank index, valid is asserted when there is a new miss */
@@ -27,10 +28,10 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
     /** valid is asserted in following scenarios:
       * 1. write is successful
       * 2. read data is valid at bank index in refill buffer*/
-    val queryResult = Valid(UInt(32.W))
+    val queryResult = Valid(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W)))
 
     /** connect directly to [[cpu.pipelinedCache.dataCache.DataBanks]], used for write back */
-    val allData = Output(Vec(cacheConfig.numOfBanks, UInt(32.W)))
+    val allData = Output(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
   })
 
   val sIdle :: sTransfer :: Nil = Enum(2)
@@ -43,19 +44,12 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig) extends Module {
 
   val writePtr = Reg(UInt(log2Ceil(cacheConfig.numOfBanks).W))
 
-  val hitInInputData = WireInit(io.inputData.valid && io.bankIndex.bits === writePtr)
+  io.queryResult.valid := (0 until CPUConfig.fetchAmount)
+    .map(i => bufferValidMask(io.bankIndex.bits + i.U))
+    .reduce(_ & _)
 
-  io.queryResult.valid := Mux(
-    hitInInputData,
-    true.B,
-    bufferValidMask(io.bankIndex.bits)
-  )
+  io.queryResult.bits := VecInit((0 until CPUConfig.fetchAmount).map(i => buffer(io.bankIndex.bits + i.U)))
 
-  io.queryResult.bits := Mux(
-    hitInInputData,
-    io.inputData.bits,
-    buffer(io.bankIndex.bits)
-  )
 
   io.allData := buffer
 

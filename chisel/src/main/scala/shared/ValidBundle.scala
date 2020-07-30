@@ -3,9 +3,9 @@
 package shared
 
 import chisel3._
-import cpu.core.Constants._
 
-class ValidBundle(len: Int = dataLen) extends Bundle {
+class ValidBundle(len: Int = 32)(implicit compileOptions: CompileOptions) extends Bundle {
+
   val valid = Bool()
   val bits  = UInt(len.W)
 
@@ -13,10 +13,12 @@ class ValidBundle(len: Int = dataLen) extends Bundle {
 }
 
 object ValidBundle {
-  def apply(valid: Bool, bits: UInt, len: Int = dataLen): ValidBundle = {
-    val that = Wire(new ValidBundle(len))
+  def apply(valid: Bool, bits: UInt, len: Int = 32): ValidBundle = {
+    val that = Wire(ValidBundle(len))
     that.valid := valid
     that.bits  := bits
     that
   }
+
+  def apply(len: Int): ValidBundle = new ValidBundle(len)
 }

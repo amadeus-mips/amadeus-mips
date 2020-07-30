@@ -3,7 +3,6 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.ValidIO
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles._
@@ -18,6 +17,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
     /** For multi-cycle multiplication and division. */
     val flush = Input(Bool())
+
+    val decodeValid = Input(Bool())
 
     val rawHILO  = Input(new HILOBundle)
     val mem0HILO = Input(new HILOValidBundle)
@@ -34,6 +35,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     val branch     = Output(new ValidBundle) // back to `Fetch`
     val predUpdate = ValidIO(new BrPrUpdateBundle)
     val stallReq   = Output(Bool())
+    val waitingDS  = Output(Bool())
+    val isBranch   = Output(Bool())
   })
 
   val alu        = Module(new ALU)
@@ -121,10 +124,12 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
   io.branch.valid := brPrFail
 
-  io.predUpdate.valid       := brPrFail
-  io.predUpdate.bits.pc     := io.in.pc
-  io.predUpdate.bits.target := branch.io.branch.bits
-  io.predUpdate.bits.taken  := branch.io.branch.valid
+  io.predUpdate.pc     := io.in.pc
+  io.predUpdate.target := branch.io.branch.bits
+  io.predUpdate.taken  := branch.io.branch.valid
+
+  io.waitingDS := io.in.instType === INST_BR && !io.decodeValid
+  io.isBranch  := io.in.instType === INST_BR
 
   io.stallReq := writeOther.io.stallReq ||
     io.in.operation === MV_MFC0 && VecInit(io.mem0Op, io.mem1Op).contains(TLB_WI) ||

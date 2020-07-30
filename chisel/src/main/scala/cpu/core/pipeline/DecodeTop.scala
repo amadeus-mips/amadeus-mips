@@ -6,13 +6,14 @@ import chisel3._
 import chisel3.util.experimental.loadMemoryFromFile
 import cpu.CPUConfig
 import cpu.core.Constants._
-import cpu.core.bundles.WriteBundle
-import cpu.core.bundles.stages.{IdExeBundle, If1IdBundle}
+import cpu.core.bundles.stages.IdExeBundle
+import cpu.core.bundles.{InstructionFIFOEntry, WriteBundle}
 import firrtl.annotations.MemoryLoadFileType
 
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val in = Input(new If1IdBundle)
+    val in      = Input(new InstructionFIFOEntry())
+    val inValid = Input(Bool())
 
     val exeWR = Input(new WriteBundle)
     val mem0WR = Input(new WriteBundle)
@@ -28,18 +29,18 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     val stallReq = Output(Bool()) // to pipeLine control
   })
 
-  val inst = io.in.inst
+  val in = Mux(io.inValid, io.in, 0.U.asTypeOf(io.in))
 
   val hazard  = Module(new cpu.core.decode.Hazard(5))
   val decode  = Module(new cpu.core.decode.Decode)
   val control = Module(new cpu.core.decode.Control)
 
-  val rs    = inst(25, 21)
-  val rt    = inst(20, 16)
-  val rd    = inst(15, 11)
-  val sa    = inst(10, 6)
-  val imm16 = inst(15, 0)
-  val imm26 = inst(25, 0)
+  val rs    = in.inst(25, 21)
+  val rt    = in.inst(20, 16)
+  val rd    = in.inst(15, 11)
+  val sa    = in.inst(10, 6)
+  val imm16 = in.inst(15, 0)
+  val imm26 = in.inst(25, 0)
 
   hazard.io.wrs(0) := io.exeWR
   hazard.io.wrs(1) := io.mem0WR
@@ -56,16 +57,16 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   hazard.io.ops(1).typ    := decode.io.out.op2Type
 
   /** 根据指令解码获取控制信号 */
-  decode.io.inst := inst
+  decode.io.inst := in.inst
 
   control.io.inst.rt    := rt
   control.io.inst.rd    := rd
   control.io.inst.sa    := sa
   control.io.inst.imm16 := imm16
-  control.io.inst.sel   := inst(2, 0)
+  control.io.inst.sel   := in.inst(2, 0)
 
   control.io.signal   := decode.io.out
-  control.io.inExcept := io.in.except
+  control.io.inExcept := in.except
   control.io.rsData   := hazard.io.ops(0).outData
   control.io.rtData   := hazard.io.ops(1).outData
 
@@ -78,11 +79,11 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.cp0    := control.io.cp0
   io.out.except := control.io.except
 
-  io.out.pc          := io.in.pc
+  io.out.pc          := in.pc
   io.out.imm26       := imm26
-  io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.brPredict   := io.in.brPredict
-  io.out.instValid   := io.in.instValid
+  io.out.inDelaySlot := in.inDelaySlot
+  io.out.brPredict   := in.brPredict
+  io.out.instValid   := in.valid
 
   io.stallReq := hazard.io.stallReq
 

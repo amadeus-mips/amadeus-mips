@@ -2,22 +2,25 @@ package cpu.pipelinedCache.components
 
 import chisel3._
 import chisel3.util._
+import cpu.CPUConfig
+import cpu.pipelinedCache.CacheConfig
 
-class ReadHolder extends Module {
+class ReadHolder(implicit CPUConfig: CPUConfig, cacheConfig: CacheConfig) extends Module {
   val io = IO(new Bundle {
+    val flush = Input(Bool())
 
     /** when input is valid, there is a valid/not ready scenario */
-    val input = Flipped(Valid(UInt(32.W)))
+    val input = Flipped(Valid(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W))))
 
     /** when output is valid, read from here */
-    val output = Valid(UInt(32.W))
+    val output = Valid(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W)))
   })
 
-  val instruction = RegInit("hdeadbeef".U(32.W))
+  val instruction = RegInit(0.U.asTypeOf(Vec(CPUConfig.fetchAmount, UInt((cacheConfig.bankWidth * 8).W))))
   val valid       = RegInit(false.B)
 
   instruction     := io.input.bits
   io.output.bits  := instruction
-  valid           := io.input.valid
+  valid           := io.input.valid && !io.flush
   io.output.valid := valid
 }
