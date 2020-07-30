@@ -21,6 +21,7 @@ class Control extends Module {
     val exceptSave = Input(Bool())
 
     val moveResult = Input(UInt(dataLen.W))
+    val moveWe     = Input(Bool())
 
     val outWrite  = Output(new WriteBundle())
     val outExcept = Output(Vec(exceptAmount, Bool()))
@@ -33,7 +34,7 @@ class Control extends Module {
   io.outExcept(EXCEPT_STORE)    := io.exceptSave
 
   io.outWrite := io.inWrite
-  when(io.aluOverflow || io.exceptSave || io.exceptLoad) { io.outWrite.enable := false.B }
+  when(io.aluOverflow || io.exceptSave || io.exceptLoad || !io.moveWe) { io.outWrite.enable := false.B }
   io.outWrite.data := MuxLookup(
     io.instType,
     0.U,

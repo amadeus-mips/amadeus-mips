@@ -40,7 +40,8 @@ class FuncWithVcdTest extends ChiselFlatSpec {
   * There is no golden trace!!!
   */
 class OurFuncWithVcdTest extends ChiselFlatSpec {
-  implicit val socCfg = SocConfig.funcConfig(simulation = true, memFile = "./src/test/resources/loongson/func/inst_ram_p.coe")
+//  implicit val socCfg = SocConfig.funcConfig(simulation = true, memFile = "./src/test/resources/loongson/func/inst_ram_p.coe")
+  implicit val socCfg = SocConfig.funcConfig(simulation = true, memFile = "../tests/func/obj/inst_ram.coe")
   implicit val tcfg = new TestConfig(trace = false, vcdOn = true)
 
   "func test" should "use verilator to generate vcd file" in {

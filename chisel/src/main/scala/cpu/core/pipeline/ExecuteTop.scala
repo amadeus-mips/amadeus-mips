@@ -65,6 +65,8 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   alu.io.operation := io.in.operation
   alu.io.lo        := writeOther.io.outHILO.lo.bits
 
+  move.io.op1       := io.in.op1
+  move.io.op2       := io.in.op2
   move.io.operation := io.in.operation
   move.io.hilo      := forward.io.outHILO
   move.io.cp0Data   := forward.io.outCP0
@@ -98,6 +100,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   control.io.exceptLoad  := memory.io.exceptLoad
   control.io.exceptSave  := memory.io.exceptSave
   control.io.moveResult  := move.io.result
+  control.io.moveWe      := move.io.we
 
   io.out.write       := control.io.outWrite
   io.out.operation   := io.in.operation
