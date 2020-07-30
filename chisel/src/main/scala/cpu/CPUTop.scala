@@ -9,7 +9,7 @@ import cpu.cache.UnCachedUnit
 import cpu.core.Core_ls
 import cpu.mmu.MMU
 import cpu.performance.CPUTopPerformanceIO
-import cpu.pipelinedCache.{CacheConfig, DataCache, InstrCache}
+import cpu.pipelinedCache.{DataCache, InstrCache}
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
 
@@ -31,8 +31,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   })
   val axiArbiter = Module(new AXIArbiter())
 
-  val iCache   = Module(new InstrCache(conf.iCacheConfig))
-  val dCache   = Module(new DataCache(conf.dCacheConfig))
+  val iCache   = Module(new InstrCache(conf.iCacheConf))
+  val dCache   = Module(new DataCache(conf.iCacheConf))
   val unCached = Module(new UnCachedUnit)
 
   val mmu = Module(new MMU)
@@ -47,9 +47,9 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   mmu.io.in.memReq := core.io.memAccess.request.bits
 
   // assume instructions are always cached
-  iCache.io.addr            <> mmu.io.out.rInst.addr
-  iCache.io.data            <> mmu.io.out.rInst.data
-  iCache.io.flush           := mmu.io.out.rInst.change
+  iCache.io.fetchIO.addr    <> mmu.io.out.rInst.addr
+  iCache.io.fetchIO.data    <> mmu.io.out.rInst.data
+  iCache.io.fetchIO.change  := mmu.io.out.rInst.change
   iCache.io.invalidateIndex <> core.io.iCacheInvalidate
 
   dCache.io.cacheInstruction <> core.io.dCacheInvalidate

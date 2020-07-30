@@ -24,7 +24,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
     val request  = Decoupled(new MemReqBundle)
     val uncached = Input(Bool())
 
-    val iCacheInvalidate = Decoupled(UInt(cfg.iCacheConfig.indexLen.W))
+    val iCacheInvalidate = Decoupled(UInt(cfg.iCacheConf.indexLen.W))
 
     val dCacheInvalidate = Decoupled(UInt(0.W))
 
@@ -78,10 +78,11 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.request <> control.io.request
 
   io.dCacheInvalidate.bits := DontCare
-  io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
+//  io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
+  io.dCacheInvalidate.valid := false.B
 
-  val indexFrom = cfg.iCacheConfig.indexLen + cfg.iCacheConfig.bankIndexLen + cfg.iCacheConfig.bankOffsetLen - 1
-  val indexTo = cfg.iCacheConfig.bankIndexLen + cfg.iCacheConfig.bankOffsetLen
+  val indexFrom = cfg.iCacheConf.indexLen + cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen - 1
+  val indexTo = cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen
   io.iCacheInvalidate.bits := io.in.memAddr(indexFrom, indexTo)
   io.iCacheInvalidate.valid := io.in.cacheOp.target === TARGET_I && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
 

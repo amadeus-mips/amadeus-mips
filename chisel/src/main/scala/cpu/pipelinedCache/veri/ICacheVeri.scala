@@ -14,7 +14,7 @@ class ICacheVeri(implicit CPUConfig: CPUConfig) extends Module {
     val addr = Flipped(Decoupled(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W))))
     val data = Decoupled(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
   })
-  val insCache = Module(new InstrCache(CPUConfig.iCacheConfig))
+  val insCache = Module(new InstrCache(CPUConfig.iCacheConf))
   val ram      = Module(new SymbiyosysAXIRam)
   insCache.io.axi                   <> ram.io.axi
   insCache.io.fetchIO.addr          <> io.addr

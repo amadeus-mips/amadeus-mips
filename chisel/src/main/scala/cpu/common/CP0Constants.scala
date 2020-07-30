@@ -397,7 +397,7 @@ class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
     bundle.m       := false.B
     bundle.mmuSize := (conf.tlbSize - 1).U
     bundle.is := {
-      conf.iCacheConfig.numOfSets match {
+      conf.iCacheConf.numOfSets match {
         case 64   => 0.U
         case 128  => 1.U
         case 256  => 2.U
@@ -409,7 +409,7 @@ class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
       }
     }
     bundle.il := {
-      conf.iCacheConfig.numOfBanks * 4 match {
+      conf.iCacheConf.numOfBanks * 4 match {
         case 4   => 1.U
         case 8   => 2.U
         case 16  => 3.U
@@ -418,9 +418,9 @@ class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
         case 128 => 6.U
       }
     }
-    bundle.ia := (conf.iCacheConfig.numOfWays - 1).U
+    bundle.ia := (conf.iCacheConf.numOfWays - 1).U
     bundle.ds := {
-      conf.dCacheConfig.numOfSets match {
+      conf.dCacheConf.numOfSets match {
         case 64   => 0.U
         case 128  => 1.U
         case 256  => 2.U
@@ -432,7 +432,7 @@ class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
       }
     }
     bundle.dl := {
-      conf.dCacheConfig.numOfBanks * 4 match {
+      conf.dCacheConf.numOfBanks * 4 match {
         case 4   => 1.U
         case 8   => 2.U
         case 16  => 3.U
@@ -441,7 +441,7 @@ class Config1CP0(implicit conf: CPUConfig) extends BaseCP0 {
         case 128 => 6.U
       }
     }
-    bundle.da := (conf.dCacheConfig.numOfWays - 1).U
+    bundle.da := (conf.dCacheConf.numOfWays - 1).U
     bundle.c2 := false.B
     bundle.md := false.B
     bundle.pc := false.B

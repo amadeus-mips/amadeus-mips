@@ -11,7 +11,8 @@ class Hazard extends Module {
     val except         = Input(Vec(exceptAmount, Bool()))
     val exceptJumpAddr = Input(UInt(addrLen.W))
     val EPC            = Input(UInt(dataLen.W))
-    val stallReq       = Input(Vec(6, Bool()))
+
+    val predictFail = Input(Bool())
 
     val flushAll = Output(Bool())
     val flushPC  = Output(UInt(dataLen.W))

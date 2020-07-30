@@ -35,11 +35,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   val io = IO(new Bundle {
     val intr = Input(UInt(intrLen.W))
 
-    val rInst     = new InstFetchIO
-    val memAccess = new MemAccessIO
-    val iCacheInvalidate = Decoupled(UInt(conf.iCacheConfig.indexLen.W))
+    val rInst            = new InstFetchIO
+    val memAccess        = new MemAccessIO
+    val iCacheInvalidate = Decoupled(UInt(conf.iCacheConf.indexLen.W))
     val dCacheInvalidate = Decoupled(UInt(0.W))
-    val tlb       = new TLBOpIO(conf.tlbSize)
+    val tlb              = new TLBOpIO(conf.tlbSize)
   })
 
   /**
@@ -60,7 +60,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   // stages
   val if_if1    = Module(new Stage(1, new IfIf1Bundle))
-  val instFIFO = Module(new InstructionFIFO(new InstructionFIFOEntry()))
+  val instFIFO  = Module(new InstructionFIFO(new InstructionFIFOEntry()))
   val id_exe    = Module(new Stage(1, new IdExeBundle))
   val exe_mem   = Module(new Stage(2, new ExeMemBundle))
   val mem0_mem1 = Module(new Stage(3, new Mem0Mem1Bundle))
@@ -103,8 +103,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   decodeTop.io.in      := instFIFO.io.dequeue.head.bits
   decodeTop.io.inValid := instFIFO.io.dequeue.head.valid
   decodeTop.io.exeWR   := executeTop.io.out.write
-  decodeTop.io.mem0WR := memory0Top.io.out.write
-  decodeTop.io.mem1WR := memory1Top.io.out.write
+  decodeTop.io.mem0WR  := memory0Top.io.out.write
+  decodeTop.io.mem1WR  := memory1Top.io.out.write
+  decodeTop.io.mem2WR  := memory2Top.io.out.write
   decodeTop.io.wbWR    := mem2_wb.io.out.write
   decodeTop.io.rsData  := regFile.io.rsData
   decodeTop.io.rtData  := regFile.io.rtData
@@ -117,17 +118,17 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   id_exe.io.stall := hazard.io.backend.stall
   id_exe.io.flush := hazard.io.flushAll
 
-  executeTop.io.in       := id_exe.io.out
-  executeTop.io.flush    := hazard.io.flushAll
+  executeTop.io.in          := id_exe.io.out
+  executeTop.io.flush       := hazard.io.flushAll
   executeTop.io.decodeValid := instFIFO.io.dequeue.head.valid
-  executeTop.io.rawHILO  := hilo.io.out
-  executeTop.io.mem0HILO := exe_mem.io.out.hilo
-  executeTop.io.mem1HILO := mem0_mem1.io.out.hiloWrite
-  executeTop.io.cp0Data  := cp0.io.data
-  executeTop.io.mem0CP0  := exe_mem.io.out.cp0
-  executeTop.io.mem1CP0  := mem0_mem1.io.out.cp0Write
-  executeTop.io.mem0Op   := exe_mem.io.out.operation
-  executeTop.io.mem1Op   := mem2_wb.io.out.opera
+  executeTop.io.rawHILO     := hilo.io.out
+  executeTop.io.mem0HILO    := exe_mem.io.out.hilo
+  executeTop.io.mem1HILO    := mem0_mem1.io.out.hiloWrite
+  executeTop.io.cp0Data     := cp0.io.data
+  executeTop.io.mem0CP0     := exe_mem.io.out.cp0
+  executeTop.io.mem1CP0     := mem0_mem1.io.out.cp0Write
+  executeTop.io.mem0Op      := exe_mem.io.out.operation
+  executeTop.io.mem1Op      := mem2_wb.io.out.op
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.backend.stall
@@ -153,19 +154,20 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hilo.io.in := mem0_mem1.io.out.hiloWrite
 
-  hazard.io.except := mem0_mem1.io.out.except
-  hazard.io.EPC    := cp0.io.exceptionCP0.EPC
+  hazard.io.except         := mem0_mem1.io.out.except
+  hazard.io.exceptJumpAddr := memory1Top.io.exceptJumpAddr
+  hazard.io.EPC            := cp0.io.exceptionCP0.EPC
 
   hazard.io.frontend.stallReqFromIf0 := fetchTop.io.stallReq
   hazard.io.frontend.stallReqFromIf1 := fetch1Top.io.stallReq
   hazard.io.backend.stallReqFromId   := decodeTop.io.stallReq
   hazard.io.backend.stallReqFromExe  := executeTop.io.stallReq
-  hazard.io.backend.stallReqFromMem  := memory0Top.io.stallReq
+  hazard.io.backend.stallReqFromMem0 := memory0Top.io.stallReq
+  hazard.io.backend.stallReqFromMem1 := memory1Top.io.stallReq
 
   hazard.io.predictFail          := executeTop.io.branch.valid
   hazard.io.backend.exeWaitingDS := executeTop.io.waitingDS
   hazard.io.backend.exeIsBranch  := executeTop.io.isBranch
-
 
   mem0_mem1.io.in    := memory0Top.io.out
   mem0_mem1.io.stall := hazard.io.backend.stall

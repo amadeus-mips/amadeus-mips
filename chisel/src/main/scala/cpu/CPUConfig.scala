@@ -20,10 +20,6 @@ case class CPUConfig(
   verification:       Boolean = false
 ) {
   require(isPow2(instructionFIFOLength))
-
-  val branchPredictorAddrLen       = 10
-  val branchPredictorTableEntryNum = 64
-//  require(build && memoryFile.isEmpty || !build && !memoryFile.isEmpty)
 }
 
 object CPUConfig {

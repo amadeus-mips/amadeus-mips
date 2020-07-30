@@ -99,7 +99,7 @@ class VeriDCache extends Module {
     val dataValid  = Output(Bool())
   })
   implicit val cpuConfig:   CPUConfig   = new CPUConfig(build = false)
-  val dcache  = Module(new DataCache(cpuConfig.dCacheConfig))
+  val dcache  = Module(new DataCache(cpuConfig.dCacheConf))
   val veriRam = Module(new VeriAXIRam)
   dcache.io.axi     <> veriRam.io.axi
   dcache.io.request <> io.request

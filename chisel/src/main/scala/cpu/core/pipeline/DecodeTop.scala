@@ -90,9 +90,13 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   if (conf.compareRamDirectly) {
     val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
     loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)
-    val error = !(!io.in.instValid || io.in.instValid && io.in.inst === veriMem.read(io.in.pc(19, 2))) && io.in.pc >= "h9fc00000".U
+    val error = !(!in.valid || in.valid && in.inst === veriMem.read(in.pc(19, 2))) && io.in.pc >= "h9fc00000".U
     when (error) {
-      printf(p"the request is ${io.in.pc}, the wrong instruction is ${io.in.inst}, the correct instruction should be ${veriMem.read(io.in.pc(19, 2))}")
+      printf(
+        p"the request is 0x${Hexadecimal(in.pc)}, " +
+          p"the wrong instruction is 0x${Hexadecimal(in.inst)}, " +
+          p"the correct instruction should be ${Hexadecimal(veriMem.read(io.in.pc(19, 2)))}"
+      )
     }
     assert(!error)
   }

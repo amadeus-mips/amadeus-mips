@@ -33,7 +33,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
     val out        = Output(new ExeMemBundle)
     val branch     = Output(new ValidBundle) // back to `Fetch`
-    val predUpdate = ValidIO(new BrPrUpdateBundle)
+    val predUpdate = Output(new BrPrUpdateBundle)
     val stallReq   = Output(Bool())
     val waitingDS  = Output(Bool())
     val isBranch   = Output(Bool())
