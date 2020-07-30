@@ -3,7 +3,7 @@
 package cpu.core
 
 import chisel3._
-import cpu.common.{CP0Constants, DefaultConfig, DefaultWireLength, Instructions}
+import cpu.common.{CP0Constants, DefaultWireLength, Instructions}
 import shared.Util
 
 trait opConstants {
@@ -90,6 +90,7 @@ trait opConstants {
   val ALU_MUL   = 51.U(opLen.W)
   val MV_MOVN   = 52.U(opLen.W)
   val MV_MOVZ   = 53.U(opLen.W)
+  val MEM_CAC   = 54.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
@@ -128,12 +129,27 @@ trait opConstants {
   // @formatter:on
 }
 
+trait cacheOpConstants {
+
+  /** Instruction cache */
+  val TARGET_I = 0.U
+
+  /** Data cache */
+  val TARGET_D = 1.U
+
+  /** Tertiary */
+  val TARGET_T = 2.U
+
+  /** Secondary */
+  val TARGET_S = 3.U
+}
+
 trait valueConstants {
-  val startPC  = "hbfc00000".U(32.W)
+  val startPC           = "hbfc00000".U(32.W)
   val tlbRefillExceptPC = "hbfc00200".U(32.W)
-  val generalExceptPC = "hbfc00380".U(32.W)
-  val zeroWord = 0.U(32.W)
-  val GPR31    = "b11111".U(5.W)
+  val generalExceptPC   = "hbfc00380".U(32.W)
+  val zeroWord          = 0.U(32.W)
+  val GPR31             = "b11111".U(5.W)
 }
 
 trait exceptConstants {
@@ -173,5 +189,6 @@ object Constants
     with exceptConstants
     with Instructions
     with DefaultWireLength
+    with cacheOpConstants
     with valueConstants
     with CP0Constants {}

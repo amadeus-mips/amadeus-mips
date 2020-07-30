@@ -90,7 +90,7 @@ class QueryTop(implicit cacheConfig: CacheConfig) extends Module {
     )
   )
 
-  io.inAMiss := qState === qRefill
+  io.inAMiss := qState =/= qIdle
 
   io.write.valid               := qState === qWriteBack
   io.write.bits.waySelection   := lru.getLRU(mshr.io.extractMiss.addr.index)

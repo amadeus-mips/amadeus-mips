@@ -122,6 +122,8 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
 
   io.dequeueLast := (lineWritePTR === (cacheConfig.numOfBanks - 1).U) && dispatchState === dDispatch
 
+  io.size := size
+
   when(io.enqueue.fire) {
     addrBank(tailPTR)  := io.enqueue.bits.addr
     validBank(tailPTR) := true.B

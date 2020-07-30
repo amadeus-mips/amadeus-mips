@@ -57,6 +57,9 @@ class TagValid(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
       .portB
       .writeEnable                          := (io.write.valid && io.write.bits.addr.waySel === i.U) || io.invalidateAllWays
     tagValidBanks.io.way(i).portB.writeData := io.write.bits.tagValid
+    when(io.invalidateAllWays) {
+      tagValidBanks.io.way(i).portB.writeData.valid := false.B
+    }
   }
 
 }

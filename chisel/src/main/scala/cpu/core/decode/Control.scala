@@ -41,40 +41,36 @@ class Control extends Module {
   // 根据IMMType选择imm
   val imm32 = MuxLookup(
     io.signal.immType,
-    0.U,
+    Util.zeroExtend(sa),  // default IMM_SHT
     Array(
       IMM_LSE -> Util.signedExtend(imm16),
       IMM_LZE -> Util.zeroExtend(imm16),
-      IMM_HZE -> Cat(imm16, Fill(16, 0.U)),
-      IMM_SHT -> Util.zeroExtend(sa)
+      IMM_HZE -> Cat(imm16, Fill(16, 0.U))
     )
   )
 
   io.op1 := MuxLookup(
     io.signal.op1Type,
-    0.U,
+    io.rsData, // default OPn_RF
     Array(
-      OPn_IMM -> imm32,
-      OPn_RF  -> io.rsData
+      OPn_IMM -> imm32
     )
   )
   io.op2 := MuxLookup(
     io.signal.op2Type,
-    0.U,
+    io.rtData, // default OPn_RF
     Array(
-      OPn_IMM -> imm32,
-      OPn_RF  -> io.rtData
+      OPn_IMM -> imm32
     )
   )
 
   io.write.enable := io.signal.wr
   io.write.address := MuxLookup(
     io.signal.wraType,
-    zeroWord,
+    GPR31, // default WRA_T3
     Array(
       WRA_T1 -> rd,
-      WRA_T2 -> rt,
-      WRA_T3 -> GPR31 // 31th register
+      WRA_T2 -> rt
     )
   )
   io.write.data  := DontCare

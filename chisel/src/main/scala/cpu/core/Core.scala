@@ -35,6 +35,8 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
     val rInst     = new InstFetchIO
     val memAccess = new MemAccessIO
+    val iCacheInvalidate = Decoupled(UInt(conf.iCacheConfig.indexLen.W))
+    val dCacheInvalidate = Decoupled(UInt(0.W))
     val tlb       = new TLBOpIO(conf.tlbSize)
   })
 
@@ -187,6 +189,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   io.memAccess.request <> memory0Top.io.request
   io.tlb               <> memory0Top.io.tlb
   io.tlb.kseg0Uncached := cp0.io.kseg0Uncached
+
+  io.iCacheInvalidate <> memory0Top.io.iCacheInvalidate
+  io.dCacheInvalidate <> memory0Top.io.dCacheInvalidate
 
   io.rInst.change := fetchTop.io.pcChange
 }

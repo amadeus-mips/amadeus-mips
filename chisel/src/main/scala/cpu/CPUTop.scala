@@ -49,11 +49,12 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   mmu.io.in.memReq := core.io.memAccess.request.bits
 
   // assume instructions are always cached
-  iCache.io.addr                  <> mmu.io.out.rInst.addr
-  iCache.io.data                  <> mmu.io.out.rInst.data
-  iCache.io.flush                 := mmu.io.out.rInst.change
-  iCache.io.invalidateIndex.valid := false.B
-  iCache.io.invalidateIndex.bits  := DontCare
+  iCache.io.addr            <> mmu.io.out.rInst.addr
+  iCache.io.data            <> mmu.io.out.rInst.data
+  iCache.io.flush           := mmu.io.out.rInst.change
+  iCache.io.invalidateIndex <> core.io.iCacheInvalidate
+
+  dCache.io.cacheInstruction <> core.io.dCacheInvalidate
 
   when(!mmu.io.dataUncached) {
     dCache.io.request.valid   := core.io.memAccess.request.valid && unCached.io.request.ready

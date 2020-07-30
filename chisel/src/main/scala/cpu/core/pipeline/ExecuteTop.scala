@@ -83,6 +83,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   memory.io.op2       := io.in.op2
   memory.io.imm16     := io.in.imm26(15, 0)
   memory.io.operation := io.in.operation
+  memory.io.rt        := io.in.imm26(20, 16)
 
   branch.io.op1       := io.in.op1
   branch.io.op2       := io.in.op2
@@ -111,6 +112,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out.pc          := io.in.pc
   io.out.memAddr     := memory.io.memAddr
   io.out.memData     := io.in.op2
+  io.out.cacheOp     := memory.io.cacheOp
   io.out.instValid   := io.in.instValid
 
   val brPrFail =

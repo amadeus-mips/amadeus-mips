@@ -4,7 +4,7 @@ package cpu.core.bundles.stages
 
 import chisel3._
 import cpu.core.Constants._
-import cpu.core.bundles.{CPBundle, HILOValidBundle, WriteBundle}
+import cpu.core.bundles.{CPBundle, CacheOp, HILOValidBundle, WriteBundle}
 
 class ExeMemBundle extends Bundle {
   val write       = new WriteBundle
@@ -16,5 +16,6 @@ class ExeMemBundle extends Bundle {
   val pc          = UInt(addrLen.W)
   val memAddr     = UInt(addrLen.W)
   val memData     = UInt(dataLen.W)
+  val cacheOp     = new CacheOp
   val instValid   = Bool()
 }

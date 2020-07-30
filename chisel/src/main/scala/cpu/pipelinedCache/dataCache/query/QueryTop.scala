@@ -158,6 +158,11 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   /** when there is no structural hazard for data banks and tag/valid banks */
   val resourceFree = isIdle || (isRefill && !axiRead.io.finishTransfer)
 
+  when(qState === qInvalidating) {
+    invalidateCounter := invalidateCounter - 1.U
+  }
+
+
   /** new miss can only be generated when the state is idle and query is not hit
     * and query is valid
     * and the write miss is not a hit in the line being written */
@@ -205,7 +210,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.data           := refillBuffer.io.allData
 
   io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
-  io.ready := passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue
+  io.ready := (passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && (qState =/= qInvalidating && qState =/= qWaitToDrain)
 
   io.dirtyWay := Mux(qState === qInvalidating, invalidateCounter,lruWayReg)
 

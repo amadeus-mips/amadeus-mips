@@ -39,7 +39,7 @@ class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extend
   io.invalidateIndex.ready := controller.io.invalidateReady
 
   fetch.io.addr                      := io.addr.bits
-  fetch.io.write.valid               := controller.io.writeEnable || io.invalidateIndex.fire
+  fetch.io.write.valid               := controller.io.writeEnable
   fetch.io.write.bits.tagValid.tag   := query.io.write.bits.tagValid.tag
   fetch.io.write.bits.tagValid.valid := !io.invalidateIndex.fire
   fetch.io.write.bits.indexSelection := Mux(
@@ -49,6 +49,7 @@ class InstrCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extend
   )
   fetch.io.write.bits.waySelection := query.io.write.bits.waySelection
   fetch.io.invalidateAllWays       := io.invalidateIndex.fire
+  assert(!io.invalidateIndex.fire || (io.invalidateIndex.fire && !query.io.write.valid))
 
   val instrFetchData = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
 

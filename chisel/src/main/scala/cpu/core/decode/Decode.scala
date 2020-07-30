@@ -101,21 +101,24 @@ class Decode extends Module {
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WI  , WR_N  , WRA_X  , IMM_N  ),
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
 
-
       // 例外指令
       SYSCALL   -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_SC  , WR_N  , WRA_X  , IMM_N  ),
       BREAK     -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_BR  , WR_N  , WRA_X  , IMM_N  ),
       ERET      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
 
       // 访存指令
-      LB        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_LSE),
-      LBU       -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LBU , WR_Y  , WRA_T2 , IMM_LSE),
-      LH        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LH  , WR_Y  , WRA_T2 , IMM_LSE),
-      LHU       -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LHU , WR_Y  , WRA_T2 , IMM_LSE),
-      LW        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LW  , WR_Y  , WRA_T2 , IMM_LSE),
-      SB        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SB  , WR_N  , WRA_X  , IMM_LSE),
-      SH        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SH  , WR_N  , WRA_X  , IMM_LSE),
-      SW        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_N  , WRA_X  , IMM_LSE),
+      LB        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_N  ),
+      LBU       -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LBU , WR_Y  , WRA_T2 , IMM_N  ),
+      LH        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LH  , WR_Y  , WRA_T2 , IMM_N  ),
+      LHU       -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LHU , WR_Y  , WRA_T2 , IMM_N  ),
+      LW        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LW  , WR_Y  , WRA_T2 , IMM_N  ),
+      SB        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SB  , WR_N  , WRA_X  , IMM_N  ),
+      SH        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SH  , WR_N  , WRA_X  , IMM_N  ),
+      SW        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_N  , WRA_X  , IMM_N  ),
+
+      // Cache
+      CACHE     -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_CAC , WR_N  , WRA_X  , IMM_N  ),
+
     )
   )
   // @formatter:on

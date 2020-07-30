@@ -24,6 +24,10 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
     val request  = Decoupled(new MemReqBundle)
     val uncached = Input(Bool())
 
+    val iCacheInvalidate = Decoupled(UInt(cfg.iCacheConfig.indexLen.W))
+
+    val dCacheInvalidate = Decoupled(UInt(0.W))
+
     // with mmu
     val tlb = new TLBOpIO(cfg.tlbSize)
 
@@ -69,9 +73,17 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.out.hiloWrite.lo.valid := io.in.hilo.lo.valid && !hasExcept
   io.out.hiloWrite.hi.valid := io.in.hilo.hi.valid && !hasExcept
 
-  io.stallReq := control.io.stallReq
+  io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready)
 
   io.request <> control.io.request
+
+  io.dCacheInvalidate.bits := DontCare
+  io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
+
+  val indexFrom = cfg.iCacheConfig.indexLen + cfg.iCacheConfig.bankIndexLen + cfg.iCacheConfig.bankOffsetLen - 1
+  val indexTo = cfg.iCacheConfig.bankIndexLen + cfg.iCacheConfig.bankOffsetLen
+  io.iCacheInvalidate.bits := io.in.memAddr(indexFrom, indexTo)
+  io.iCacheInvalidate.valid := io.in.cacheOp.target === TARGET_I && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
 
   io.tlb.asid          := io.tlbCP0.entryHi.asid
   io.tlb.kseg0Uncached := false.B
