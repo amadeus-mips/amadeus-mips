@@ -31,6 +31,8 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
       val tagValid = new TagValidBundle
     }))
 
+    val invalidateAll = Input(Bool())
+
     /** the query result of the physical request for cache request */
     val addrResult = Output(new QueryAddressBundle)
 
@@ -56,6 +58,5 @@ class FetchTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   tagValid.io.index := virtualIndex
   tagValid.io.write := io.write
 
-  //TODO: implement cache instruction
-  tagValid.io.invalidateAllWays := false.B
+  tagValid.io.invalidateAllWays := io.invalidateAll
 }

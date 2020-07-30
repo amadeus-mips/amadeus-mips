@@ -48,6 +48,8 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
 
     /** when there is a write query hit in the write queue */
     val holdOffNewMiss = Output(Bool())
+
+    val size = Output(UInt((log2Ceil(capacity)+1).W))
   })
   require(isPow2(capacity))
 

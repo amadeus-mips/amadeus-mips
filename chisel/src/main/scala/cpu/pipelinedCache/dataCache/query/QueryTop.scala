@@ -39,6 +39,11 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     /** ready reflects whether last stage's data need to be re-fetched */
     val ready = Output(Bool())
 
+    /** invalidate all lines at index */
+    val readyForInvalidate = Output(Bool())
+
+    val invalidateAllValid = Output(Bool())
+
     val dirtyWay = Output(UInt(log2Ceil(cacheConfig.numOfWays).W))
   })
 
@@ -59,6 +64,11 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   val dirtyBanks = RegInit(
     VecInit(Seq.fill(cacheConfig.numOfWays)(VecInit(Seq.fill(cacheConfig.numOfSets)(CPUConfig.verification.B))))
   )
+
+  val invalidateCounter = RegInit(0.U(log2Ceil((cacheConfig.numOfWays) + 1).W))
+
+  val dirtyForInvalidateWire = (0 until cacheConfig.numOfWays)
+    .map(dirtyBanks(_)(io.fetchQuery.index))
 
   /** do nothing to this query, proceed to next */
   val passThrough = WireDefault(!io.fetchQuery.valid)
@@ -91,12 +101,15 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   val evictWayDirty = WireDefault(dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index))
 
   /** corner case: write back is also in the idle stage */
-  val qIdle :: qRefill :: qEvict :: qWriteBack :: Nil = Enum(4)
-  val qState                                          = RegInit(qIdle)
+  val qIdle :: qRefill :: qEvict :: qWriteBack :: qInvalidating :: qWaitToDrain :: Nil = Enum(6)
+  val qState                                                         = RegInit(qIdle)
   switch(qState) {
     is(qIdle) {
       when(newMiss) {
         qState := qRefill
+      }.elsewhen(io.readyForInvalidate && io.fetchQuery.invalidate) {
+        invalidateCounter := (cacheConfig.numOfWays - 1).U
+        qState := qInvalidating
       }
     }
     is(qRefill) {
@@ -115,6 +128,18 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     is(qWriteBack) {
       //TODO: make this faster
       qState := qIdle
+    }
+    //VERI: invalidating: invalidate counter === 0 or next cycle is wait for drain
+    is(qInvalidating) {
+      when(invalidateCounter === 0.U) {
+        qState := qWaitToDrain
+      }
+    }
+    // wait to drain
+    is(qWaitToDrain) {
+      when(writeQueue.io.size === 0.U) {
+        qState := qIdle
+      }
     }
   }
 
@@ -154,6 +179,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.axi.w  <> axiWrite.io.axi.w
   io.axi.b  <> axiWrite.io.axi.b
 
+  /** index selection also holds true for icache invalidate */
   io.queryCommit.indexSel := Mux(
     (isRefill && axiRead.io.finishTransfer) || isEvict,
     mshr.io.extractMiss.addr.index,
@@ -178,10 +204,16 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.tagValid.valid := true.B
   io.writeBack.bits.data           := refillBuffer.io.allData
 
-  io.hit   := ((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough
+  io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
   io.ready := passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue
 
   io.dirtyWay := lruWayReg
+
+  /** when there is nothing in the write queue and state is idle and there is no pending request */
+  io.readyForInvalidate := RegNext(writeQueue.io.size === 0.U && qState === qIdle && !io.fetchQuery.valid)
+
+  // invalidate all ways at the last cycle of putting everything into queue
+  io.invalidateAllValid := qState === qInvalidating && invalidateCounter === 0.U
 
   comparator.io.tagValid := io.fetchQuery.tagValid
   comparator.io.phyTag   := io.fetchQuery.phyTag
@@ -209,10 +241,19 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   )
   axiRead.io.addrReq.valid := newMiss
 
-  writeQueue.io.enqueue.valid           := (qState === qEvict) && dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index)
+  writeQueue.io.enqueue.valid           := ((qState === qEvict) && dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index))
   writeQueue.io.enqueue.bits.addr.tag   := mshr.io.extractMiss.tagValidAtIndex(lruWayReg).tag
   writeQueue.io.enqueue.bits.addr.index := mshr.io.extractMiss.addr.index
   writeQueue.io.enqueue.bits.data       := io.dirtyData
+  //FIXME: discuss if this is correct
+  // starting from the second cycle of invalidating, ending in the first cycle during waiting to drain
+  when(RegNext(qState) === qInvalidating ) {
+    // when entry is dirty and valid
+    writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid)
+    writeQueue.io.enqueue.bits.addr.tag := RegNext(io.fetchQuery.tagValid(invalidateCounter).tag)
+    writeQueue.io.enqueue.bits.addr.index := RegNext(io.fetchQuery.index)
+    writeQueue.io.enqueue.bits.data := io.dirtyData
+  }
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)
     .asTypeOf(writeQueue.io.query.addr)
   // if the query is valid, then the query could issue to writeBack queue any cycle

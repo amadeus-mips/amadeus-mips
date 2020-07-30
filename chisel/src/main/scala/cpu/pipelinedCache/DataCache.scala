@@ -17,6 +17,9 @@ class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends
   //noinspection DuplicatedCode
   val io = IO(new Bundle {
 
+    /** only signals ready/valid, the data will be passed in from request */
+    val cacheInstruction = Flipped(Decoupled(UInt(0.W)))
+
     /** input request io, ready decitates whether it's ready to
       * accept next request query */
     val request = Flipped(Decoupled(new MemReqBundle))
@@ -52,10 +55,13 @@ class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends
     query_commit.io.out.readData,
     readDataWire(query_commit.io.out.waySel)
   )
+  // FIXME
+  io.cacheInstruction.ready := query.io.readyForInvalidate
 
   fetch.io.addr.translatedTag  := io.request.bits.tag
   fetch.io.addr.physicalIndex := io.request.bits.physicalIndex
   fetch.io.write := query.io.writeBack
+  fetch.io.invalidateAll := query.io.invalidateAllValid
 
   //-----------------------------------------------------------------------------
   //------------------pipeline register seperating fetch and query---------------
@@ -69,6 +75,7 @@ class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends
   fetch_query.io.in.bankIndex := fetch.io.addrResult.bankIndex
   fetch_query.io.in.writeData := io.request.bits.writeData
   fetch_query.io.in.writeMask := io.request.bits.writeMask
+  fetch_query.io.in.invalidate := io.cacheInstruction.fire
 
   /** update the tag and valid information when there is a write back
     * don't touch the valid signal */
