@@ -39,9 +39,9 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     /** ready reflects whether last stage's data need to be re-fetched */
     val ready = Output(Bool())
 
-    /** invalidate all lines at index */
     val readyForInvalidate = Output(Bool())
 
+    /** invalidate all lines at index */
     val invalidateAllValid = Output(Bool())
 
     val dirtyWay = Output(UInt(log2Ceil(cacheConfig.numOfWays).W))
@@ -207,7 +207,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
   io.ready := passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue
 
-  io.dirtyWay := lruWayReg
+  io.dirtyWay := Mux(qState === qInvalidating, invalidateCounter,lruWayReg)
 
   /** when there is nothing in the write queue and state is idle and there is no pending request */
   io.readyForInvalidate := RegNext(writeQueue.io.size === 0.U && qState === qIdle && !io.fetchQuery.valid)
@@ -274,15 +274,20 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   mshr.io.recordMiss.bits.addr.bankIndex  := io.fetchQuery.bankIndex
   mshr.io.recordMiss.bits.tagValidAtIndex := io.fetchQuery.tagValid
 
-  when(writeQueue.io.enqueue.fire) {
+  when(writeQueue.io.enqueue.fire && qState =/= qInvalidating && qState =/= qWaitToDrain) {
     dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := false.B
   }
   when(qState === qWriteBack) {
     dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := refillBuffer.io.dataDirty
   }
-
+  when(writeQueue.io.enqueue.fire && RegNext(qState) === qInvalidating) {
+    dirtyBanks(RegNext(invalidateCounter))(io.fetchQuery.index) := false.B
+  }
   // update the LRU when there is a hit in the banks, don't update otherwise
   when(hitInBank) {
     lru.update(index = io.fetchQuery.index, way = comparator.io.bankHitWay.bits)
   }
+
+  //VERI:
+  assert(!(io.fetchQuery.valid && io.fetchQuery.invalidate))
 }
