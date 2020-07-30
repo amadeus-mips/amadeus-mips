@@ -34,5 +34,5 @@ class Memory extends Module {
     (io.operation === MEM_SW && memAddr(1, 0) =/= 0.U)
 
   io.cacheOp.target := io.rt(1, 0)
-  io.cacheOp.valid  := VecInit("b000".U, "b100".U, "b101".U, "b110".U).contains(io.rt(4,2))
+  io.cacheOp.valid  := VecInit("b000".U, "b100".U, "b101".U, "b110".U).contains(io.rt(4,2)) && io.operation === MEM_CAC
 }

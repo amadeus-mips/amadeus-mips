@@ -341,8 +341,29 @@ kseg0_kseg1:
     nop
     jal n12_sw_test    #sw
     nop
+
+
+    # li a0, 0x802d303c
+    # sw s0, 0(a0)
+    # li v0, 0x800d0000
+
+    # cache 0x1, 0(a0)     #index invalidate data
+    # cache 0x1, 0(v0)     #index invalidate data
+
+    # lw v0, 0(a0)
+    # bne v0, s0, io_err
+    # nop
+    # la v0, wait_1s
+    # cache 0x0, 0(v0)     #index invalidate inst
+    # nop
+    # nop
+    # nop
+    # nop
+    # nop
+
     jal wait_1s
     nop
+    
     jal n13_j_test       #j
     nop
     jal wait_1s

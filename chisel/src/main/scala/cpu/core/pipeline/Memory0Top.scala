@@ -78,8 +78,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.request <> control.io.request
 
   io.dCacheInvalidate.bits := DontCare
-//  io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
-  io.dCacheInvalidate.valid := false.B
+  io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
 
   val indexFrom = cfg.iCacheConf.indexLen + cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen - 1
   val indexTo = cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen

@@ -7,7 +7,7 @@ CFLAGS += -fno-reorder-blocks -fno-reorder-functions
 OBJDIR = ./obj
 
 export TOPDIR AR CFLAGS
-export CROSS_COMPILE ?= mipsel-linux-
+export CROSS_COMPILE ?= mips-mti-elf-
 
 all:
 	make compile
