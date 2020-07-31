@@ -116,6 +116,8 @@ class Decode extends Module {
       SH        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SH  , WR_N  , WRA_X  , IMM_N  ),
       SW        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_N  , WRA_X  , IMM_N  ),
 
+      SYNC      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
+
       // Cache
       CACHE     -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_CAC , WR_N  , WRA_X  , IMM_N  ),
 
