@@ -11,7 +11,7 @@ import firrtl.options.TargetDirAnnotation
 
 //TODO: hit in bust write queue?
 //TODO: reduce wire usage
-class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
+class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends Module {
   val io = IO(new Bundle {
 
     /** enqueue io, for the data cache to dispatch dirty lines into the write queue
@@ -52,6 +52,7 @@ class WriteQueue(capacity: Int = 2)(implicit cacheConfig: CacheConfig, CPUConfig
     val size = Output(UInt((log2Ceil(capacity)+1).W))
   })
   require(isPow2(capacity))
+  require(capacity >= cacheConfig.numOfWays)
 
   /** size of the queue: how many entries are in this queue */
   val size = RegInit((if (CPUConfig.verification) 0 else 0).U((log2Ceil(capacity) + 1).W))
