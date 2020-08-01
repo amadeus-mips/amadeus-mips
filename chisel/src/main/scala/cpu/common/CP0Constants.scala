@@ -348,7 +348,7 @@ class Config0CP0(implicit conf: CPUConfig) extends BaseCP0 {
     val bundle = WireInit(0.U.asTypeOf(new Config0Bundle))
     bundle.m  := true.B
     bundle.mt := 1.U
-    bundle.k0 := 2.U
+    bundle.k0 := 3.U
     bundle
   })
 
