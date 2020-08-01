@@ -103,6 +103,9 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   /** corner case: write back is also in the idle stage */
   val qIdle :: qRefill :: qEvict :: qWriteBack :: qInvalidating :: qWaitToDrain :: Nil = Enum(6)
   val qState                                                         = RegInit(qIdle)
+  /** this is for symbiyosys tool, otherwise it will assume it could be any value during cycle of reset */
+  val qStateNext = RegInit(qIdle)
+  qStateNext := qState
   switch(qState) {
     is(qIdle) {
       when(newMiss) {
@@ -210,7 +213,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.data           := refillBuffer.io.allData
 
   io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
-  io.ready := (passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && (qState =/= qInvalidating && qState =/= qWaitToDrain)
+  io.ready := (passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && qState =/= qInvalidating && qState =/= qWaitToDrain
 
   io.dirtyWay := Mux(qState === qInvalidating, invalidateCounter,lruWayReg)
 
@@ -252,7 +255,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   writeQueue.io.enqueue.bits.data       := io.dirtyData
   //FIXME: discuss if this is correct
   // starting from the second cycle of invalidating, ending in the first cycle during waiting to drain
-  when(RegNext(qState) === qInvalidating ) {
+  when(qStateNext === qInvalidating ) {
     // when entry is dirty and valid
     writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid)
     writeQueue.io.enqueue.bits.addr.tag := RegNext(io.fetchQuery.tagValid(invalidateCounter).tag)
@@ -285,7 +288,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   when(qState === qWriteBack) {
     dirtyBanks(lruWayReg)(mshr.io.extractMiss.addr.index) := refillBuffer.io.dataDirty
   }
-  when(writeQueue.io.enqueue.fire && RegNext(qState) === qInvalidating) {
+  when(writeQueue.io.enqueue.fire && qStateNext === qInvalidating) {
     dirtyBanks(RegNext(invalidateCounter))(io.fetchQuery.index) := false.B
   }
   // update the LRU when there is a hit in the banks, don't update otherwise

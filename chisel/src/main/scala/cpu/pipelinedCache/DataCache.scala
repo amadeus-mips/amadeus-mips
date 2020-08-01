@@ -47,7 +47,7 @@ class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends
   val readDataWire = Wire(Vec(cacheConfig.numOfWays, UInt((cacheConfig.bankWidth * 8).W)))
   val dirtyData    = Wire(Vec(cacheConfig.numOfBanks, UInt((cacheConfig.bankWidth * 8).W)))
 
-  io.request.ready := controller.io.inputReady
+  io.request.ready := controller.io.inputReady && !io.cacheInstruction.fire && !fetch_query.io.out.invalidate
   io.axi           <> query.io.axi
   io.commit        := query.io.hit
   io.readData := Mux(
