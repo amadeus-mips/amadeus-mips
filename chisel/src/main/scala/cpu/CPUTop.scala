@@ -7,7 +7,7 @@ import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import cpu.cache.UnCachedUnit
 import cpu.core.Core_ls
-import cpu.mmu.MMU
+import cpu.mmu.{FakeMMU, MMU}
 import cpu.performance.CPUTopPerformanceIO
 import cpu.pipelinedCache.{DataCache, InstrCache}
 import firrtl.options.TargetDirAnnotation
@@ -35,7 +35,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   val dCache   = Module(new DataCache(conf.iCacheConf))
   val unCached = Module(new UnCachedUnit)
 
-  val mmu = Module(new MMU)
+  val mmu = Module(if(conf.enableTLB) new MMU else new FakeMMU)
 
   val core = Module(new Core_ls)
 
@@ -83,7 +83,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 }
 
 object elaborateCPU extends App {
-  implicit val cpuCfg = new CPUConfig(build = true)
+  implicit val cpuCfg = CPUConfig(build = true)
   (new ChiselStage).execute(
     Array(),
     Seq(ChiselGeneratorAnnotation(() => new CPUTop()), TargetDirAnnotation("generation"))

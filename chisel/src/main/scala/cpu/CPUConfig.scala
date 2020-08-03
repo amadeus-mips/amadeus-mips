@@ -1,12 +1,12 @@
 package cpu
 
 import chisel3.util.isPow2
-import cpu.BranchPredictorType.TwoBit
 import cpu.pipelinedCache.CacheConfig
 
 case class CPUConfig(
   build:                     Boolean,
   memoryFile:                String      = "",
+  enableTLB:                 Boolean     = false,
   tlbSize:                   Int         = 16,
   fetchAmount:               Int         = 2,
   compareRamDirectly:        Boolean     = false,

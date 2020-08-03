@@ -32,8 +32,8 @@ class TwoBitPredictor(implicit val conf: CPUConfig) extends BaseBranchPredictor(
 
   val history = RegInit(0.U(historyLen.W))
 
+  val current = predictTable(io.update.bits.pc(len - 1, 2) ^ io.update.bits.history)
   when(io.update.valid) {
-    val current = predictTable(io.update.bits.pc(len - 1, 2) ^ io.update.bits.history)
     history := Cat(history(historyLen-2, 0), io.update.bits.jump)
     predictTable(io.update.bits.pc(len - 1, 2) ^ io.update.bits.history) := MuxLookup(
       current,

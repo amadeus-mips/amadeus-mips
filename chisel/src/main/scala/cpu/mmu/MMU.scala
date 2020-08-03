@@ -1,15 +1,10 @@
 package cpu.mmu
 
 import chisel3._
-import chisel3.util.{Cat, Decoupled}
+import chisel3.util.Cat
 import cpu.CPUConfig
-import cpu.common.{MemReqBundle, NiseSramReadIO, NiseSramWriteIO}
-import cpu.core.InstFetchIO
-import cpu.core.bundles.TLBOpIO
 
-class MMU(implicit conf: CPUConfig) extends Module {
-  val io = IO(new MMUIO)
-
+class MMU(implicit conf: CPUConfig) extends BaseMMU {
   val tlb = Module(new FullTLB(numOfReadPorts = 2, TLBSize = conf.tlbSize))
 
   tlb.io.asid          := io.core.asid
@@ -29,7 +24,7 @@ class MMU(implicit conf: CPUConfig) extends Module {
   io.out.rInst.addr.valid := io.in.rInst.addr.valid &&
     (!tlb.io.result(0).mapped || tlb.io.result(0).hit && tlb.io.result(0).pageInfo.valid)
 
-  io.out.memReq := io.in.memReq
+  io.out.memReq     := io.in.memReq
   io.out.memReq.tag := Cat(0.U(3.W), tlb.io.result(1).pageInfo.pfn(16, 0))
 
   io.dataUncached := tlb.io.result(1).uncached
