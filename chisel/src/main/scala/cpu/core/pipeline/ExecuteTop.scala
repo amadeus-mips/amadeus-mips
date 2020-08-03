@@ -152,9 +152,9 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.branch.bits  := Mux(branch.io.branch.valid, branch.io.branch.bits, io.in.pc + 8.U)
   io.branch.valid := brPrFail
 
-  io.predUpdate.pc     := io.in.pc
-  io.predUpdate.target := branch.io.branch.bits
-  io.predUpdate.taken  := branch.io.branch.valid
+  io.predUpdate.pc      := io.in.pc
+  io.predUpdate.jump    := branch.io.branch.valid
+  io.predUpdate.history := io.in.brPrHistory
 
   io.waitingDS := io.in.instType === INST_BR && !io.decodeValid
   io.isBranch  := io.in.instType === INST_BR

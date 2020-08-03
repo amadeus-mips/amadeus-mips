@@ -59,6 +59,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   io.out.imm26       := imm26
   io.out.inDelaySlot := in.inDelaySlot
   io.out.brPredict   := in.brPredict
+  io.out.brPrHistory := in.brPrHistory
   io.out.instValid   := in.valid
 
   io.stallReq := false.B

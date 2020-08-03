@@ -72,7 +72,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetchTop.io.flushPC := hazard.io.flushPC
 
   fetchTop.io.predUpdate.bits  := executeTop.io.predUpdate
-  fetchTop.io.predUpdate.valid := hazard.io.branchValid
+  fetchTop.io.predUpdate.valid := hazard.io.predictUpdate
 
   fetchTop.io.predict       := fetch1Top.io.predict
   fetchTop.io.predictWithDS := fetch1Top.io.predictWithDS
@@ -122,9 +122,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.mem0Op := exe_mem.io.out.operation
   executeTop.io.mem1Op := mem2_wb.io.out.op
   // wr forward
-  executeTop.io.mem0WR := memory0Top.io.out.write
-  executeTop.io.mem1WR := memory1Top.io.out.write
-  executeTop.io.mem2WR := memory2Top.io.out.write
+  executeTop.io.mem0WR := exe_mem.io.out.write
+  executeTop.io.mem1WR := mem0_mem1.io.out.write
+  executeTop.io.mem2WR := mem1_mem2.io.out.write
   executeTop.io.wbWR   := mem2_wb.io.out.write
   // regfile data
   executeTop.io.rsData := regFile.io.rsData

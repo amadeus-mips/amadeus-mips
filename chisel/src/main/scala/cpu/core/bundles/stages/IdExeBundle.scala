@@ -3,11 +3,12 @@
 package cpu.core.bundles.stages
 
 import chisel3._
+import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.{CPBundle, WriteBundle}
 import shared.ValidBundle
 
-class IdExeBundle extends Bundle {
+class IdExeBundle(implicit c: CPUConfig) extends Bundle {
   val instType    = UInt(instTypeLen.W)
   val operation   = UInt(opLen.W)
   val rs          = ValidBundle(5)
@@ -20,5 +21,8 @@ class IdExeBundle extends Bundle {
   val pc          = UInt(addrLen.W)
   val inDelaySlot = Bool()
   val brPredict   = ValidBundle(32)
+  val brPrHistory = UInt(c.branchPredictorHistoryLen.W)
   val instValid   = Bool()
+
+  override def cloneType: IdExeBundle.this.type = new IdExeBundle().asInstanceOf[this.type ]
 }

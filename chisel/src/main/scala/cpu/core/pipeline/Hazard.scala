@@ -17,7 +17,8 @@ class Hazard extends Module {
     val flushAll = Output(Bool())
     val flushPC  = Output(UInt(dataLen.W))
 
-    val branchValid = Output(Bool())
+    val branchValid   = Output(Bool())
+    val predictUpdate = Output(Bool())
 
     val frontend = new Bundle {
       val stallReqFromIf0 = Input(Bool())
@@ -44,8 +45,8 @@ class Hazard extends Module {
 
   val hasExcept = io.except.asUInt().orR()
 
-  io.flushAll   := hasExcept
-  io.flushPC := Mux(io.except(EXCEPT_ERET), io.EPC, io.exceptJumpAddr)
+  io.flushAll := hasExcept
+  io.flushPC  := Mux(io.except(EXCEPT_ERET), io.EPC, io.exceptJumpAddr)
 
   val branchValid = !io.backend.stall(1) && io.predictFail
 
@@ -66,13 +67,14 @@ class Hazard extends Module {
     Seq(
       io.backend.stallReqFromMem1 -> "b11111".U,
       io.backend.stallReqFromMem0 -> "b1111".U,
-      io.backend.stallReqFromExe -> "b111".U,
-      io.backend.exeWaitingDS    -> "b110".U,
-      io.backend.stallReqFromId  -> Mux(io.backend.exeIsBranch, "b111".U, "b11".U)
+      io.backend.stallReqFromExe  -> "b111".U,
+      io.backend.exeWaitingDS     -> "b110".U,
+      io.backend.stallReqFromId   -> Mux(io.backend.exeIsBranch, "b111".U, "b11".U)
     )
   )
 
   assert(!(io.backend.exeWaitingDS && io.backend.stallReqFromId))
 
-  io.branchValid := branchValid
+  io.branchValid   := branchValid
+  io.predictUpdate := !io.backend.stall(1) && io.backend.exeIsBranch
 }

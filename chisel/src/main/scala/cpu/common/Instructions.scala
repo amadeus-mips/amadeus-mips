@@ -83,6 +83,11 @@ trait Instructions {
     val bi = Seq(J, JAL, JR, JALR, BEQ, BNE, BGTZ, BLEZ, BGEZ, BGEZAL, BLTZ, BLTZAL)
     bi.foldLeft(false.B)((r, e) => r || (e === inst))
   }
+  def isJBranchInst(inst: UInt) = {
+    require(inst.getWidth == 32)
+    val jbi = Seq(J, JAL)
+    jbi.foldLeft(false.B)((r, e) => r || (e === inst))
+  }
 }
 
 trait unImpl {

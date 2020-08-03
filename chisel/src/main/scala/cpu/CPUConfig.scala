@@ -5,19 +5,18 @@ import cpu.BranchPredictorType.TwoBit
 import cpu.pipelinedCache.CacheConfig
 
 case class CPUConfig(
-  build:                        Boolean,
-  memoryFile:                   String              = "",
-  tlbSize:                      Int                 = 32,
-  fetchAmount:                  Int                 = 2,
-  compareRamDirectly:           Boolean             = false,
-  iCacheConf:                   CacheConfig         = CacheConfig(),
-  dCacheConf:                   CacheConfig         = CacheConfig(),
-  branchPredictorAddrLen:       Int                 = 10,
-  branchPredictorTableEntryNum: Int                 = 64,
-  branchPredictorType:          BranchPredictorType = TwoBit,
-  instructionFIFOLength:        Int                 = 4,
-  decodeWidth:                  Int                 = 1,
-  verification:       Boolean = false
+  build:                     Boolean,
+  memoryFile:                String      = "",
+  tlbSize:                   Int         = 16,
+  fetchAmount:               Int         = 2,
+  compareRamDirectly:        Boolean     = false,
+  iCacheConf:                CacheConfig = CacheConfig(),
+  dCacheConf:                CacheConfig = CacheConfig(),
+  branchPredictorAddrLen:    Int         = 10,
+  branchPredictorHistoryLen: Int         = 2,
+  instructionFIFOLength:     Int         = 4,
+  decodeWidth:               Int         = 1,
+  verification:              Boolean     = false
 ) {
   require(isPow2(instructionFIFOLength))
 }

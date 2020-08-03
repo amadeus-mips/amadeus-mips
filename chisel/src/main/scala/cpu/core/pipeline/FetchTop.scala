@@ -2,11 +2,10 @@ package cpu.core.pipeline
 
 import chisel3._
 import chisel3.util.Valid
-import cpu.BranchPredictorType.{AlwaysNotTaken, AlwaysTaken, TwoBit}
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.IfIf1Bundle
-import cpu.core.components.{AlwaysNotTakenPredictor, AlwaysTakenPredictor, BrPrUpdateBundle, TwoBitPredictor}
+import cpu.core.components.{BrPrUpdateBundle, TwoBitPredictor}
 import shared.ValidBundle
 
 class FetchTop(implicit conf: CPUConfig) extends Module {
@@ -39,11 +38,7 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
       val invalid = Bool()
     })
   })
-  val branchPredictor = Module(conf.branchPredictorType match {
-    case TwoBit         => new TwoBitPredictor()
-    case AlwaysNotTaken => new AlwaysNotTakenPredictor()
-    case AlwaysTaken    => new AlwaysTakenPredictor()
-  })
+  val branchPredictor = Module(new TwoBitPredictor())
 
   val hazard = Module(new cpu.core.fetch.Hazard)
   val pcMux  = Module(new cpu.core.fetch.PCMux(n = 4))
@@ -72,7 +67,8 @@ class FetchTop(implicit conf: CPUConfig) extends Module {
   io.out.validPcMask(0) := pcValid && !io.stallReq
   io.out.validPcMask(1) :=
     !pcMux.io.pcCacheCorner && (!hazard.io.out.predict.valid || hazard.io.out.predictWithDS) && io.out.instValid && pcValid
-  io.out.brPredict := branchPredictor.io.prediction
+  io.out.brPredict   := branchPredictor.io.prediction
+  io.out.brPrHistory := branchPredictor.io.history
 
   io.out.except                          := DontCare
   io.out.except(EXCEPT_FETCH)            := pcMux.io.pcNotAligned
