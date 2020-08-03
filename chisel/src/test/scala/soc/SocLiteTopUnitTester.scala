@@ -186,7 +186,7 @@ class SocLiteTopUnitTester(
     if(isPerf){
       val averageScore = Math.pow(perfAllRes.map(_.score).product, 1.0/perfAllRes.length)
       val commitTime = GItHelper.dateString
-      val resStr = "{" + s""""commit": $commitTime, """ + s""""score": $averageScore,"perfs":""" + "[" +  perfAllRes.map(_.toString).mkString(",") + "]}"
+      val resStr = "{" + s""""commit": "$commitTime", """ + s""""score": $averageScore,"perfs":""" + "[" +  perfAllRes.map(_.toString).mkString(",") + "]}"
 
       val prefix = if(tcfg.runAllPerf) "all" else tcfg.perfMap(perfNumber)
       val currentTime = System.currentTimeMillis()

@@ -102,17 +102,6 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   decodeTop.io.in      := instFIFO.io.dequeue.head.bits
   decodeTop.io.inValid := instFIFO.io.dequeue.head.valid
-  decodeTop.io.exeWR   := executeTop.io.out.write
-  decodeTop.io.mem0WR  := memory0Top.io.out.write
-  decodeTop.io.mem1WR  := memory1Top.io.out.write
-  decodeTop.io.mem2WR  := memory2Top.io.out.write
-  decodeTop.io.wbWR    := mem2_wb.io.out.write
-  decodeTop.io.rsData  := regFile.io.rsData
-  decodeTop.io.rtData  := regFile.io.rtData
-
-  regFile.io.write := mem2_wb.io.out.write
-  regFile.io.rs    := instFIFO.io.dequeue.head.bits.inst(25, 21)
-  regFile.io.rt    := instFIFO.io.dequeue.head.bits.inst(20, 16)
 
   id_exe.io.in    := decodeTop.io.out
   id_exe.io.stall := hazard.io.backend.stall
@@ -121,14 +110,29 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.in          := id_exe.io.out
   executeTop.io.flush       := hazard.io.flushAll
   executeTop.io.decodeValid := instFIFO.io.dequeue.head.valid
-  executeTop.io.rawHILO     := hilo.io.out
-  executeTop.io.mem0HILO    := exe_mem.io.out.hilo
-  executeTop.io.mem1HILO    := mem0_mem1.io.out.hiloWrite
-  executeTop.io.cp0Data     := cp0.io.data
-  executeTop.io.mem0CP0     := exe_mem.io.out.cp0
-  executeTop.io.mem1CP0     := mem0_mem1.io.out.cp0Write
-  executeTop.io.mem0Op      := exe_mem.io.out.operation
-  executeTop.io.mem1Op      := mem2_wb.io.out.op
+  // hio forward
+  executeTop.io.rawHILO  := hilo.io.out
+  executeTop.io.mem0HILO := exe_mem.io.out.hilo
+  executeTop.io.mem1HILO := mem0_mem1.io.out.hiloWrite
+  // cp0 forward
+  executeTop.io.cp0Data := cp0.io.data
+  executeTop.io.mem0CP0 := exe_mem.io.out.cp0
+  executeTop.io.mem1CP0 := mem0_mem1.io.out.cp0Write
+  // op forward
+  executeTop.io.mem0Op := exe_mem.io.out.operation
+  executeTop.io.mem1Op := mem2_wb.io.out.op
+  // wr forward
+  executeTop.io.mem0WR := memory0Top.io.out.write
+  executeTop.io.mem1WR := memory1Top.io.out.write
+  executeTop.io.mem2WR := memory2Top.io.out.write
+  executeTop.io.wbWR   := mem2_wb.io.out.write
+  // regfile data
+  executeTop.io.rsData := regFile.io.rsData
+  executeTop.io.rtData := regFile.io.rtData
+
+  regFile.io.write := mem2_wb.io.out.write
+  regFile.io.rs    := id_exe.io.out.rs.bits
+  regFile.io.rt    := id_exe.io.out.rt.bits
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.backend.stall

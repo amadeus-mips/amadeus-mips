@@ -1,8 +1,12 @@
 package soc
 
+import java.text.SimpleDateFormat
+import java.util.Date
+
 sealed trait Result {
   val pass: Boolean
   val timestamp = System.currentTimeMillis()
+  val timeString = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date(timestamp))
 }
 
 class JSONString(val underlying: String)
@@ -93,7 +97,7 @@ case class PerfResult(log: String) extends Result {
   }
 
   override def toString: String =
-    s"""{ "name": "$name", "pass": $pass, "score": $score, "socCount": $socCount, "cpuCount": $cpuCount, "time": $timestamp, "addition": $additionInformation }""".stripMargin
+    s"""{ "name": "$name", "pass": $pass, "score": $score, "socCount": $socCount, "cpuCount": $cpuCount, "time": "$timeString", "addition": $additionInformation }""".stripMargin
 
 }
 
