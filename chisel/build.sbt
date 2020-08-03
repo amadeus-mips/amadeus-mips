@@ -56,6 +56,9 @@ libraryDependencies += "net.fornwall.jelf" % "jelf" % "0.4.1"
 libraryDependencies += "edu.berkeley.cs" %% "chiseltest" % "0.2.1"
 
 libraryDependencies += "org.typelevel" %% "spire" % "0.14.1"
+// https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit
+libraryDependencies += "org.eclipse.jgit" % "org.eclipse.jgit" % "5.8.1.202007141445-r"
+
 
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 
