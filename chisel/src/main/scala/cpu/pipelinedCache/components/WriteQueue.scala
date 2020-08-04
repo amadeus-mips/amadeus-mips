@@ -79,7 +79,7 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
   // valid bank
   val validBank = RegInit(VecInit(Seq.fill(capacity)((false).B)))
   // data banks
-  val dataBanks = Mem(capacity, UInt(32.W))
+  val dataBanks = Mem(capacity, Vec(cacheConfig.numOfBanks, UInt(32.W)))
 //  val dataBanks = RegInit(
 //    VecInit(
 //      // this reset value is for verification, but there is no convenient way to swap this to mem
