@@ -50,22 +50,16 @@ class UncachedQueue extends Module {
   io.request.ready := MuxCase(
     true.B,
     Array(
-      (rState === rRead)  -> (readQueue.io.count =/= 16.U(5.W) && reqRead),
-      (rState === rWrite) -> (writeAddressQueue.io.count =/= 16.U(5.W) && writeDataQueue.io.count =/= 16.U(5.W) && reqWrite)
+      (rState === rRead) -> (readQueue.io.count =/= 16.U(5.W) && reqRead),
+      (rState === rWrite) -> (writeAddressQueue.io.count =/= 16.U(5.W) && writeDataQueue.io.count =/= 16.U(
+        5.W
+      ) && reqWrite)
     )
   )
 
   /** when it is a write, can commit as soon as dispatched. When it is a read, can only commit
     * when read data has returned */
-  io.commit := MuxCase(
-    false.B,
-    Array(
-      // read commit has to wait until return of data
-      (rState === rRead) -> io.axi.r.fire,
-      // write can be commited as soon as there is a handshake
-      (rState === rWrite) -> RegNext(io.request.fire)
-    )
-  )
+  io.commit := io.axi.r.fire
 
   io.readData := RegNext(io.axi.r.bits.data)
 
@@ -117,8 +111,8 @@ class UncachedQueue extends Module {
     rCounter,
     Array(
       (io.axi.r.fire && io.axi.ar.fire) -> rCounter,
-      (io.axi.r.fire)                   -> (rCounter - 1.U),
-      (io.axi.ar.fire)                  -> (rCounter + 1.U)
+      io.axi.r.fire                     -> (rCounter - 1.U),
+      io.axi.ar.fire                    -> (rCounter + 1.U)
     )
   )
 

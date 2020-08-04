@@ -57,5 +57,5 @@ class Memory1Top extends Module {
     io.out.pc := 0.U
   }
 
-  io.stallReq := io.out.valid && (opIsLoad(io.in.op) || opIsStore(io.in.op)) && !io.commit
+  io.stallReq := io.out.valid && opIsLoad(io.in.op) && !io.commit
 }
