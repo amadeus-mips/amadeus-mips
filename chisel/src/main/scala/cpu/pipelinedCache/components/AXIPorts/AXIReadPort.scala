@@ -53,7 +53,7 @@ class AXIReadPort(addrReqWidth: Int = 32, AXIID: UInt)(implicit cacheConfig: Cac
   io.axi.ar.bits.prot  := 0.U
 
   // valid and ready signals
-  io.axi.ar.valid := readState === readWaitForAR || (readState === readIdle && io.addrReq.valid)
+  io.axi.ar.valid := readState === readWaitForAR
   io.axi.r.ready  := readState === readTransfer
 
   io.transferData.valid := readState === readTransfer && io.axi.r.fire

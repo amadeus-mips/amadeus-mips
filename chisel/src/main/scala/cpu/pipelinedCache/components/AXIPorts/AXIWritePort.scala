@@ -50,7 +50,7 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
   io.axi.ar := DontCare
   io.axi.r  := DontCare
 
-  io.axi.aw.valid := awValidReg || (writeState === writeIdle && io.addrRequest.fire)
+  io.axi.aw.valid := awValidReg
   io.axi.aw.bits.addr := Cat(
     io.addrRequest.bits.tag,
     io.addrRequest.bits.index,
@@ -79,8 +79,8 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
     is(writeIdle) {
       when(io.addrRequest.fire) {
         writeState := writeTransfer
-        awValidReg := !io.axi.aw.fire
-        wFirstReg  := !io.axi.w.fire
+        awValidReg := true.B
+        wFirstReg  := true.B
       }
     }
     is(writeTransfer) {
