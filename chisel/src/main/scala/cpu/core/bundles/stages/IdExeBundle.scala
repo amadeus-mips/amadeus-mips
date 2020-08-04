@@ -11,9 +11,8 @@ import shared.ValidBundle
 class IdExeBundle(implicit c: CPUConfig) extends Bundle {
   val instType    = UInt(instTypeLen.W)
   val operation   = UInt(opLen.W)
-  val rs          = ValidBundle(5)
-  val rt          = ValidBundle(5)
-  val imm         = UInt(32.W)
+  val op1         = UInt(dataLen.W)
+  val op2         = UInt(dataLen.W)
   val write       = new WriteBundle
   val cp0         = new CPBundle
   val except      = Vec(exceptAmount, Bool())

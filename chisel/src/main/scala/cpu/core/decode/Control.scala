@@ -18,12 +18,14 @@ class Control extends Module {
       val sel   = UInt(3.W)
     })
     val signal   = Input(new SignalBundle)
+    val rsData   = Input(UInt(dataLen.W)) // from Forward
+    val rtData   = Input(UInt(dataLen.W)) // ^
     val inExcept = Input(Vec(exceptAmount, Bool()))
 
+    val op1   = Output(UInt(dataLen.W))
+    val op2   = Output(UInt(dataLen.W))
     val write = Output(new WriteBundle)
     val cp0   = Output(new CPBundle)
-
-    val imm = Output(UInt(32.W))
 
     val nextInstInDelaySlot = Output(Bool())
 
@@ -37,13 +39,28 @@ class Control extends Module {
   val sel   = io.inst.sel
 
   // 根据IMMType选择imm
-  io.imm := MuxLookup(
+  val imm32 = MuxLookup(
     io.signal.immType,
     Util.zeroExtend(sa), // default IMM_SHT
     Array(
       IMM_LSE -> Util.signedExtend(imm16),
       IMM_LZE -> Util.zeroExtend(imm16),
       IMM_HZE -> Cat(imm16, Fill(16, 0.U))
+    )
+  )
+
+  io.op1 := MuxLookup(
+    io.signal.op1Type,
+    io.rsData, // default OPn_RF
+    Array(
+      OPn_IMM -> imm32
+    )
+  )
+  io.op2 := MuxLookup(
+    io.signal.op2Type,
+    io.rtData, // default OPn_RF
+    Array(
+      OPn_IMM -> imm32
     )
   )
 

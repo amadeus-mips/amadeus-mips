@@ -36,15 +36,6 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     val mem0Op = Input(UInt(opLen.W))
     val mem1Op = Input(UInt(opLen.W))
 
-    // write data forward
-    val mem0WR = Input(new WriteBundle)
-    val mem1WR = Input(new WriteBundle)
-    val mem2WR = Input(new WriteBundle)
-    val wbWR   = Input(new WriteBundle)
-
-    val rsData = Input(UInt(dataLen.W))
-    val rtData = Input(UInt(dataLen.W))
-
     val out        = Output(new ExeMemBundle)
     val branch     = Output(new ValidBundle) // back to `Fetch`
     val predUpdate = Output(new BrPrUpdateBundle)
@@ -65,11 +56,10 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
   /** Only used in `move` module */
   val forward = Module(new cpu.core.execute.Forward(2, 2))
-  val hazard  = Module(new execute.Hazard(4))
   val control = Module(new cpu.core.execute.Control)
 
-  val op1 = Mux(io.in.rs.valid, hazard.io.ops(0).outData, io.in.imm)
-  val op2 = Mux(io.in.rt.valid, hazard.io.ops(1).outData, io.in.imm)
+  val op1 = io.in.op1
+  val op2 = io.in.op2
 
   forward.io.rawHILO   := io.rawHILO
   forward.io.fwHILO(0) := io.mem0HILO
@@ -80,14 +70,6 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   forward.io.rawCP0.data := io.cp0Data
   forward.io.fwCP0(0)    := io.mem0CP0
   forward.io.fwCP0(1)    := io.mem1CP0
-
-  hazard.io.wrs           := VecInit(io.mem0WR, io.mem1WR, io.mem2WR, io.wbWR)
-  hazard.io.ops(0).addr   := io.in.rs.bits
-  hazard.io.ops(0).enable := io.in.rs.valid
-  hazard.io.ops(0).inData := io.rsData
-  hazard.io.ops(1).addr   := io.in.rt.bits
-  hazard.io.ops(1).enable := io.in.rt.valid
-  hazard.io.ops(1).inData := io.rtData
 
   alu.io.op1       := op1
   alu.io.op2       := op2
@@ -107,8 +89,6 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   writeOther.io.inCP0     := io.in.cp0
   writeOther.io.mult      <> mult.io
   writeOther.io.div       <> div.io
-  mult.io.enable          := writeOther.io.mult.enable && !hazard.io.stallReq
-  div.io.enable           := writeOther.io.div.enable && !hazard.io.stallReq
 
   memory.io.op1       := op1
   memory.io.op2       := op2
@@ -159,7 +139,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.waitingDS := io.in.instType === INST_BR && !io.decodeValid
   io.isBranch  := io.in.instType === INST_BR
 
-  io.stallReq := hazard.io.stallReq || writeOther.io.stallReq ||
+  io.stallReq := writeOther.io.stallReq ||
     io.in.operation === MV_MFC0 && VecInit(io.mem0Op, io.mem1Op).contains(TLB_WI) ||
     VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem0Op) || VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem1Op)
 
