@@ -14,6 +14,7 @@ class Control extends Module {
     val inMemData   = Input(UInt(dataLen.W))
     val operation   = Input(UInt(opLen.W))
     val addr        = Input(UInt(dataLen.W))
+    val stalled = Input(Bool())
 
     /** Whether except happened. From [[cpu.core.memory.Control]] module */
     val except = Input(Bool())
@@ -26,9 +27,17 @@ class Control extends Module {
   val addrL2  = io.addr(1, 0)
   val cutAddr = Cat(io.addr(dataLen - 1, 2), 0.U(2.W))
 
+  val handShaken = RegInit(false.B)
+
+  when(io.stalled && io.request.fire() && !handShaken){
+    handShaken := true.B
+  }.elsewhen(!io.stalled) {
+    handShaken := false.B
+  }
+
   io.request.bits.tag := io.addr(31, 12)
   io.request.bits.physicalIndex := io.addr(11, 0)
-  io.request.valid := !io.except && (opIsLoad(io.operation) || opIsStore(io.operation))
+  io.request.valid := !io.except && (opIsLoad(io.operation) || opIsStore(io.operation)) && (!io.stalled || !handShaken)
   io.request.bits.writeMask := MuxLookup(
     io.operation,
     0.U,

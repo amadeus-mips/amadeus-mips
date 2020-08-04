@@ -139,6 +139,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   exe_mem.io.flush := hazard.io.flushAll
 
   memory0Top.io.in           := exe_mem.io.out
+  memory0Top.io.stalled      := exe_mem.io.stalled
   memory0Top.io.uncached     := io.memAccess.uncached
   memory0Top.io.tlbCP0       := cp0.io.tlbCP0
   memory0Top.io.exceptionCP0 := cp0.io.exceptionCP0

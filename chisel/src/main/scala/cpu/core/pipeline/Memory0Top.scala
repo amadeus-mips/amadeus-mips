@@ -13,7 +13,8 @@ import cpu.core.components.{ExceptionHandleBundle, TLBHandleBundle}
 
 class Memory0Top(implicit cfg: CPUConfig) extends Module {
   val io = IO(new Bundle {
-    val in = Input(new ExeMemBundle)
+    val in      = Input(new ExeMemBundle)
+    val stalled = Input(Bool())
 
     val exceptionCP0 = Input(new ExceptionHandleBundle)
     val tlbCP0       = Input(new TLBHandleBundle(cfg.tlbSize))
@@ -40,6 +41,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
 
   val hasExcept = except.io.outExcept.asUInt().orR()
 
+  control.io.stalled   := io.stalled
   control.io.inMemData := io.in.memData
   control.io.operation := io.in.operation
   control.io.addr      := io.in.memAddr
@@ -57,19 +59,19 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   except.io.tlbExcept.invalid  := io.tlb.except.data.invalid
   except.io.tlbExcept.modified := io.tlb.except.data.modified
 
-  io.out.addrL2      := io.in.memAddr(1, 0)
-  io.out.op          := io.in.operation
-  io.out.write       := io.in.write
-  io.out.write.enable := io.in.write.enable && !hasExcept
-  io.out.pc          := io.in.pc
-  io.out.uncached    := io.uncached
-  io.out.inDelaySlot := io.in.inDelaySlot
-  io.out.except      := except.io.outExcept
-  io.out.badAddr     := except.io.badAddr
-  io.out.tlbWrite    := io.tlb
-  io.out.cp0Write    := io.in.cp0
-  io.out.cp0Write.valid := io.in.cp0.valid && !hasExcept
-  io.out.hiloWrite   := io.in.hilo
+  io.out.addrL2             := io.in.memAddr(1, 0)
+  io.out.op                 := io.in.operation
+  io.out.write              := io.in.write
+  io.out.write.enable       := io.in.write.enable && !hasExcept
+  io.out.pc                 := io.in.pc
+  io.out.uncached           := io.uncached
+  io.out.inDelaySlot        := io.in.inDelaySlot
+  io.out.except             := except.io.outExcept
+  io.out.badAddr            := except.io.badAddr
+  io.out.tlbWrite           := io.tlb
+  io.out.cp0Write           := io.in.cp0
+  io.out.cp0Write.valid     := io.in.cp0.valid && !hasExcept
+  io.out.hiloWrite          := io.in.hilo
   io.out.hiloWrite.lo.valid := io.in.hilo.lo.valid && !hasExcept
   io.out.hiloWrite.hi.valid := io.in.hilo.hi.valid && !hasExcept
 
@@ -77,12 +79,12 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
 
   io.request <> control.io.request
 
-  io.dCacheInvalidate.bits := DontCare
+  io.dCacheInvalidate.bits  := DontCare
   io.dCacheInvalidate.valid := io.in.cacheOp.target === TARGET_D && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
 
   val indexFrom = cfg.iCacheConf.indexLen + cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen - 1
-  val indexTo = cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen
-  io.iCacheInvalidate.bits := io.in.memAddr(indexFrom, indexTo)
+  val indexTo   = cfg.iCacheConf.bankIndexLen + cfg.iCacheConf.bankOffsetLen
+  io.iCacheInvalidate.bits  := io.in.memAddr(indexFrom, indexTo)
   io.iCacheInvalidate.valid := io.in.cacheOp.target === TARGET_I && io.in.cacheOp.valid && !hasExcept && !io.mem1Except && io.in.instValid
 
   io.tlb.asid          := io.tlbCP0.entryHi.asid

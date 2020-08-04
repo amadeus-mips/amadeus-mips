@@ -5,7 +5,7 @@ package cpu
 import axi.{AXIIO, AXIOutstandingReadArbiter, AXIOutstandingWriteArbiter}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.UnCachedUnit
+import cpu.cache.UncachedQueue
 import cpu.core.Core_ls
 import cpu.mmu.{FakeMMU, MMU}
 import cpu.performance.CPUTopPerformanceIO
@@ -34,7 +34,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   val iCache   = Module(new InstrCache(conf.iCacheConf))
   val dCache   = Module(new DataCache(conf.iCacheConf))
-  val unCached = Module(new UnCachedUnit)
+  val unCached = Module(new UncachedQueue)
 
   val mmu = Module(if (conf.enableTLB) new MMU else new FakeMMU)
 
