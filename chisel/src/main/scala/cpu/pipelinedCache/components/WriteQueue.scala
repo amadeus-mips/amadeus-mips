@@ -1,7 +1,6 @@
 package cpu.pipelinedCache.components
 
 import chisel3._
-import chisel3.experimental.BundleLiterals._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
 import chisel3.util._
 import cpu.CPUConfig
@@ -71,26 +70,30 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
   val dIdle :: dDispatch :: Nil = Enum(2)
   val dispatchState             = RegInit(dIdle)
 
+  require(!CPUConfig.verification)
   // separate the associative request, data and valid
-  val addrBank = RegInit(
-    VecInit(Seq.tabulate(capacity)(i => (new RecordAddressBundle).Lit(_.tag -> 7.U, _.index -> i.U)))
-  )
+  val addrBank = Mem(capacity, new RecordAddressBundle)
+//  val addrBank = RegInit(
+//    VecInit(Seq.tabulate(capacity)(i => (new RecordAddressBundle).Lit(_.tag -> 7.U, _.index -> i.U)))
+//  )
   // valid bank
   val validBank = RegInit(VecInit(Seq.fill(capacity)((false).B)))
   // data banks
-  val dataBanks = RegInit(
-    VecInit(
-      // this reset value is for verification, but there is no convenient way to swap this to mem
-      Seq.tabulate(capacity)(i => VecInit(Seq.tabulate(cacheConfig.numOfBanks)(k => (7 * 4 + i * 2 + k).U(32.W))))
-    )
-  )
+  val dataBanks = Mem(capacity, UInt(32.W))
+//  val dataBanks = RegInit(
+//    VecInit(
+//      // this reset value is for verification, but there is no convenient way to swap this to mem
+//      Seq.tabulate(capacity)(i => VecInit(Seq.tabulate(cacheConfig.numOfBanks)(k => (7 * 4 + i * 2 + k).U(32.W))))
+//    )
+//  )
 
   val dispatchDataWire = WireInit(dataBanks(headPTR)(lineWritePTR))
 
   val queryHitVec = Wire(Vec(capacity, Bool()))
-  queryHitVec := (addrBank.zip(validBank)).map {
-    case (addr, valid) => ((addr.index === io.query.addr.index) && (addr.tag === io.query.addr.phyTag) && valid)
-  }
+  queryHitVec := (0 until capacity).map{ case (index) => addrBank(index).index === io.query.addr.index && addrBank(index).tag === io.query.addr.phyTag && validBank(index)}
+//  queryHitVec := (addrBank.zip(validBank)).map {
+//    case (addr, valid) => ((addr.index === io.query.addr.index) && (addr.tag === io.query.addr.phyTag) && valid)
+//  }
   val queryHitPos = Wire(UInt(log2Ceil(capacity).W))
   queryHitPos := queryHitVec.indexWhere(queryHit => queryHit)
   val isQueryHit =

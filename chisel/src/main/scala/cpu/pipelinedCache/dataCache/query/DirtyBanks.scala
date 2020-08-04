@@ -24,7 +24,7 @@ class DirtyBanks(implicit cacheConfig: CacheConfig) extends Module {
     val indexDirty = Output(Vec(cacheConfig.numOfWays, Bool()))
   })
   for (i <- 0 until cacheConfig.numOfWays) {
-    val bank = RegInit(VecInit(Seq.fill(cacheConfig.numOfSets)(false.B)))
+    val bank = Mem(cacheConfig.numOfSets, Bool())
     io.indexDirty(i) := bank(io.queryIndex)
     when(io.write.valid && i.U === io.write.bits.waySelect) {
       bank(io.write.bits.indexSelect) := io.write.bits.isDirty
