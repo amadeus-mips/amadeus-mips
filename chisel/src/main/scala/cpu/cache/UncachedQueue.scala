@@ -6,7 +6,7 @@ import chisel3.util._
 import cpu.common.MemReqBundle
 import shared.Constants
 
-class UncachedQueue extends Module {
+class UncachedQueue(capacity: Int = 64) extends Module {
   val io = IO(new Bundle {
 
     /** see documentation of [[cpu.pipelinedCache.DataCache.io.request]] */
@@ -35,27 +35,25 @@ class UncachedQueue extends Module {
   val rState                          = RegInit(rIdle)
 
   /** count how many outstanding read are there */
-  val rCounter = RegInit(0.U(5.W))
+  val rCounter = RegInit(0.U((log2Ceil(capacity) + 1).W))
 
-  val bCounter = RegInit(0.U(5.W))
+  val bCounter = RegInit(0.U((log2Ceil(capacity) + 1).W))
 
   /** only stores read address */
-  val readQueue = Module(new Queue(UInt(32.W), 16, true, true))
+  val readQueue = Module(new Queue(UInt(32.W), capacity, true, false))
 
   /** stores the address for the write */
-  val writeAddressQueue = Module(new Queue(UInt(32.W), 16, true, true))
+  val writeAddressQueue = Module(new Queue(UInt(32.W), capacity, true, false))
 
   /** stores the data for the write */
-  val writeDataQueue = Module(new Queue(new WriteMeta, 16, true, true))
+  val writeDataQueue = Module(new Queue(new WriteMeta, capacity, true, false))
 
   /** when idle, can always handle input; when read or write, can handle input as long as queue is not full */
   io.request.ready := MuxCase(
     true.B,
     Array(
-      (rState === rRead) -> (readQueue.io.count =/= 16.U(5.W) && reqRead),
-      (rState === rWrite) -> (writeAddressQueue.io.count =/= 16.U(5.W) && writeDataQueue.io.count =/= 16.U(
-        5.W
-      ) && reqWrite)
+      (rState === rRead) -> (((readQueue.io.count + rCounter) =/= capacity.U)  && reqRead),
+      (rState === rWrite) -> ((writeAddressQueue.io.count + writeDataQueue.io.count + bCounter) =/= capacity.U && reqWrite)
     )
   )
 
@@ -101,12 +99,12 @@ class UncachedQueue extends Module {
   readQueue.io.deq.ready := io.axi.ar.fire
 
   writeAddressQueue.io.enq.bits  := Cat(io.request.bits.tag, io.request.bits.physicalIndex)
-  writeAddressQueue.io.enq.valid := reqValid && reqWrite && rState =/= rRead
+  writeAddressQueue.io.enq.valid := io.request.fire && reqWrite && rState =/= rRead
   writeAddressQueue.io.deq.ready := io.axi.aw.fire
 
   writeDataQueue.io.enq.bits.data := io.request.bits.writeData
   writeDataQueue.io.enq.bits.strb := io.request.bits.writeMask
-  writeDataQueue.io.enq.valid     := reqValid && reqWrite && rState =/= rRead
+  writeDataQueue.io.enq.valid     := io.request.fire && reqWrite && rState =/= rRead
   writeDataQueue.io.deq.ready     := io.axi.w.fire
 
   rCounter := MuxCase(
@@ -129,7 +127,7 @@ class UncachedQueue extends Module {
 
   switch(rState) {
     is(rIdle) {
-      when(reqValid) {
+      when(io.request.fire) {
         when(reqRead) {
           rState := rRead
         }.elsewhen(reqWrite) {

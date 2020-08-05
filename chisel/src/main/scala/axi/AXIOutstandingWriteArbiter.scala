@@ -6,7 +6,7 @@ import chisel3.util._
 /**
   * out standing axi write arbiter will process aw and w seperately. w order is the same as aw order
   */
-class AXIOutstandingWriteArbiter(capacity: Int = 16) extends Module {
+class AXIOutstandingWriteArbiter(capacity: Int = 64) extends Module {
   val io = IO(new Bundle {
 
     //VERI: assume master comply with axi requirements
