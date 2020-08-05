@@ -41,7 +41,7 @@ class UnCachedUnit extends Module {
   io.readData := RegNext(io.axi.r.bits.data)
 
   /** when the last ( and only ) r data came, or both w and aw has performed a handshake */
-  io.commit := io.axi.r.fire || (writeState === writeTransfer && io.axi.w.fire())
+  io.commit := io.axi.r.fire
 
   io.request.ready := writeState === writeIdle && readState === readIdle
 
