@@ -29,7 +29,7 @@ class UnCachedUnit extends Module {
   val readState                                        = RegInit(readIdle)
   val readAddressReg                                   = Reg(UInt(32.W))
 
-  val writeIdle :: writeAW :: writeTransfer :: Nil = Enum(3)
+  val writeIdle :: writeAW :: writeTransfer :: writeFinish :: Nil = Enum(4)
   val writeState                                                  = RegInit(writeIdle)
   val writeAddressReg                                             = Reg(UInt(32.W))
   val writeDataReg                                                = Reg(UInt(32.W))
@@ -74,7 +74,7 @@ class UnCachedUnit extends Module {
   io.axi.w.valid     := writeState === writeTransfer
 
   /** ignore b channel completely */
-  io.axi.b.ready := true.B
+  io.axi.b.ready := writeState === writeFinish
   //-----------------------------------------------------------------------------
   //------------------fsm transformation--------------------------------------
   //-----------------------------------------------------------------------------
@@ -114,6 +114,11 @@ class UnCachedUnit extends Module {
     }
     is(writeTransfer) {
       when(io.axi.w.fire) {
+        writeState := Mux(io.axi.b.fire, writeIdle ,writeFinish)
+      }
+    }
+    is(writeFinish) {
+      when(io.axi.b.fire) {
         writeState := writeIdle
       }
     }
