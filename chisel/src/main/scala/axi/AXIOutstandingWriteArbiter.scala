@@ -22,13 +22,14 @@ class AXIOutstandingWriteArbiter extends Module {
   io.fromMasters <> 0.U.asTypeOf(io.fromMasters)
   io.toBus       <> 0.U.asTypeOf(io.toBus)
 
-  io.toBus.b.ready := true.B
-
   val awIdle :: awLocked :: Nil = Enum(2)
   val awState                   = RegInit(awIdle)
 
   // w channels are routed in the order aw handshake is performed
-  val writeQueue = Module(new Queue(UInt(1.W), 16, pipe = true, flow = true))
+  val writeQueue = Module(new Queue(UInt(1.W), 32, pipe = true, flow = true))
+
+  /** wait for b queue */
+  val bQueue = Module(new Queue(UInt(1.W), 32, pipe = true, flow = true))
 
   val isMastersAWValid = io.fromMasters(0).aw.valid || io.fromMasters(1).aw.valid
 
@@ -41,11 +42,21 @@ class AXIOutstandingWriteArbiter extends Module {
   writeQueue.io.enq.bits  := awLockIndexReg
 
   writeQueue.io.deq.ready := io.toBus.w.fire && io.toBus.w.bits.last
+  // VERI: will the write queue and b queue overflow and lose data?
+
+  bQueue.io.enq.valid := writeQueue.io.deq.fire
+  bQueue.io.enq.bits := writeQueue.io.deq.bits
+  bQueue.io.deq.ready := io.toBus.b.fire
 
   when(writeQueue.io.deq.valid) {
     io.toBus.w <> io.fromMasters(writeQueue.io.deq.bits).w
   }
 
+  when(bQueue.io.deq.valid) {
+    io.toBus.b <> io.fromMasters(bQueue.io.deq.bits).b
+  }
+
+  //TODO: optimize me
   switch(awState) {
     is(awIdle) {
       when(isMastersAWValid && readyForNewAW) {

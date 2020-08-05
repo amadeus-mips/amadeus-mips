@@ -37,6 +37,8 @@ class UncachedQueue extends Module {
   /** count how many outstanding read are there */
   val rCounter = RegInit(0.U(5.W))
 
+  val bCounter = RegInit(0.U(5.W))
+
   /** only stores read address */
   val readQueue = Module(new Queue(UInt(32.W), 16, true, true))
 
@@ -91,8 +93,8 @@ class UncachedQueue extends Module {
   io.axi.w.bits.last := true.B
   io.axi.w.valid     := writeDataQueue.io.deq.valid
 
-  /** ignore b channel completely */
-  io.axi.b.ready := true.B
+  /** when b complete, r could begin */
+  io.axi.b.ready := rState =/= rRead
 
   readQueue.io.enq.bits  := Cat(io.request.bits.tag, io.request.bits.physicalIndex)
   readQueue.io.enq.valid := reqValid && reqRead && rState =/= rWrite
@@ -116,6 +118,15 @@ class UncachedQueue extends Module {
     )
   )
 
+  bCounter := MuxCase(
+    bCounter,
+    Array(
+      (io.axi.b.fire && io.axi.aw.fire) -> bCounter,
+      io.axi.b.fire                     -> (bCounter - 1.U),
+      io.axi.aw.fire                    -> (bCounter + 1.U)
+    )
+  )
+
   switch(rState) {
     is(rIdle) {
       when(reqValid) {
@@ -132,7 +143,7 @@ class UncachedQueue extends Module {
       }
     }
     is(rWrite) {
-      when(writeAddressQueue.io.count === 0.U && writeDataQueue.io.count === 0.U && !io.request.fire) {
+      when(writeAddressQueue.io.count === 0.U && writeDataQueue.io.count === 0.U && bCounter === 0.U && !io.request.fire) {
         rState := rIdle
       }
     }
