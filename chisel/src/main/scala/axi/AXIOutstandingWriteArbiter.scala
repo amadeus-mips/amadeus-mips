@@ -6,7 +6,7 @@ import chisel3.util._
 /**
   * out standing axi write arbiter will process aw and w seperately. w order is the same as aw order
   */
-class AXIOutstandingWriteArbiter extends Module {
+class AXIOutstandingWriteArbiter(capacity: Int = 16) extends Module {
   val io = IO(new Bundle {
 
     //VERI: assume master comply with axi requirements
@@ -25,11 +25,14 @@ class AXIOutstandingWriteArbiter extends Module {
   val awIdle :: awLocked :: Nil = Enum(2)
   val awState                   = RegInit(awIdle)
 
+  /** keep count of the size. There should be no more than capacity number of requests in flight */
+  val size = RegInit(0.U((log2Ceil(capacity) + 1).W))
+
   // w channels are routed in the order aw handshake is performed
-  val writeQueue = Module(new Queue(UInt(1.W), 32, pipe = true, flow = true))
+  val writeQueue = Module(new Queue(UInt(1.W), capacity, pipe = true, flow = true))
 
   /** wait for b queue */
-  val bQueue = Module(new Queue(UInt(1.W), 32, pipe = true, flow = true))
+  val bQueue = Module(new Queue(UInt(1.W), capacity, pipe = true, flow = true))
 
   val isMastersAWValid = io.fromMasters(0).aw.valid || io.fromMasters(1).aw.valid
 
@@ -37,9 +40,16 @@ class AXIOutstandingWriteArbiter extends Module {
 
   val awLockIndexReg = Reg(UInt(1.W))
 
-  val readyForNewAW = writeQueue.io.enq.ready
+  /** when size is less than capacity, write queue is always not full */
+  val readyForNewAW = size =/= capacity.U
   writeQueue.io.enq.valid := io.toBus.aw.fire
   writeQueue.io.enq.bits  := awLockIndexReg
+
+  size := MuxCase(size, Array(
+    (io.toBus.aw.fire && io.toBus.b.fire) -> size,
+    io.toBus.aw.fire -> (size + 1.U),
+    io.toBus.b.fire -> (size - 1.U)
+  ))
 
   writeQueue.io.deq.ready := io.toBus.w.fire && io.toBus.w.bits.last
   // VERI: will the write queue and b queue overflow and lose data?
