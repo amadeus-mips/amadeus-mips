@@ -48,7 +48,10 @@ class UnCachedUnit extends Module {
   io.axi.ar.bits.id    := Constants.DATA_ID
   io.axi.ar.bits.addr  := readAddressReg
   io.axi.ar.bits.len   := 0.U(4.W)
-  io.axi.ar.bits.size  := "b010".U(3.W) // 4 Bytes
+  io.axi.ar.bits.size  := MuxCase("b010".U(3.W), Array(
+    (readAddressReg(0) === 1.U(1.W)) -> "b000".U(3.W),
+    (readAddressReg(1) === 1.U(1.W)) -> "b001".U(3.W)
+  ))
   io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-request burst
   io.axi.ar.bits.lock  := 0.U
   io.axi.ar.bits.cache := 0.U
