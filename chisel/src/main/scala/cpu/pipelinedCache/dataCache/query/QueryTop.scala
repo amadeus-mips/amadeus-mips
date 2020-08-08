@@ -193,7 +193,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     mshr.io.extractMiss.addr.index,
     io.fetchQuery.index
   )
-  io.queryCommit.waySel        := comparator.io.bankHitWay.bits
+  io.queryCommit.waySel        := Mux(qState === qInvalidating, invalidateCounter, comparator.io.bankHitWay.bits)
   io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
   io.queryCommit.writeData     := io.fetchQuery.writeData
   io.queryCommit.writeMask     := io.fetchQuery.writeMask
@@ -212,7 +212,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.tagValid.valid := true.B
   io.writeBack.bits.data           := refillBuffer.io.allData
 
-  io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough && io.fetchQuery.writeMask === 0.U) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
+  io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough && io.fetchQuery.writeMask === 0.U)
   io.ready := (passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && qState =/= qInvalidating && qState =/= qWaitToDrain
 
   io.dirtyWay := Mux(qState === qInvalidating, invalidateCounter,lruWayReg)
