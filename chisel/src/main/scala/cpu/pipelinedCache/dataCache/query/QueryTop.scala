@@ -193,7 +193,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
     mshr.io.extractMiss.addr.index,
     io.fetchQuery.index
   )
-  io.queryCommit.waySel        := Mux(qState === qInvalidating, invalidateCounter, comparator.io.bankHitWay.bits)
+  io.queryCommit.waySel        := comparator.io.bankHitWay.bits
   io.queryCommit.bankIndexSel  := io.fetchQuery.bankIndex
   io.queryCommit.writeData     := io.fetchQuery.writeData
   io.queryCommit.writeMask     := io.fetchQuery.writeMask
@@ -257,7 +257,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   // starting from the second cycle of invalidating, ending in the first cycle during waiting to drain
   when(qStateNext === qInvalidating ) {
     // when entry is dirty and valid
-    writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid)
+    writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid, false.B)
     writeQueue.io.enqueue.bits.addr.tag := RegNext(io.fetchQuery.tagValid(invalidateCounter).tag)
     writeQueue.io.enqueue.bits.addr.index := RegNext(io.fetchQuery.index)
     writeQueue.io.enqueue.bits.data := io.dirtyData
