@@ -13,6 +13,7 @@ class Memory2Top extends Module {
     val cachedData   = Input(UInt(dataLen.W))
     val out          = Output(new Mem2WbBundle)
   })
+  val uncached = io.in.uncached
   val readData = Mux(io.in.uncached, io.uncachedData, io.cachedData)
 
   io.out.op    := io.in.op
@@ -26,29 +27,45 @@ class Memory2Top extends Module {
         io.in.op,
         io.in.write.data,
         Seq(
-          MEM_LB -> MuxLookup(
-            io.in.addrL2,
-            io.in.write.data,
-            Seq(
-              "b11".U -> Util.signedExtend(readData(31, 24)),
-              "b10".U -> Util.signedExtend(readData(23, 16)),
-              "b01".U -> Util.signedExtend(readData(15, 8)),
-              "b00".U -> Util.signedExtend(readData(7, 0))
+          MEM_LB -> Mux(
+            uncached,
+            Util.signedExtend(readData(7, 0)),
+            MuxLookup(
+              io.in.addrL2,
+              io.in.write.data,
+              Seq(
+                "b11".U -> Util.signedExtend(readData(31, 24)),
+                "b10".U -> Util.signedExtend(readData(23, 16)),
+                "b01".U -> Util.signedExtend(readData(15, 8)),
+                "b00".U -> Util.signedExtend(readData(7, 0))
+              )
             )
           ),
-          MEM_LBU -> MuxLookup(
-            io.in.addrL2,
-            io.in.write.data,
-            Seq(
-              "b11".U -> Util.zeroExtend(readData(31, 24)),
-              "b10".U -> Util.zeroExtend(readData(23, 16)),
-              "b01".U -> Util.zeroExtend(readData(15, 8)),
-              "b00".U -> Util.zeroExtend(readData(7, 0))
+          MEM_LBU -> Mux(
+            uncached,
+            Util.zeroExtend(readData(7, 0)),
+            MuxLookup(
+              io.in.addrL2,
+              io.in.write.data,
+              Seq(
+                "b11".U -> Util.zeroExtend(readData(31, 24)),
+                "b10".U -> Util.zeroExtend(readData(23, 16)),
+                "b01".U -> Util.zeroExtend(readData(15, 8)),
+                "b00".U -> Util.zeroExtend(readData(7, 0))
+              )
             )
           ),
-          MEM_LH  -> Mux(io.in.addrL2(1), Util.signedExtend(readData(31, 16)), Util.signedExtend(readData(15, 0))),
-          MEM_LHU -> Mux(io.in.addrL2(1), Util.zeroExtend(readData(31, 16)), Util.zeroExtend(readData(15, 0))),
-          MEM_LW  -> readData
+          MEM_LH -> Mux(
+            uncached,
+            Util.signedExtend(readData(15, 0)),
+            Mux(io.in.addrL2(1), Util.signedExtend(readData(31, 16)), Util.signedExtend(readData(15, 0)))
+          ),
+          MEM_LHU -> Mux(
+            uncached,
+            Util.zeroExtend(readData(15, 0)),
+            Mux(io.in.addrL2(1), Util.zeroExtend(readData(31, 16)), Util.zeroExtend(readData(15, 0)))
+          ),
+          MEM_LW -> readData
         )
       )
     }
