@@ -2,10 +2,10 @@
 
 package cpu
 
-import axi.{AXIIO, AXIQueueArbiter}
+import axi.{AXIArbiter, AXIIO, AXIQueueArbiter}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.UnCachedUnit
+import cpu.cache.{UnCachedUnit, UncachedQueue}
 import cpu.core.Core_ls
 import cpu.mmu.{FakeMMU, MMU}
 import cpu.performance.CPUTopPerformanceIO
@@ -29,7 +29,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
-  val arbiter = Module(new AXIQueueArbiter(3, 5))
+  val arbiter = Module(new AXIArbiter(3))
 
   val iCache   = Module(new InstrCache(conf.iCacheConf))
   val dCache   = Module(new DataCache(conf.iCacheConf))
