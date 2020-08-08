@@ -128,7 +128,7 @@ class DataCache(cacheConfig: CacheConfig)(implicit CPUConfig: CPUConfig) extends
         query.io.writeBack.bits.data(k),
         query.io.queryCommit.writeData
       )
-      dirtyData(k) := dataBanks.io.way_bank(RegNext(query.io.dirtyWay))(k).readData
+      dirtyData(k) := dataBanks.io.way_bank(query.io.dirtyWay)(k).readData
     }
     readDataWire(i) := dataBanks.io.way_bank(i)(query_commit.io.out.bankIndexSel).readData
   }
