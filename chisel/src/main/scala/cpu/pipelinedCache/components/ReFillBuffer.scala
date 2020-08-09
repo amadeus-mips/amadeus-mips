@@ -69,7 +69,6 @@ class ReFillBuffer(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) exte
         buffer(writePtr)          := io.inputData.bits
       }
       when(io.finish) {
-        bufferValidMask := 0.U.asTypeOf(bufferValidMask)
         state           := sIdle
       }
     }
