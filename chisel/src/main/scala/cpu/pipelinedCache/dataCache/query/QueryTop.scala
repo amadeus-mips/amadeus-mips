@@ -269,6 +269,7 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   writeQueue.io.query.data      := io.fetchQuery.writeData
 
   writeQueue.io.writeHandshake := axiWrite.io.writeHandshake
+  writeQueue.io.writeCommit := axiWrite.io.writeCommit
 
   axiWrite.io.addrRequest <> writeQueue.io.dequeueAddr
   axiWrite.io.data        <> writeQueue.io.dequeueData

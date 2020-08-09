@@ -27,6 +27,9 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
 
     /** see [[cpu.pipelinedCache.components.WriteQueue.io.writeHandshake]] */
     val writeHandshake = Output(Bool())
+
+    /** signals when a write has commited, i.e. there is a b handshake */
+    val writeCommit = Output(Bool())
   })
 
   val writeIdle :: writeTransfer :: Nil = Enum(2)
@@ -74,6 +77,8 @@ class AXIWritePort(AXIID: UInt)(implicit cacheConfig: CacheConfig) extends Modul
   io.axi.b.ready := true.B
 
   io.writeHandshake := io.axi.w.fire || io.axi.aw.fire
+
+  io.writeCommit := io.axi.b.fire
 
   switch(writeState) {
     is(writeIdle) {
