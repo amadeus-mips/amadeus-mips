@@ -91,9 +91,9 @@ class Control extends Module {
         0.U,
         Seq(
           "b11".U -> io.inMemData,
-          "b10".U -> Cat(0.U(8.W), io.inMemData(23, 0)),
-          "b01".U -> Cat(0.U(16.W), io.inMemData(15, 0)),
-          "b00".U -> Cat(0.U(24.W), io.inMemData(7, 0))
+          "b10".U -> Cat(0.U(8.W), io.inMemData(31, 8)),
+          "b01".U -> Cat(0.U(16.W), io.inMemData(31, 16)),
+          "b00".U -> Cat(0.U(24.W), io.inMemData(31, 24))
         )
       ),
       MEM_SWR -> MuxLookup(
