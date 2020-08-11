@@ -17,6 +17,8 @@ class Control extends Module {
     val aluResult   = Input(UInt(dataLen.W))
     val aluOverflow = Input(Bool())
 
+    val trap = Input(Bool())
+
     val exceptLoad = Input(Bool())
     val exceptSave = Input(Bool())
 
@@ -34,6 +36,7 @@ class Control extends Module {
   io.outExcept(EXCEPT_OVERFLOW) := io.aluOverflow
   io.outExcept(EXCEPT_LOAD)     := io.exceptLoad
   io.outExcept(EXCEPT_STORE)    := io.exceptSave
+  io.outExcept(EXCEPT_TRAP)     := io.trap && io.instType === INST_TRAP
 
   io.outWrite := io.inWrite
   when(io.aluOverflow || io.exceptSave || io.exceptLoad || !io.moveWe) { io.outWrite.enable := false.B }

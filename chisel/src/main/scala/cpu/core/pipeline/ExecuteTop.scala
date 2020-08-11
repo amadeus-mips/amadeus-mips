@@ -108,6 +108,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
   control.io.aluResult    := alu.io.result
   control.io.aluOverflow  := alu.io.overflow
+  control.io.trap         := alu.io.trap
   control.io.exceptLoad   := memory.io.exceptLoad
   control.io.exceptSave   := memory.io.exceptSave
   control.io.moveResult   := move.io.result

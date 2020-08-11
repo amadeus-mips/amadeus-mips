@@ -18,7 +18,7 @@ trait opConstants {
   val OPn_X     = 1.U(1.W)    // Dont care
 
   // 指令类型（判断执行阶段写入寄存器结果的来源 ALU, CP0...）
-  val instTypeLen = 3
+  val instTypeLen = 4
   val INST_N      = 0.U(instTypeLen.W)
   val INST_ALU    = 1.U(instTypeLen.W)    // 普通ALU,
   val INST_MV     = 2.U(instTypeLen.W)    // Move（包括hilo, cp0)
@@ -27,6 +27,7 @@ trait opConstants {
   val INST_BR     = 5.U(instTypeLen.W)    // 跳转指令
   val INST_EXC    = 6.U(instTypeLen.W)    // 例外指令
   val INST_TLB    = 7.U(instTypeLen.W)    // TLB instruction
+  val INST_TRAP   = 8.U(instTypeLen.W)
 
   val opLen = 6
   val OP_N     = 0.U(opLen.W)   // 无操作
@@ -98,6 +99,14 @@ trait opConstants {
   val MEM_SWL   = 59.U(opLen.W)
   val MEM_SWR   = 60.U(opLen.W)
 
+
+  val TRAP_EQ   = 0.U(opLen.W)
+  val TRAP_GE   = 1.U(opLen.W)
+  val TRAP_GEU  = 2.U(opLen.W)
+  val TRAP_LT   = 3.U(opLen.W)
+  val TRAP_LTU  = 4.U(opLen.W)
+  val TRAP_NE   = 5.U(opLen.W)
+
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
     require(op.getWidth == opLen)
@@ -159,7 +168,7 @@ trait valueConstants {
 }
 
 trait exceptConstants {
-  val exceptAmount = 16
+  val exceptAmount = 17
 
   val EXCEPT_FETCH        = 0
   val EXCEPT_ERET         = 1
@@ -181,6 +190,8 @@ trait exceptConstants {
   val EXCEPT_DATA_TLB_W_REFILL   = 13
   val EXCEPT_DATA_TLB_W_INVALID  = 14
   val EXCEPT_DATA_TLB_W_MODIFIED = 15
+
+  val EXCEPT_TRAP = 16
 
   def isTLBExcept(exc: Vec[Bool]): Bool = {
     require(exc.length == exceptAmount)

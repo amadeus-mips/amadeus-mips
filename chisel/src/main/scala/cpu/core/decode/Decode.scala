@@ -67,6 +67,20 @@ class Decode extends Module {
       SLTI      -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_SLT , WR_Y  , WRA_T2 , IMM_LSE),
       SLTIU     -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_SLTU, WR_Y  , WRA_T2 , IMM_LSE),
 
+      // Trap
+      TEQ       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_EQ, WR_N  , WRA_X  , IMM_N  ),
+      TEQI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_EQ, WR_N  , WRA_X  , IMM_LSE),
+      TGE       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_GE, WR_N  , WRA_X  , IMM_N  ),
+      TGEI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_GE, WR_N  , WRA_X  , IMM_LSE),
+      TGEIU     -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_GEU, WR_N , WRA_X  , IMM_LSE),
+      TGEU      -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_GEU, WR_N , WRA_X  , IMM_N  ),
+      TLT       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_LT, WR_N  , WRA_X  , IMM_N  ),
+      TLTI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_LT, WR_N  , WRA_X  , IMM_LSE),
+      TLTIU     -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_LTU, WR_N , WRA_X  , IMM_LSE),
+      TLTU      -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_LTU, WR_N , WRA_X  , IMM_N  ),
+      TNE       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_NE, WR_N  , WRA_X  , IMM_N  ),
+      TNEI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_NE, WR_N  , WRA_X  , IMM_LSE),
+
       // 算术指令
       ADD       -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_ADD , WR_Y  , WRA_T1 , IMM_N  ),
       ADDU      -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_ADDU, WR_Y  , WRA_T1 , IMM_N  ),

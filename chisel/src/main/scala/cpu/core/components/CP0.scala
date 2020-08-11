@@ -132,6 +132,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
         io.except(EXCEPT_OVERFLOW)            -> "h0c".U(5.W), // Ov
         io.except(EXCEPT_SYSCALL)             -> "h08".U(5.W), // Sys
         io.except(EXCEPT_BREAK)               -> "h09".U(5.W), // Break
+        io.except(EXCEPT_TRAP)                -> "h0d".U(5.W), // Tr
         io.except(EXCEPT_LOAD)                -> "h04".U(5.W), // AdEL
         io.except(EXCEPT_STORE)               -> "h05".U(5.W), // AdES
         io.except(EXCEPT_DATA_TLB_R_REFILL)   -> "h02".U(5.W), // TLBL
