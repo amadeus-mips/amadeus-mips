@@ -1319,3 +1319,19 @@
     movn v0, t0, t1; \
     bne v0, v1, inst_error; \
     nop
+
+/* 93 */
+#define TEST_CLO(in_a, ref) \
+    LI (t0, in_a); \
+    LI (v1, ref); \
+    clo v0, t0; \
+    bne v0, v1, inst_error; \
+    nop
+
+/* 93 */
+#define TEST_CLZ(in_a, ref) \
+    LI (t0, in_a); \
+    LI (v1, ref); \
+    clz v0, t0; \
+    bne v0, v1, inst_error; \
+    nop

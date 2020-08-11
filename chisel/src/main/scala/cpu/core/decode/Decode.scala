@@ -77,9 +77,12 @@ class Decode extends Module {
       MULTU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULTU, WR_N  , WRA_X  , IMM_N  ),
       DIV       -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIV  , WR_N  , WRA_X  , IMM_N  ),
       DIVU      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIVU , WR_N  , WRA_X  , IMM_N  ),
+      CLO       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLO , WR_Y  , WRA_T1 , IMM_N  ),
+      CLZ       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLZ , WR_Y  , WRA_T1 , IMM_N  ),
       // 立即数
       ADDI      -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_ADD , WR_Y  , WRA_T2 , IMM_LSE),
       ADDIU     -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_ADDU, WR_Y  , WRA_T2 , IMM_LSE),
+
 
       // 跳转指令
       J         -> List(Y , OPn_X  , OPn_X  , INST_BR , BR_J    , WR_N  , WRA_X  , IMM_N  ),

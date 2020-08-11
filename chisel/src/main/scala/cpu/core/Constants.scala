@@ -15,7 +15,7 @@ trait opConstants {
   // Operand
   val OPn_RF    = 0.U(1.W)    // regfile
   val OPn_IMM   = 1.U(1.W)    // 立即数
-  val OPn_X     = 0.U(1.W)    // Dont care
+  val OPn_X     = 1.U(1.W)    // Dont care
 
   // 指令类型（判断执行阶段写入寄存器结果的来源 ALU, CP0...）
   val instTypeLen = 3
@@ -91,6 +91,8 @@ trait opConstants {
   val MV_MOVN   = 52.U(opLen.W)
   val MV_MOVZ   = 53.U(opLen.W)
   val MEM_CAC   = 54.U(opLen.W)
+  val ALU_CLO   = 55.U(opLen.W)
+  val ALU_CLZ   = 56.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {

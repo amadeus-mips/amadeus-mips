@@ -29,6 +29,16 @@ class ALU extends Module {
     )
   )
 
+  val clo = WireInit(32.U)
+  val clz = WireInit(32.U)
+  for(i <- 0 until 32) {
+    when(!io.op1(i)) {
+      clo := (31 - i).U
+    }.otherwise {
+      clz := (31 - i).U
+    }
+  }
+
   io.result := MuxLookup(
     io.operation,
     0.U,
@@ -48,7 +58,9 @@ class ALU extends Module {
       ALU_ADDU -> add_result,
       ALU_SUB  -> sub_result,
       ALU_SUBU -> sub_result,
-      ALU_MUL  -> io.lo
+      ALU_MUL  -> io.lo,
+      ALU_CLO  -> clo,
+      ALU_CLZ  -> clz,
       // @formatter:on
     )
   )

@@ -2,7 +2,7 @@
 #include <regdef.h>
 #include <cpu_cde.h>
 
-#define TEST_NUM 92
+#define TEST_NUM 94
 
 
 ##s0, number
@@ -684,6 +684,14 @@ kseg0_kseg1:
     nop
     jal wait_1s
     nop
+    jal n93_clo_test
+    nop
+    jal wait_1s
+    nop
+    jal n94_clz_test
+    nop
+    jal wait_1s
+    nop   
 ###check io access
     LI  (a0, IO_SIMU_ADDR)
     LI  (t0, 0x1234)
