@@ -1,7 +1,7 @@
 package cpu.core.pipeline
 
 import chisel3._
-import chisel3.util.MuxLookup
+import chisel3.util._
 import cpu.core.Constants._
 import cpu.core.bundles.stages.{Mem1Mem2Bundle, Mem2WbBundle}
 import shared.Util
@@ -48,7 +48,27 @@ class Memory2Top extends Module {
           ),
           MEM_LH  -> Mux(io.in.addrL2(1), Util.signedExtend(readData(31, 16)), Util.signedExtend(readData(15, 0))),
           MEM_LHU -> Mux(io.in.addrL2(1), Util.zeroExtend(readData(31, 16)), Util.zeroExtend(readData(15, 0))),
-          MEM_LW  -> readData
+          MEM_LW  -> readData,
+          MEM_LWL -> MuxLookup(
+            io.in.addrL2,
+            io.in.write.data,
+            Seq(
+              "b11".U -> readData,
+              "b10".U -> Cat(readData(23,0), io.in.write.data(7,0)),
+              "b01".U -> Cat(readData(15,0), io.in.write.data(15,0)),
+              "b00".U -> Cat(readData(7,0), io.in.write.data(23,0)),
+            )
+          ),
+          MEM_LWR -> MuxLookup(
+            io.in.addrL2,
+            io.in.write.data,
+            Seq(
+              "b11".U -> Cat(io.in.write.data(31, 24), readData(7,0)),
+              "b10".U -> Cat(io.in.write.data(31, 16), readData(15,0)),
+              "b01".U -> Cat(io.in.write.data(31, 8), readData(7,0)),
+              "b00".U -> readData,
+            )
+          )
         )
       )
     }

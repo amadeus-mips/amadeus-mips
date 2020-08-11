@@ -93,16 +93,20 @@ trait opConstants {
   val MEM_CAC   = 54.U(opLen.W)
   val ALU_CLO   = 55.U(opLen.W)
   val ALU_CLZ   = 56.U(opLen.W)
+  val MEM_LWL   = 57.U(opLen.W)
+  val MEM_LWR   = 58.U(opLen.W)
+  val MEM_SWL   = 59.U(opLen.W)
+  val MEM_SWR   = 60.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    Util.listHasElement(List(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW), op)
+    VecInit(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW, MEM_LWL, MEM_LWR).contains(op)
   }
   /** judge whether op is to save data to memory */
   def opIsStore(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    VecInit(Seq(MEM_SB, MEM_SH, MEM_SW)).contains(op)
+    VecInit(MEM_SB, MEM_SH, MEM_SW, MEM_SWL, MEM_SWR).contains(op)
   }
   /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {

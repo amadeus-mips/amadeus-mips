@@ -23,6 +23,8 @@ class Control extends Module {
     val moveResult = Input(UInt(dataLen.W))
     val moveWe     = Input(Bool())
 
+    val memWriteData = Input(UInt(dataLen.W))
+
     val outWrite  = Output(new WriteBundle())
     val outExcept = Output(Vec(exceptAmount, Bool()))
   })
@@ -41,7 +43,8 @@ class Control extends Module {
     Array(
       INST_ALU -> io.aluResult,
       INST_MV  -> io.moveResult,
-      INST_BR  -> (io.pc + 8.U) // 链接跳转的写入地址为pc + 8
+      INST_BR  -> (io.pc + 8.U), // 链接跳转的写入地址为pc + 8
+      INST_MEM  -> io.memWriteData,
     )
   )
   io.outWrite.valid := io.inWrite.valid ||

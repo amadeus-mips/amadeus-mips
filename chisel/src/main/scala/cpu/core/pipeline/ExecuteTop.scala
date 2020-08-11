@@ -8,7 +8,6 @@ import cpu.core.Constants._
 import cpu.core.bundles._
 import cpu.core.bundles.stages.{ExeMemBundle, IdExeBundle}
 import cpu.core.components.{BrPrUpdateBundle, Div, Mult}
-import cpu.core.execute
 import cpu.core.execute.components._
 import shared.ValidBundle
 
@@ -107,12 +106,13 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   control.io.pc       := io.in.pc
   control.io.inExcept := io.in.except
 
-  control.io.aluResult   := alu.io.result
-  control.io.aluOverflow := alu.io.overflow
-  control.io.exceptLoad  := memory.io.exceptLoad
-  control.io.exceptSave  := memory.io.exceptSave
-  control.io.moveResult  := move.io.result
-  control.io.moveWe      := move.io.we
+  control.io.aluResult    := alu.io.result
+  control.io.aluOverflow  := alu.io.overflow
+  control.io.exceptLoad   := memory.io.exceptLoad
+  control.io.exceptSave   := memory.io.exceptSave
+  control.io.moveResult   := move.io.result
+  control.io.moveWe       := move.io.we
+  control.io.memWriteData := io.in.op2
 
   io.out.write       := control.io.outWrite
   io.out.operation   := io.in.operation
