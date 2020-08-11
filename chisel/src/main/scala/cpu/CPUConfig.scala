@@ -6,7 +6,7 @@ import cpu.pipelinedCache.CacheConfig
 case class CPUConfig(
   build:                     Boolean,
   memoryFile:                String      = "",
-  enableTLB:                 Boolean     = true,
+  enableTLB:                 Boolean     = false,
   tlbSize:                   Int         = 16,
   fetchAmount:               Int         = 2,
   compareRamDirectly:        Boolean     = false,

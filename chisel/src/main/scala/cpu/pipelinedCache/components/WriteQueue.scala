@@ -48,9 +48,6 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
     /** when there is a write query hit in the write queue */
     val holdOffNewMiss = Output(Bool())
 
-    /** the write has performed b handshake, and can be viewed as commited */
-    val writeCommit = Input(Bool())
-
     val size = Output(UInt((log2Ceil(capacity)+1).W))
   })
   require(isPow2(capacity))
@@ -70,7 +67,7 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
   val lineWritePTR = RegInit(0.U(log2Ceil(cacheConfig.numOfBanks).W))
 
 
-  val dIdle :: dDispatch :: dWaitForCommit :: Nil = Enum(3)
+  val dIdle :: dDispatch :: Nil = Enum(2)
   val dispatchState             = RegInit(dIdle)
 
   require(!CPUConfig.verification)
@@ -103,12 +100,15 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
     /**
       * there is a hit in the hit vec
       * if the line is not being dispatched, everything is good
-      * if the query is a hit in the transaction in flight, then it must wait for
-      * axi b channel to perform a handshake before doing anything
+      * or the query is a read, also good
+      * but if the query is performing a write, then it is not counted as a query hit.
+      * [[cpu.pipelinedCache.dataCache.query.QueryTop]]
+      * will issue a new miss. As this handshake has taken place yet, the read will observe this write
+      * in transfer
       */
-    queryHitVec.asUInt =/= 0.U && queryHitPos =/= headPTR
+    queryHitVec.asUInt =/= 0.U && Mux(io.query.writeMask === 0.U, true.B, queryHitPos =/= headPTR)
 
-  io.holdOffNewMiss := queryHitVec.asUInt =/= 0.U && queryHitPos === headPTR
+  io.holdOffNewMiss := queryHitVec.asUInt =/= 0.U && io.query.writeMask =/= 0.U && queryHitPos === headPTR
 
   val hasAWHandshake = RegInit(false.B)
 
@@ -135,10 +135,7 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
     tailPTR            := tailPTR - 1.U
   }
 
-  /** when nothing happens, size does not change
-    * when dispatch state receives a b handshake, that means a write has commited. size := size - 1
-    * if there is an enqueue fire, size := size + 1*/
-  size := size - ((dispatchState === dWaitForCommit) && io.writeCommit).asUInt + io.enqueue.fire.asUInt
+  size := size - ((dispatchState === dDispatch) && (io.dequeueData.fire) && (lineWritePTR === (cacheConfig.numOfBanks - 1).U)).asUInt + io.enqueue.fire.asUInt
 
   // write query
   when(io.query.writeMask.asUInt =/= 0.U && isQueryHit) {
@@ -168,20 +165,13 @@ class WriteQueue(capacity: Int = 8)(implicit cacheConfig: CacheConfig, CPUConfig
       when(io.dequeueData.fire) {
         lineWritePTR := lineWritePTR + 1.U
         when(lineWritePTR === (cacheConfig.numOfBanks - 1).U) {
-          dispatchState      := dWaitForCommit
+          dispatchState      := dIdle
+          headPTR            := headPTR - 1.U
+          validBank(headPTR) := false.B
         }
       }
     }
-    is(dWaitForCommit) {
-      when(io.writeCommit) {
-        headPTR            := headPTR - 1.U
-        validBank(headPTR) := false.B
-        dispatchState := dIdle
-      }
-    }
   }
-
-  assert(!io.writeCommit || dispatchState === dWaitForCommit, "when dispatch state is not wait for commit, write commit should not be high")
 
   assert(size === 0.U || (size =/= 0.U && validBank(headPTR)))
   assert(headPTR =/= tailPTR || (headPTR === tailPTR && (size === 0.U || size === capacity.U)))
