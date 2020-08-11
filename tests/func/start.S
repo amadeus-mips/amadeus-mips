@@ -2,7 +2,7 @@
 #include <regdef.h>
 #include <cpu_cde.h>
 
-#define TEST_NUM 94
+#define TEST_NUM 98
 
 
 ##s0, number
@@ -82,6 +82,9 @@ test_finish:
     nop
     li  k0, 0x08 # int
     beq k1, k0, int_ex
+    nop
+    li  k0, 0x09 # trap
+    beq k1, k0, trap_ex
     nop
 
 syscall_ex:
@@ -243,6 +246,25 @@ int_ex:
     lui s2, 0x8
     b ex_ret
     nop
+
+trap_ex:
+    addu  s2, zero, zero
+    mfc0 k0, c0_epc
+    bne  k0, s4, ex_finish
+    nop
+    mfc0 k0, c0_cause
+    andi k0, k0, 0x7c # 6..2
+    li   k1, 0x34 # 011_0100
+    bne  k0, k1, ex_finish
+    nop
+    mfc0 k0, c0_status
+    andi k0, k0, 0x02
+    li   k1, 0x02
+    bne  k0, k1, ex_finish
+    nop
+    lui  s2, 0x9
+    b ex_finish
+    nop    
 
 ex_finish:
     mfc0 k0,c0_cause
@@ -689,6 +711,26 @@ kseg0_kseg1:
     jal wait_1s
     nop
     jal n94_clz_test
+    nop
+    jal wait_1s
+    nop   
+    jal n95_lwl_test
+    nop
+    jal wait_1s
+    nop   
+    jal n96_lwr_test
+    nop
+    jal wait_1s
+    nop
+    jal n97_swl_test
+    nop
+    jal wait_1s
+    nop   
+    jal n98_swr_test
+    nop
+    jal wait_1s
+    nop   
+    jal n99_trap_ex_test
     nop
     jal wait_1s
     nop   

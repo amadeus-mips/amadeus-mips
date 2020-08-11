@@ -1,0 +1,38 @@
+#include <asm.h>
+#include <regdef.h>
+#include <inst_test.h>
+
+LEAF(n95_lwl_test)
+    .set noreorder
+    addiu s0, s0 ,1
+    li  s2, 0x0
+###test inst
+    TEST_LWL(0x0020cbb6, 0x6ac6e045, 0x8355bac7, 0x8000d000, 0, 0x4520cbb6)
+    TEST_LWL(0x735f3fa6, 0xc0b9305a, 0x401b058b, 0x8000d000, 1, 0x305a3fa6)
+    TEST_LWL(0x730f0c14, 0xab309418, 0xe4a93ac3, 0x8000d000, 2, 0x30941814)
+    TEST_LWL(0xd6948ca2, 0x01f80a99, 0xa5fccbb6, 0x8000d000, 3, 0x01f80a99)
+    TEST_LWL(0x48933abc, 0x018e52f9, 0x3bf8df69, 0x8000d000, 4, 0x69933abc)
+    TEST_LWL(0x93509466, 0x480e492f, 0x93c41ef5, 0x8000d000, 5, 0x1ef59466)
+    TEST_LWL(0xcb335517, 0x4329b2bb, 0x6d5bb4b4, 0x8000d000, 6, 0x5bb4b417)
+    TEST_LWL(0x9f8ed2f2, 0xe72a2868, 0xca26169a, 0x8000d000, 7, 0xca26169a)
+    TEST_LWL(0xe52e236a, 0xb2824c88, 0x5840304a, 0x8000d000, 0, 0x882e236a)
+    TEST_LWL(0xa97d161f, 0x70e07e0a, 0x5c73740f, 0x8000d000, 1, 0x7e0a161f)
+    TEST_LWL(0x2ced9105, 0x0e96f2c1, 0x90c7f838, 0x8000d000, 2, 0x96f2c105)
+    TEST_LWL(0x6d514064, 0x79386eb0, 0xe4b50cb3, 0x8000d000, 3, 0x79386eb0)
+    TEST_LWL(0x3f2dca1c, 0x5aa3b2ec, 0x6fe1d2e5, 0x8000d000, 4, 0xe52dca1c)
+    TEST_LWL(0xbd5f688d, 0xb8326f31, 0x49300fd8, 0x8000d000, 5, 0x0fd8688d)
+    TEST_LWL(0xde8eb9b8, 0x18726b2b, 0x6ca57e5c, 0x8000d000, 6, 0xa57e5cb8)
+    TEST_LWL(0xe971d6aa, 0x4e4079e4, 0x8cf1efd5, 0x8000d000, 7, 0x8cf1efd5)
+###detect exception
+    bne s2, zero, inst_error
+    nop
+###score ++
+    addiu s3, s3, 1
+###output (s0<<24)|s3
+inst_error:  
+    sll t1, s0, 24
+    or t0, t1, s3 
+    sw t0, 0(s1)
+    jr ra
+    nop
+END(n95_lwl_test)

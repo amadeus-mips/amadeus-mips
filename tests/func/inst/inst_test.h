@@ -1328,10 +1328,67 @@
     bne v0, v1, inst_error; \
     nop
 
-/* 93 */
+/* 94 */
 #define TEST_CLZ(in_a, ref) \
     LI (t0, in_a); \
     LI (v1, ref); \
     clz v0, t0; \
     bne v0, v1, inst_error; \
     nop
+
+/* 95 */
+#define TEST_LWL(base_reg, data_a, data_b, base_addr, offset, ref) \
+    LI (v0, base_reg); \
+    LI (t1, data_a); \
+    LI (t2, data_b); \
+    LI (t0, base_addr); \
+    LI (v1, ref); \
+    sw t1, 0(t0); \
+    sw t2, 4(t0); \
+    lwl v0, offset(t0); \
+    bne v0, v1, inst_error; \
+    nop
+
+
+/* 96 */
+#define TEST_LWR(base_reg, data_a, data_b, base_addr, offset, ref) \
+    LI (v0, base_reg); \
+    LI (t1, data_a); \
+    LI (t2, data_b); \
+    LI (t0, base_addr); \
+    LI (v1, ref); \
+    sw t1, 0(t0); \
+    sw t2, 4(t0); \
+    lwr v0, offset(t0); \
+    bne v0, v1, inst_error; \
+    nop
+
+/* 97 */
+#define TEST_SWL(reg, mem, base_addr, offset, ref) \
+    LI (t1, reg); \
+    LI (t2, mem); \
+    LI (t0, base_addr); \
+    LI (v1, ref); \
+    sw t2, 0(t0); \
+    swl t1, offset(t0); \
+    lw v0, 0(t0); \
+    bne v0, v1, inst_error; \
+    nop
+
+/* 98 */
+#define TEST_SWR(reg, mem, base_addr, offset, ref) \
+    LI (t1, reg); \
+    LI (t2, mem); \
+    LI (t0, base_addr); \
+    LI (v1, ref); \
+    sw t2, 0(t0); \
+    swr t1, offset(t0); \
+    lw v0, 0(t0); \
+    bne v0, v1, inst_error; \
+    nop
+
+
+
+
+
+
