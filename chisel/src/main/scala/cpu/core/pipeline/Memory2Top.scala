@@ -63,9 +63,9 @@ class Memory2Top extends Module {
             io.in.addrL2,
             io.in.write.data,
             Seq(
-              "b11".U -> Cat(io.in.write.data(31, 24), readData(7,0)),
-              "b10".U -> Cat(io.in.write.data(31, 16), readData(15,0)),
-              "b01".U -> Cat(io.in.write.data(31, 8), readData(7,0)),
+              "b11".U -> Cat(io.in.write.data(31, 8), readData(31,24)),
+              "b10".U -> Cat(io.in.write.data(31, 16), readData(31,16)),
+              "b01".U -> Cat(io.in.write.data(31, 24), readData(31,8)),
               "b00".U -> readData,
             )
           )
