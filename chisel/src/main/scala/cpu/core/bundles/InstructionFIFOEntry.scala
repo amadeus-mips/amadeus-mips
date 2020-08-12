@@ -12,7 +12,7 @@ class InstructionFIFOEntry(implicit conf: CPUConfig) extends Bundle {
   val inDelaySlot = Bool()
   val brPredict   = ValidBundle(addrLen)
   val brPrHistory = UInt(conf.branchPredictorHistoryLen.W)
-  val valid       = Bool()
+  val instValid   = Bool()
 
   override def cloneType: InstructionFIFOEntry.this.type = new InstructionFIFOEntry().asInstanceOf[this.type]
 }

@@ -123,6 +123,11 @@ trait opConstants {
     Util.listHasElement(List(BR_EQ, BR_NE, BR_GTZ, BR_GEZ, BR_GEZAL, BR_LTZ, BR_LTZAL, BR_LEZ), op)
   }
 
+  def opIsHILOWrite(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(WO_MULT, WO_MULTU, WO_DIV, WO_DIVU, ALU_MUL, WO_MTHI, WO_MTLO).contains(op)
+  }
+
 
 
   // 是否写regfile, Write Register

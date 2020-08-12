@@ -22,6 +22,7 @@ class IdExeBundle(implicit c: CPUConfig) extends Bundle {
   val brPredict   = ValidBundle(32)
   val brPrHistory = UInt(c.branchPredictorHistoryLen.W)
   val instValid   = Bool()
+  val pcValid     = Bool()
 
   override def cloneType: IdExeBundle.this.type = new IdExeBundle().asInstanceOf[this.type ]
 }

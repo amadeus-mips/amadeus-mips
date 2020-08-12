@@ -8,6 +8,7 @@ import cpu.core.bundles.{CPBundle, CacheOp, HILOValidBundle, WriteBundle}
 
 class ExeMemBundle extends Bundle {
   val write       = new WriteBundle
+  val instType    = UInt(instTypeLen.W)
   val operation   = UInt(opLen.W)
   val cp0         = new CPBundle
   val hilo        = new HILOValidBundle

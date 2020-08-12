@@ -5,16 +5,16 @@ import chisel3.iotesters.PeekPokeTester
 class SystemTester(c: SocUpTop)(implicit cfg: SystemTestConfig) extends PeekPokeTester(c) {
   val nioWrapper: NIOWrapper = new SocketWrapper(9654)
 
-  var pc:    BigInt = peek(c.io.debug.wbPC)
-  var wen:   BigInt = peek(c.io.debug.wbRegFileWEn)
-  var wnum:  BigInt = peek(c.io.debug.wbRegFileWNum)
-  var wdata: BigInt = peek(c.io.debug.wbRegFileWData)
+  var pc:    BigInt = peek(c.io.debug(0).wbPC)
+  var wen:   BigInt = peek(c.io.debug(0).wbRegFileWEn)
+  var wnum:  BigInt = peek(c.io.debug(0).wbRegFileWNum)
+  var wdata: BigInt = peek(c.io.debug(0).wbRegFileWData)
 
-  def updateDebug() = {
-    pc    = peek(c.io.debug.wbPC)
-    wen   = peek(c.io.debug.wbRegFileWEn)
-    wnum  = peek(c.io.debug.wbRegFileWNum)
-    wdata = peek(c.io.debug.wbRegFileWData)
+  def updateDebug(n: Int = 0) = {
+    pc    = peek(c.io.debug(n).wbPC)
+    wen   = peek(c.io.debug(n).wbRegFileWEn)
+    wnum  = peek(c.io.debug(n).wbRegFileWNum)
+    wdata = peek(c.io.debug(n).wbRegFileWData)
   }
 
   // start run
@@ -40,11 +40,14 @@ class SystemTester(c: SocUpTop)(implicit cfg: SystemTestConfig) extends PeekPoke
 
   def run(): Unit = {
     while(cCount < cfg.cycleLimit){
-      if(pc != 0){
-        iCount += 1
-        if(cfg.needBlockingIO) if(!BlockingIO()) return
-        lastDebugInfo = debugInfo
-        lastDebugCycle = cCount
+      for(i <- 0 until 2) {
+        if (pc != 0) {
+          iCount += 1
+          if (cfg.needBlockingIO) if (!BlockingIO()) return
+          lastDebugInfo = debugInfo
+          lastDebugCycle = cCount
+        }
+        updateDebug(1)
       }
       cCount += 1
       if(cCount - lastDebugCycle > 500){

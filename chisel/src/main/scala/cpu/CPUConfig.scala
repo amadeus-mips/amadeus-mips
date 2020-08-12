@@ -15,9 +15,10 @@ case class CPUConfig(
   branchPredictorAddrLen:    Int         = 10,
   branchPredictorHistoryLen: Int         = 2,
   instructionFIFOLength:     Int         = 4,
-  decodeWidth:               Int         = 1,
+  decodeWidth:               Int         = 2,
   verification:              Boolean     = false
 ) {
+  val decodeBufferNum = 1
   require(isPow2(instructionFIFOLength))
 }
 

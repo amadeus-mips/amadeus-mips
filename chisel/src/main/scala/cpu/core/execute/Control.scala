@@ -47,7 +47,7 @@ class Control extends Module {
       INST_ALU -> io.aluResult,
       INST_MV  -> io.moveResult,
       INST_BR  -> (io.pc + 8.U), // 链接跳转的写入地址为pc + 8
-      INST_MEM  -> io.memWriteData,
+      INST_MEM -> io.memWriteData
     )
   )
   io.outWrite.valid := io.inWrite.valid ||
