@@ -143,6 +143,13 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
       )
     )
 
+  val timeIntr = RegInit(false.B)
+  when(compare.reg =/= 0.U && compare.reg === count.reg) {
+    timeIntr := true.B
+  }.elsewhen(compareWriteCP0(compare)) {
+    timeIntr := false.B
+  }
+
   // hard write
   when(io.op === TLB_R) {
     entryHi.reg.vpn2  := io.tlb.readResp.vpn2
@@ -190,7 +197,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   when(except && !status.reg.exl) {
     cause.reg.bd := io.inDelaySlot
   }
-  cause.reg.ipHard  := io.intr
+  cause.reg.ipHard  := Cat(timeIntr, io.intr(intrLen - 2, 0))
   cause.reg.excCode := excCode
 
   when(except && !io.except(EXCEPT_ERET) && !status.reg.exl) {
