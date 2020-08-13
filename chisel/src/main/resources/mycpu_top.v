@@ -97,10 +97,10 @@ module mycpu_top(
         .io_axi_b_bits_resp        (bresp),
         .io_axi_b_valid       (bvalid),
         .io_axi_b_ready       (bready),
-        .io_debug_wbPC            (debug_wb_pc),
-        .io_debug_wbRegFileWEn    (debug_wb_rf_wen),
-        .io_debug_wbRegFileWNum   (debug_wb_rf_wnum),
-        .io_debug_wbRegFileWData  (debug_wb_rf_wdata)
+        .io_debug_0_wbPC            (debug_wb_pc),
+        .io_debug_0_wbRegFileWEn    (debug_wb_rf_wen),
+        .io_debug_0_wbRegFileWNum   (debug_wb_rf_wnum),
+        .io_debug_0_wbRegFileWData  (debug_wb_rf_wdata)
     );
 
 
