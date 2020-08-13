@@ -32,17 +32,18 @@ class ExceptionHandleBundle extends Bundle {
 class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val tlbWidth = log2Ceil(tlbSize)
   val io = IO(new Bundle {
-    val intr     = Input(UInt(intrLen.W))
-    val cp0Write = Input(new CPBundle)
+    val intr = Input(UInt(intrLen.W))
 
+    // cp0 write
+    val cp0Write = Input(new CPBundle)
+    val op       = Input(UInt(opLen.W))
+    val tlb      = Input(new TLBReadBundle)
+
+    // exception handler
+    val except      = Input(Vec(exceptAmount, Bool()))
     val inDelaySlot = Input(Bool())
     val pc          = Input(UInt(addrLen.W))
-
-    val except  = Input(Vec(exceptAmount, Bool()))
-    val badAddr = Input(UInt(addrLen.W))
-
-    val op  = Input(UInt(opLen.W))
-    val tlb = Input(new TLBReadBundle)
+    val badAddr     = Input(UInt(addrLen.W))
 
     // read port
     val read = Vec(

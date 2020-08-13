@@ -25,6 +25,7 @@ class Issue(implicit c: CPUConfig) extends Module {
     val ins           = Vec(n, Flipped(Decoupled(new InstructionFIFOEntry())))
     val decodeResults = Input(Vec(n, new DecodeResult))
 
+    val flush   = Input(Bool())
     val stalled = Input(Bool())
 
     /**
@@ -81,31 +82,34 @@ class Issue(implicit c: CPUConfig) extends Module {
     bufferValid && io.ins(0).valid || !bufferValid && io.ins(1).valid
   )
 
-  val isC0 = current.map(in => {
-    VecInit(MV_MFC0, WO_MTC0).contains(in.operation) || in.instType === INST_TLB
-  })
-  val isMem = current.map(in => {
-    INST_MEM === in.instType
-  })
-  val isCacheInst = current.map(in => {
-    MEM_CAC === in.operation
-  })
-  val isBranch = current.map(in => {
-    INST_BR === in.instType
-  })
-  val isHILOWrite = current.map(in => {
-    opIsHILOWrite(in.operation)
-  })
+  val isMem       = current.map(in => { INST_MEM === in.instType })
+  val isBranch    = current.map(in => { INST_BR === in.instType })
+  val isEret      = current.map(in => { EXC_ER === in.operation })
+  val isHILOWrite = current.map(in => { opIsHILOWrite(in.operation) })
+  val isC0Write   = current.map(in => { opIsC0Write(in.operation) })
+
   val hiloHazard =
     current(0).operation === WO_MTHI && current(1).operation === MV_MFHI ||
-    current(0).operation === WO_MTLO && current(1).operation === MV_MFLO
+      current(0).operation === WO_MTLO && current(1).operation === MV_MFLO ||
+      VecInit(WO_DIV, WO_DIVU, WO_MULT, ALU_MUL, WO_MULTU).contains(current(0).operation) &&
+        VecInit(MV_MFHI, MV_MFLO).contains(current(1).operation)
 
-  val secondDependOnFirst = current(0).write.enable &&
+  val regFileHazard = current(0).write.enable &&
     (currentRs(1).valid && currentRs(1).bits === current(0).write.address ||
       currentRt(1).valid && currentRt(1).bits === current(0).write.address)
 
-  val secondNotIssue = isC0.reduce(_ || _) || isMem.reduce(_ && _) || isBranch(1) || isHILOWrite.reduce(_ && _) ||
-    (!currentOp1(1).valid || !currentOp2(1).valid) || isCacheInst.reduce(_ || _) || secondDependOnFirst || hiloHazard
+  /**
+    * conditions:
+    *   <ul>both are memory</ul>
+    *   <ul>second is branch</ul>
+    *   <ul>both are eret</ul>
+    *   <ul>both will write hilo</ul>
+    *   <ul>first will write cp0</ul>
+    *   <ul>second not ready</ul>
+    *   <ul>have hazard(regFile or hilo)</ul>
+    */
+  val secondNotIssue = isMem.reduce(_ && _) || isBranch(1) || isEret.reduce(_ && _) || isHILOWrite.reduce(_ && _) ||
+    isC0Write(0) || (!currentOp1(1).valid || !currentOp2(1).valid) || regFileHazard || hiloHazard
 
   //===---------------------------------------------------===
   // buffer controller
@@ -120,8 +124,8 @@ class Issue(implicit c: CPUConfig) extends Module {
         when(currentValid(1)) {
           when(secondNotIssue) {
             // only issue buffer
-            buffer          := io.decodeResults(0)
-            bufferIn        := io.ins(0).bits
+            buffer   := io.decodeResults(0)
+            bufferIn := io.ins(0).bits
           }.otherwise {
             // issue two instruction
             when(io.ins(1).valid) {
@@ -150,6 +154,9 @@ class Issue(implicit c: CPUConfig) extends Module {
         }
       }
     }
+  }
+  when(io.flush) {
+    bufferValid := false.B
   }
 
   io.out.zip(current).zipWithIndex.foreach {

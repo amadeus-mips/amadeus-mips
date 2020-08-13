@@ -15,6 +15,7 @@ import firrtl.annotations.MemoryLoadFileType
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val ins     = Vec(conf.decodeWidth, Flipped(Decoupled(new InstructionFIFOEntry())))
+    val flush = Input(Bool())
     val stalled = Input(Bool())
 
     val forwards = Input(
@@ -93,6 +94,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     issue.io.decodeResults(i).imm32     := controls(i).io.imm32
     issue.io.decodeResults(i).except    := controls(i).io.except
   }
+  issue.io.flush := io.flush
   issue.io.stalled := io.stalled
 
   io.out := issue.io.out

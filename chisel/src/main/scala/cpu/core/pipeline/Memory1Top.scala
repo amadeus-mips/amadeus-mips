@@ -5,6 +5,7 @@ import chisel3.util.{Cat, MuxCase}
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.{Mem0Mem1Bundle, Mem1Mem2Bundle}
+import cpu.core.bundles.{CPBundle, TLBReadBundle}
 import cpu.core.components.ExceptionHandleBundle
 
 class Memory1Top(implicit conf: CPUConfig) extends Module {
@@ -14,12 +15,27 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
 
     val exceptionCP0 = Input(new ExceptionHandleBundle)
 
-    val out            = Output(Vec(conf.decodeWidth, new Mem1Mem2Bundle))
-    val stallReq       = Output(Bool())
+    val out      = Output(Vec(conf.decodeWidth, new Mem1Mem2Bundle))
+    val stallReq = Output(Bool())
+
+    // cp0 write
+    val cp0Write = Output(new CPBundle)
+    val op       = Output(UInt(opLen.W))
+    val tlbWrite = Output(new TLBReadBundle)
+
+    // exception handler
+    val except      = Output(Vec(exceptAmount, Bool()))
+    val inDelaySlot = Output(Bool())
+    val pc          = Output(UInt(addrLen.W))
+    val badAddr     = Output(UInt(addrLen.W))
+
     val exceptJumpAddr = Output(UInt(addrLen.W))
   })
+  val exceptSlot = Mux(io.ins(0).except.reduce(_ || _), 0.U, 1.U)
+  val c0Slot     = Mux(opIsC0Write(io.ins(0).op), 0.U, 1.U)
 
-  val except = Mux(io.ins(0).except.reduce(_ || _), io.ins(0).except, io.ins(1).except)
+  val except    = Mux(exceptSlot === 0.U, io.ins(0).except, io.ins(1).except)
+  val hasExcept = except.reduce(_ || _)
 
   val isInterruptExcept = except(EXCEPT_INTR)
   val isRefillExcept = except(EXCEPT_INST_TLB_REFILL) || except(EXCEPT_DATA_TLB_W_REFILL) || except(
@@ -67,5 +83,19 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
     io.out(1).pc := 0.U
   }
 
-  io.stallReq := io.out.map(_.valid).reduce(_ || _) && (opIsLoad(io.ins(0).op) || opIsLoad(io.ins(1).op)) && !io.commit
+  io.cp0Write := io.ins(c0Slot).cp0Write
+  io.op       := io.ins(c0Slot).op
+  io.tlbWrite := io.ins(c0Slot).tlbWrite
+  when(hasExcept) {
+    io.cp0Write.enable := false.B
+    io.op              := 0.U
+  }
+
+  io.except      := except
+  io.inDelaySlot := io.ins(exceptSlot).inDelaySlot
+  io.pc          := io.ins(exceptSlot).pc
+  io.badAddr     := io.ins(exceptSlot).badAddr
+
+  io.stallReq := !io.commit &&
+    io.out.map(_.valid).zip(io.ins.map(_.op)).map { case (valid, op) => valid && opIsLoad(op) }.reduce(_ || _)
 }

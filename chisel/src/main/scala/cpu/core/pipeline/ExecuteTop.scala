@@ -35,12 +35,16 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
     // cp0 forward
     val cp0Data = Input(Vec(conf.decodeWidth, UInt(dataLen.W))) // from cp0
-    val mem0CP0 = Input(new CPBundle)
-    val mem1CP0 = Input(new CPBundle)
+    val cp0Forward = Input(Vec(conf.decodeWidth, new Bundle {
+      val mem0CP0 = new CPBundle
+      val mem1CP0 = new CPBundle
+    }))
 
     // op forward
-    val mem0Op = Input(UInt(opLen.W))
-    val mem1Op = Input(UInt(opLen.W))
+    val opForward = Input(Vec(conf.decodeWidth, new Bundle {
+      val mem0Op = UInt(opLen.W)
+      val mem1Op = UInt(opLen.W)
+    }))
 
     val out = Output(Vec(conf.decodeWidth, new ExeMemBundle))
 
@@ -53,7 +57,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   val alu  = Seq.fill(2)(Module(new ALU))
   val move = Seq.fill(2)(Module(new Move))
   // only one cp0 or mult/div issue
-  val writeOther = Module(new MultDiv)
+  val multDivController = Module(new MultDiv)
   // now only one memory in an issue packet, but it might be in the first slot or the second slot
   val memory = Seq.fill(2)(Module(new Memory))
 
@@ -64,7 +68,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   val branch = Module(new Branch)
 
   /** Only used in `move` module */
-  val forward = Module(new cpu.core.execute.Forward(2 * conf.decodeWidth, 2))
+  val forward = Module(new cpu.core.execute.Forward(2 * conf.decodeWidth, 2 * conf.decodeWidth))
 
   val control = Seq.fill(2)(Module(new cpu.core.execute.Control))
 
@@ -78,7 +82,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     alu(i).io.op1       := op1
     alu(i).io.op2       := op2
     alu(i).io.operation := operation
-    alu(i).io.lo        := writeOther.io.outHILO.lo.bits
+    alu(i).io.lo        := multDivController.io.outHILO.lo.bits
 
     move(i).io.op1         := op1
     move(i).io.op2         := op2
@@ -87,9 +91,9 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     move(i).io.cp0Data     := forward.io.outCP0(i)
     memory(i).io.op1       := op1
     memory(i).io.op2       := op2
-    memory(i).io.imm16     := io.ins(0).imm26(15, 0)
+    memory(i).io.imm16     := io.ins(i).imm26(15, 0)
     memory(i).io.operation := operation
-    memory(i).io.rt        := io.ins(0).imm26(20, 16)
+    memory(i).io.rt        := io.ins(i).imm26(20, 16)
 
     control(i).io.instType := io.ins(i).instType
     control(i).io.inWrite  := io.ins(i).write
@@ -119,11 +123,13 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   io.out(0).cp0       := io.ins(0).cp0
   io.out(0).cp0.data  := io.ins(0).op2
   io.out(0).cp0.valid := true.B
-  io.out(1).cp0       := 0.U.asTypeOf(io.out(1).cp0)
+  io.out(1).cp0       := io.ins(1).cp0
+  io.out(1).cp0.data  := io.ins(1).op2
+  io.out(1).cp0.valid := true.B
 
   io.out(0).hilo        := 0.U.asTypeOf(io.out(0).hilo)
   io.out(1).hilo        := 0.U.asTypeOf(io.out(1).hilo)
-  io.out(hiloSlot).hilo := writeOther.io.outHILO
+  io.out(hiloSlot).hilo := multDivController.io.outHILO
 
   forward.io.rawHILO   := io.rawHILO
   forward.io.fwHILO(0) := io.hiloForwards(1).mem0HILO
@@ -136,15 +142,17 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   forward.io.rawCP0(0).data := io.cp0Data(0)
   forward.io.rawCP0(1)      := io.ins(1).cp0
   forward.io.rawCP0(1).data := io.cp0Data(1)
-  forward.io.fwCP0(0)       := io.mem0CP0
-  forward.io.fwCP0(1)       := io.mem1CP0
+  forward.io.fwCP0(0)       := io.cp0Forward(1).mem0CP0
+  forward.io.fwCP0(1)       := io.cp0Forward(0).mem0CP0
+  forward.io.fwCP0(2)       := io.cp0Forward(1).mem1CP0
+  forward.io.fwCP0(3)       := io.cp0Forward(0).mem1CP0
 
-  writeOther.io.op1       := io.ins(hiloSlot).op1
-  writeOther.io.op2       := io.ins(hiloSlot).op2
-  writeOther.io.operation := io.ins(hiloSlot).operation
-  writeOther.io.flush     := io.flush
-  writeOther.io.mult      <> mult.io
-  writeOther.io.div       <> div.io
+  multDivController.io.op1       := io.ins(hiloSlot).op1
+  multDivController.io.op2       := io.ins(hiloSlot).op2
+  multDivController.io.operation := io.ins(hiloSlot).operation
+  multDivController.io.flush     := io.flush
+  multDivController.io.mult      <> mult.io
+  multDivController.io.div       <> div.io
 
   branch.io.op1       := io.ins(0).op1
   branch.io.op2       := io.ins(0).op2
@@ -166,10 +174,14 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
 
   io.isBranch := io.ins(0).instType === INST_BR
 
-  io.stallReq := writeOther.io.stallReq ||
-    (io.ins(0).operation === MV_MFC0 || io.ins(1).operation === MV_MFC0) && VecInit(io.mem0Op, io.mem1Op)
-      .contains(TLB_WI) ||
-    VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem0Op) || VecInit(TLB_R, TLB_P, WO_MTC0).contains(io.mem1Op)
+  def isLonelyOp(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(TLB_R, TLB_P, WO_MTC0).contains(op)
+  }
+
+  io.stallReq := multDivController.io.stallReq ||
+    VecInit(io.ins.map(_.operation)).contains(MV_MFC0) && VecInit(io.opForward.map(_.mem0Op) ++ io.opForward.map(_.mem1Op)).contains(TLB_WI) ||
+    io.opForward.map(_.mem0Op).map(isLonelyOp).reduce(_ || _) || io.opForward.map(_.mem1Op).map(isLonelyOp).reduce(_ || _)
 
   //===-----------------------------------------------------------===
   // performance monitor, only used in simulation

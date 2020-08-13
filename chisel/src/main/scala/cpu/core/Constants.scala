@@ -99,13 +99,12 @@ trait opConstants {
   val MEM_SWL   = 59.U(opLen.W)
   val MEM_SWR   = 60.U(opLen.W)
 
-
-  val TRAP_EQ   = 0.U(opLen.W)
-  val TRAP_GE   = 1.U(opLen.W)
-  val TRAP_GEU  = 2.U(opLen.W)
-  val TRAP_LT   = 3.U(opLen.W)
-  val TRAP_LTU  = 4.U(opLen.W)
-  val TRAP_NE   = 5.U(opLen.W)
+  val TRAP_EQ   = 1.U(opLen.W)
+  val TRAP_GE   = 2.U(opLen.W)
+  val TRAP_GEU  = 3.U(opLen.W)
+  val TRAP_LT   = 4.U(opLen.W)
+  val TRAP_LTU  = 5.U(opLen.W)
+  val TRAP_NE   = 6.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
@@ -126,6 +125,16 @@ trait opConstants {
   def opIsHILOWrite(op: UInt): Bool = {
     require(op.getWidth == opLen)
     VecInit(WO_MULT, WO_MULTU, WO_DIV, WO_DIVU, ALU_MUL, WO_MTHI, WO_MTLO).contains(op)
+  }
+
+  def opIsC0Write(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(TLB_P, TLB_R, WO_MTC0, MEM_CAC).contains(op)
+  }
+
+  def opIsC0Read(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(TLB_WI, TLB_WR, MV_MFC0, MEM_CAC).contains(op)
   }
 
 

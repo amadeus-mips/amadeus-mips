@@ -96,10 +96,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   instFIFO.io.flushTail := false.B
   instFIFO.io.enqueue   := fetch1Top.io.out
 
-  decodeTop.io.ins     <> instFIFO.io.dequeue
+  decodeTop.io.ins <> instFIFO.io.dequeue
   when(hazard.io.flushAll || executeTop.io.branch.valid) {
     decodeTop.io.ins.foreach(_.valid := false.B)
   }
+  decodeTop.io.flush   := hazard.io.flushAll || executeTop.io.branch.valid
   decodeTop.io.stalled := hazard.io.backend.stall(0)
   decodeTop.io.forwards.zipWithIndex.foreach {
     case (forward, i) =>
@@ -115,24 +116,29 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   id_exe.io.in    := decodeTop.io.out
   id_exe.io.stall := hazard.io.backend.stall
-  id_exe.io.flush := hazard.io.flushAll || executeTop.io.branch.valid && !(hazard.io.backend.stall(1) && hazard.io.backend.stall(2))
+  id_exe.io.flush := hazard.io.flushAll || executeTop.io.branch.valid && !(hazard.io.backend
+    .stall(1) && hazard.io.backend.stall(2))
 
   executeTop.io.ins     := id_exe.io.out
   executeTop.io.flush   := hazard.io.flushAll
   executeTop.io.stalled := id_exe.io.stalled
   // hio forward
-  executeTop.io.rawHILO  := hilo.io.out
+  executeTop.io.rawHILO                  := hilo.io.out
   executeTop.io.hiloForwards(0).mem0HILO := exe_mem.io.out(0).hilo
   executeTop.io.hiloForwards(0).mem1HILO := mem0_mem1.io.out(0).hiloWrite
   executeTop.io.hiloForwards(1).mem0HILO := exe_mem.io.out(1).hilo
   executeTop.io.hiloForwards(1).mem1HILO := mem0_mem1.io.out(1).hiloWrite
   // cp0 forward
-  executeTop.io.cp0Data := VecInit(cp0.io.read.map(_.data))
-  executeTop.io.mem0CP0 := exe_mem.io.out(0).cp0
-  executeTop.io.mem1CP0 := mem0_mem1.io.out(0).cp0Write
+  executeTop.io.cp0Data               := VecInit(cp0.io.read.map(_.data))
+  executeTop.io.cp0Forward(0).mem0CP0 := exe_mem.io.out(0).cp0
+  executeTop.io.cp0Forward(0).mem1CP0 := mem0_mem1.io.out(0).cp0Write
+  executeTop.io.cp0Forward(1).mem0CP0 := exe_mem.io.out(1).cp0
+  executeTop.io.cp0Forward(1).mem1CP0 := mem0_mem1.io.out(1).cp0Write
   // op forward
-  executeTop.io.mem0Op := exe_mem.io.out(0).operation
-  executeTop.io.mem1Op := mem2_wb.io.out(0).op
+  executeTop.io.opForward(0).mem0Op := exe_mem.io.out(0).operation
+  executeTop.io.opForward(0).mem1Op := mem0_mem1.io.out(0).op
+  executeTop.io.opForward(1).mem0Op := exe_mem.io.out(1).operation
+  executeTop.io.opForward(1).mem1Op := mem0_mem1.io.out(1).op
 
   exe_mem.io.in    := executeTop.io.out
   exe_mem.io.stall := hazard.io.backend.stall
@@ -150,18 +156,19 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   cp0.io.read(0).sel  := id_exe.io.out(0).imm26(2, 0)
   cp0.io.read(1).addr := id_exe.io.out(1).imm26(15, 11)
   cp0.io.read(1).sel  := id_exe.io.out(1).imm26(2, 0)
-  cp0.io.cp0Write     := mem0_mem1.io.out(0).cp0Write
-  cp0.io.except       := mem0_mem1.io.out(0).except
-  cp0.io.inDelaySlot  := mem0_mem1.io.out(0).inDelaySlot
-  cp0.io.pc           := mem0_mem1.io.out(0).pc
-  cp0.io.badAddr      := mem0_mem1.io.out(0).badAddr
 
-  cp0.io.op  := mem0_mem1.io.out(0).op
-  cp0.io.tlb := mem0_mem1.io.out(0).tlbWrite
+  cp0.io.cp0Write := memory1Top.io.cp0Write
+  cp0.io.op       := memory1Top.io.op
+  cp0.io.tlb      := memory1Top.io.tlbWrite
+
+  cp0.io.except      := memory1Top.io.except
+  cp0.io.inDelaySlot := memory1Top.io.inDelaySlot
+  cp0.io.pc          := memory1Top.io.pc
+  cp0.io.badAddr     := memory1Top.io.badAddr
 
   hilo.io.in := VecInit(mem0_mem1.io.out.map(_.hiloWrite))
 
-  hazard.io.except         := mem0_mem1.io.out(0).except
+  hazard.io.except         := memory1Top.io.except
   hazard.io.exceptJumpAddr := memory1Top.io.exceptJumpAddr
   hazard.io.EPC            := cp0.io.exceptionCP0.EPC
 
@@ -174,7 +181,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   mem0_mem1.io.in    := memory0Top.io.out
   mem0_mem1.io.stall := hazard.io.backend.stall
-  mem0_mem1.io.flush := hazard.io.flushAll
+  mem0_mem1.io.flush := hazard.io.flushAll && !memory1Top.io.stallReq
 
   memory1Top.io.ins          := mem0_mem1.io.out
   memory1Top.io.commit       := io.memAccess.commit
