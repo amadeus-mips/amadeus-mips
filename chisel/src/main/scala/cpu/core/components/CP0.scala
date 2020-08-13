@@ -105,7 +105,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val isKernelMode = !status.reg.um || status.reg.erl || status.reg.exl
 
   // soft write
-  when(io.cp0Write.enable) {
+  when(io.cp0Write.enable && io.cp0Write.valid) {
     val c = io.cp0Write
     cp0Seq.foreach(cp0 => {
       when(cp0.index.U === Cat(c.addr, c.sel)) {
@@ -121,7 +121,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
 
   def compareWriteCP0(p: BaseCP0): Bool = {
     val c = io.cp0Write
-    c.enable && c.addr === p.addr.U && c.sel === p.sel.U
+    c.enable && c.valid && c.addr === p.addr.U && c.sel === p.sel.U
   }
 
   val excCode =

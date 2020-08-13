@@ -194,5 +194,6 @@ class Issue(implicit c: CPUConfig) extends Module {
         operands.rt.valid := decodeResult.op2Type === OPn_RF && valid
     }
 
-  io.stallReq := !currentValid(0) || (!currentOp1(0).valid || !currentOp2(0).valid) || isBranch(0) && !currentValid(1)
+  io.stallReq := !currentValid(0) || (!currentOp1(0).valid || !currentOp2(0).valid) ||
+    isBranch(0) && (!currentValid(1) || (!currentOp1(1).valid || !currentOp2(1).valid))
 }
