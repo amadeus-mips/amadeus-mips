@@ -2,10 +2,10 @@
 
 package cpu
 
-import axi.{AXIArbiter, AXIIO, AXIQueueArbiter}
+import axi.{AXIArbiter, AXIIO}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{UnCachedUnit, UncachedQueue}
+import cpu.cache.UnCachedUnit
 import cpu.core.Core_ls
 import cpu.mmu.{FakeMMU, MMU}
 import cpu.performance.CPUTopPerformanceIO
@@ -66,7 +66,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
     dCache.io.request.valid   := false.B
   }
   core.io.memAccess.request.ready := dCache.io.request.ready && unCached.io.request.ready
-  core.io.memAccess.commit        := dCache.io.commit || unCached.io.commit
+  core.io.memAccess.dcacheCommit  := dCache.io.commit
+  core.io.memAccess.uncacheCommit := unCached.io.commit
   core.io.memAccess.cachedData    := dCache.io.readData
   core.io.memAccess.uncachedData  := unCached.io.readData
   core.io.memAccess.uncached      := mmu.io.dataUncached

@@ -9,7 +9,8 @@ import cpu.core.components.ExceptionHandleBundle
 class Memory1Top extends Module {
   val io = IO(new Bundle() {
     val in     = Input(new Mem0Mem1Bundle)
-    val commit = Input(Bool())
+    val dcacheCommit = Input(Bool())
+    val uncacheCommit = Input(Bool())
 
     val exceptionCP0 = Input(new ExceptionHandleBundle)
 
@@ -57,5 +58,37 @@ class Memory1Top extends Module {
     io.out.pc := 0.U
   }
 
-  io.stallReq := io.out.valid && opIsLoad(io.in.op) && !io.commit
+  /** 0 means uncached, 1 means cached */
+  val commitBuffer = RegInit(0.U)
+  val commitBufferValid = RegInit(false.B)
+
+  when(io.out.valid && opIsLoad(io.in.op)) {
+    when(io.in.uncached){
+      when(io.dcacheCommit){
+        commitBuffer := 1.U
+        commitBufferValid := true.B
+      }
+      when(commitBufferValid && commitBuffer === 0.U){
+        commitBufferValid := false.B
+      }
+      assert(!(io.dcacheCommit && (commitBufferValid && commitBuffer === 0.U)))
+    }.otherwise{
+      when(io.uncacheCommit) {
+        commitBuffer := 0.U
+        commitBufferValid := true.B
+      }
+      when(commitBufferValid && commitBuffer === 1.U) {
+        commitBufferValid := false.B
+      }
+      assert(!(io.uncacheCommit && (commitBufferValid && commitBuffer === 1.U)))
+    }
+  }
+
+  val committed = Mux(
+    io.in.uncached,
+    commitBufferValid && commitBuffer === 0.U || io.uncacheCommit,
+    commitBufferValid && commitBuffer === 1.U || io.dcacheCommit
+  )
+
+  io.stallReq := io.out.valid && opIsLoad(io.in.op) && !committed
 }

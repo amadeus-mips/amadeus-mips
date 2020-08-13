@@ -25,7 +25,8 @@ class MemAccessIO extends Bundle {
   val request  = Decoupled(new MemReqBundle)
   val uncached = Input(Bool())
   // mem1
-  val commit = Input(Bool())
+  val dcacheCommit  = Input(Bool())
+  val uncacheCommit = Input(Bool())
   // mem2
   val cachedData   = Input(UInt(dataLen.W))
   val uncachedData = Input(UInt(dataLen.W))
@@ -114,7 +115,6 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   regFile.io.rs    := instFIFO.io.dequeue.head.bits.inst(25, 21)
   regFile.io.rt    := instFIFO.io.dequeue.head.bits.inst(20, 16)
 
-
   id_exe.io.in    := decodeTop.io.out
   id_exe.io.stall := hazard.io.backend.stall
   id_exe.io.flush := hazard.io.flushAll
@@ -178,9 +178,10 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   mem0_mem1.io.stall := hazard.io.backend.stall
   mem0_mem1.io.flush := hazard.io.flushAll
 
-  memory1Top.io.in           := mem0_mem1.io.out
-  memory1Top.io.commit       := io.memAccess.commit
-  memory1Top.io.exceptionCP0 := cp0.io.exceptionCP0
+  memory1Top.io.in            := mem0_mem1.io.out
+  memory1Top.io.dcacheCommit  := io.memAccess.dcacheCommit
+  memory1Top.io.uncacheCommit := io.memAccess.uncacheCommit
+  memory1Top.io.exceptionCP0  := cp0.io.exceptionCP0
 
   mem1_mem2.io.in    := memory1Top.io.out
   mem1_mem2.io.stall := hazard.io.backend.stall
