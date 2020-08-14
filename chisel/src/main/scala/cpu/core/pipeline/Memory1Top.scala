@@ -10,8 +10,8 @@ import cpu.core.components.ExceptionHandleBundle
 
 class Memory1Top(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle() {
-    val ins    = Input(Vec(conf.decodeWidth, new Mem0Mem1Bundle))
-    val dcacheCommit = Input(Bool())
+    val ins           = Input(Vec(conf.decodeWidth, new Mem0Mem1Bundle))
+    val dcacheCommit  = Input(Bool())
     val uncacheCommit = Input(Bool())
 
     val exceptionCP0 = Input(new ExceptionHandleBundle)
@@ -20,7 +20,7 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
     val stallReq = Output(Bool())
 
     // hilo write
-    val hiloWrite   = Output(Vec(conf.decodeWidth, new HILOValidBundle))
+    val hiloWrite = Output(Vec(conf.decodeWidth, new HILOValidBundle))
 
     // cp0 write
     val cp0Write = Output(new CPBundle)
@@ -83,12 +83,12 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
   io.hiloWrite := io.ins.map(_.hiloWrite)
 
   when(!io.out(0).valid) {
-    io.out(0).pc := 0.U
+    io.out(0).pc             := 0.U
     io.hiloWrite(0).hi.valid := false.B
     io.hiloWrite(0).lo.valid := false.B
   }
   when(!io.out(1).valid) {
-    io.out(1).pc := 0.U
+    io.out(1).pc             := 0.U
     io.hiloWrite(1).hi.valid := false.B
     io.hiloWrite(1).lo.valid := false.B
   }
@@ -106,25 +106,25 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
   io.pc          := io.ins(exceptSlot).pc
   io.badAddr     := io.ins(exceptSlot).badAddr
 
-  io.stallReq := !io.commit &&
-    io.out.map(_.valid).zip(io.ins.map(_.op)).map { case (valid, op) => valid && opIsLoad(op) }.reduce(_ || _)
+  val memSlot = Mux(io.ins(0).instType === INST_MEM, 0.U, 1.U)
+
   /** 0 means uncached, 1 means cached */
-  val commitBuffer = RegInit(0.U)
+  val commitBuffer      = RegInit(0.U)
   val commitBufferValid = RegInit(false.B)
 
-  when(io.out.valid && opIsLoad(io.in.op)) {
-    when(io.in.uncached){
-      when(io.dcacheCommit){
-        commitBuffer := 1.U
+  when(io.out(memSlot).valid && opIsLoad(io.ins(memSlot).op)) {
+    when(io.ins(memSlot).uncached) {
+      when(io.dcacheCommit) {
+        commitBuffer      := 1.U
         commitBufferValid := true.B
       }
-      when(commitBufferValid && commitBuffer === 0.U){
+      when(commitBufferValid && commitBuffer === 0.U) {
         commitBufferValid := false.B
       }
       assert(!(io.dcacheCommit && (commitBufferValid && commitBuffer === 0.U)))
-    }.otherwise{
+    }.otherwise {
       when(io.uncacheCommit) {
-        commitBuffer := 0.U
+        commitBuffer      := 0.U
         commitBufferValid := true.B
       }
       when(commitBufferValid && commitBuffer === 1.U) {
@@ -135,10 +135,12 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
   }
 
   val committed = Mux(
-    io.in.uncached,
+    io.ins(memSlot).uncached,
     commitBufferValid && commitBuffer === 0.U || io.uncacheCommit,
     commitBufferValid && commitBuffer === 1.U || io.dcacheCommit
   )
 
-  io.stallReq := io.out.valid && opIsLoad(io.in.op) && !committed
+  io.stallReq := !committed &&
+    io.out.map(_.valid).zip(io.ins.map(_.op)).map { case (valid, op) => valid && opIsLoad(op) }.reduce(_ || _)
+
 }

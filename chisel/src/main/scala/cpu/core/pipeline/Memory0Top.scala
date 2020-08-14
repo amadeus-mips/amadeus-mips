@@ -64,24 +64,24 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
       except.io.tlbExcept.modified := io.tlb.except.data.modified
   }
 
-  io.out.zip(io.ins).zip(excepts).zipWithIndex.foreach {
-    case (((out, in), except), i) =>
-      out.addrL2             := in.memAddr(1, 0)
-      out.op                 := in.operation
-      out.write              := in.write
-      out.pc                 := in.pc
-      out.uncached           := io.uncached
-      out.inDelaySlot        := in.inDelaySlot
-      out.except             := except.io.outExcept
-      out.badAddr            := except.io.badAddr
-      out.tlbWrite           := io.tlb
-      out.cp0Write           := in.cp0
-      out.hiloWrite          := in.hilo
+  io.out.zip(io.ins).zip(excepts).foreach {
+    case ((out, in), except) =>
+      out.addrL2      := in.memAddr(1, 0)
+      out.instType    := in.instType
+      out.op          := in.operation
+      out.write       := in.write
+      out.pc          := in.pc
+      out.uncached    := io.uncached
+      out.inDelaySlot := in.inDelaySlot
+      out.except      := except.io.outExcept
+      out.badAddr     := except.io.badAddr
+      out.tlbWrite    := io.tlb
+      out.cp0Write    := in.cp0
+      out.hiloWrite   := in.hilo
   }
   io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready)
 
   io.request <> control.io.request
-
 
   // ===--------------------------------------------------------------------------------------------------===
   // cache instruction
