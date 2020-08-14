@@ -165,13 +165,6 @@ class SocLiteTopUnitTester(
       printPerfLog()
       branchPerformanceMonitor()
     }
-    if (tcfg.performanceMonitorEnable) {
-      log(
-        s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
-          s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
-          s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
-      )
-    }
   }
 
   def afterAllRun(): Unit = {

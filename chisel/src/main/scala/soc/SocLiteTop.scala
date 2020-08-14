@@ -46,7 +46,6 @@ class SocLiteTop(implicit
     val num   = Output(new NumMonitorBundle)
     val debug = Output(Vec(2, new DebugBundle))
 
-    val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
     val branchPerf = Output(new Bundle {
       val total = new BrPrPerfBundle
       val j     = new BrPrPerfBundle
@@ -76,10 +75,6 @@ class SocLiteTop(implicit
   io.debug := cpu.io.debug
 
   ram.io.ramRandomMask := confreg.io.ram_random_mask
-  // the optional performance IO
-  if (socCfg.performanceMonitor) {
-    io.performance.get.cpu := cpu.io.performance.get
-  }
 
   io.branchPerf := DontCare
   // performance monitor

@@ -2,13 +2,12 @@
 
 package cpu
 
-import axi.{AXIArbiter, AXIIO}
+import axi.{AXIIO, AXIOutstandingReadArbiter, AXIOutstandingWriteArbiter}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.UnCachedUnit
+import cpu.cache.{UnCachedUnit, UncachedQueue}
 import cpu.core.Core_ls
 import cpu.mmu.{FakeMMU, MMU}
-import cpu.performance.CPUTopPerformanceIO
 import cpu.pipelinedCache.{DataCache, InstrCache}
 import firrtl.options.TargetDirAnnotation
 import shared.DebugBundle
@@ -26,14 +25,15 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
     val intr  = Input(UInt(6.W))
     val axi   = AXIIO.master()
     val debug = Output(Vec(2, new DebugBundle))
-
-    val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
-  val arbiter = Module(new AXIArbiter(3))
+//  val arbiter = Module(new AXIArbiter(3))
+  val readArbiter  = Module(new AXIOutstandingReadArbiter)
+  val writeArbiter = Module(new AXIOutstandingWriteArbiter)
 
   val iCache   = Module(new InstrCache(conf.iCacheConf))
   val dCache   = Module(new DataCache(conf.iCacheConf))
-  val unCached = Module(new UnCachedUnit)
+//  val unCached = Module(new UnCachedUnit)
+  val unCached = Module(new UncachedQueue())
 
   val mmu = Module(if (conf.enableTLB) new MMU else new FakeMMU)
 
@@ -72,11 +72,32 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   core.io.memAccess.uncachedData  := unCached.io.readData
   core.io.memAccess.uncached      := mmu.io.dataUncached
 
-  arbiter.io.slaves(0) <> dCache.io.axi
-  arbiter.io.slaves(1) <> unCached.io.axi
-  arbiter.io.slaves(2) <> iCache.io.axi
+//  arbiter.io.slaves(0) <> dCache.io.axi
+//  arbiter.io.slaves(1) <> unCached.io.axi
+//  arbiter.io.slaves(2) <> iCache.io.axi
+  iCache.io.axi   := DontCare
+  readArbiter.io  := DontCare
+  writeArbiter.io := DontCare
 
-  io.axi <> arbiter.io.master
+//  io.axi <> arbiter.io.master
+  readArbiter.io.fromMasters(0).ar  <> iCache.io.axi.ar
+  readArbiter.io.fromMasters(0).r   <> iCache.io.axi.r
+  readArbiter.io.fromMasters(1).ar  <> dCache.io.axi.ar
+  readArbiter.io.fromMasters(1).r   <> dCache.io.axi.r
+  readArbiter.io.fromMasters(2).ar  <> unCached.io.axi.ar
+  readArbiter.io.fromMasters(2).r   <> unCached.io.axi.r
+  writeArbiter.io.fromMasters(0).aw <> dCache.io.axi.aw
+  writeArbiter.io.fromMasters(0).w  <> dCache.io.axi.w
+  writeArbiter.io.fromMasters(0).b  <> dCache.io.axi.b
+  writeArbiter.io.fromMasters(1).aw <> unCached.io.axi.aw
+  writeArbiter.io.fromMasters(1).w  <> unCached.io.axi.w
+  writeArbiter.io.fromMasters(1).b  <> unCached.io.axi.b
+
+  io.axi.ar <> readArbiter.io.toBus.ar
+  io.axi.r  <> readArbiter.io.toBus.r
+  io.axi.aw <> writeArbiter.io.toBus.aw
+  io.axi.w  <> writeArbiter.io.toBus.w
+  io.axi.b  <> writeArbiter.io.toBus.b
 
   io.debug := core.io_ls.debug
 
