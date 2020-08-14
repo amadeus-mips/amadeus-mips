@@ -40,7 +40,6 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
   val excepts = Seq.fill(2)(Module(new cpu.core.memory.Except))
 
   val memSlot = Mux(io.ins(0).instType === INST_MEM, 0.U, 1.U)
-  val cp0Slot = Mux(opIsC0Write(io.ins(0).operation), 0.U, 1.U)
   val hasExcept =
     VecInit(excepts.head.io.outExcept.reduce(_ || _), excepts.map(_.io.outExcept.reduce(_ || _)).reduce(_ || _))
 
@@ -70,7 +69,6 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
       out.addrL2             := in.memAddr(1, 0)
       out.op                 := in.operation
       out.write              := in.write
-      out.write.enable       := in.write.enable && !hasExcept(i)
       out.pc                 := in.pc
       out.uncached           := io.uncached
       out.inDelaySlot        := in.inDelaySlot
@@ -78,10 +76,7 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
       out.badAddr            := except.io.badAddr
       out.tlbWrite           := io.tlb
       out.cp0Write           := in.cp0
-      out.cp0Write.valid     := in.cp0.valid && !hasExcept(i)
       out.hiloWrite          := in.hilo
-      out.hiloWrite.lo.valid := in.hilo.lo.valid && !hasExcept(i)
-      out.hiloWrite.hi.valid := in.hilo.hi.valid && !hasExcept(i)
   }
   io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready)
 
@@ -91,26 +86,28 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
   // ===--------------------------------------------------------------------------------------------------===
   // cache instruction
   // ===--------------------------------------------------------------------------------------------------===
+  val cacheSlot = Mux(io.ins(0).operation === MEM_CAC, 0.U, 1.U)
   io.dCacheInvalidate.bits := DontCare
-  io.dCacheInvalidate.valid := io.ins(cp0Slot).cacheOp.target === TARGET_D && io.ins(cp0Slot).cacheOp.valid &&
-    !hasExcept(cp0Slot) && !io.mem1Except && io.ins(cp0Slot).instValid
+  io.dCacheInvalidate.valid := io.ins(cacheSlot).cacheOp.target === TARGET_D && io.ins(cacheSlot).cacheOp.valid &&
+    !io.mem1Except && io.ins(cacheSlot).instValid
 
   val indexFrom = conf.iCacheConf.indexLen + conf.iCacheConf.bankIndexLen + conf.iCacheConf.bankOffsetLen - 1
   val indexTo   = conf.iCacheConf.bankIndexLen + conf.iCacheConf.bankOffsetLen
-  io.iCacheInvalidate.bits := io.ins(cp0Slot).memAddr(indexFrom, indexTo)
-  io.iCacheInvalidate.valid := io.ins(cp0Slot).cacheOp.target === TARGET_I && io.ins(cp0Slot).cacheOp.valid &&
-    !hasExcept(cp0Slot) && !io.mem1Except && io.ins(cp0Slot).instValid
+  io.iCacheInvalidate.bits := io.ins(cacheSlot).memAddr(indexFrom, indexTo)
+  io.iCacheInvalidate.valid := io.ins(cacheSlot).cacheOp.target === TARGET_I && io.ins(cacheSlot).cacheOp.valid &&
+    !io.mem1Except && io.ins(cacheSlot).instValid
 
   // ===--------------------------------------------------------------------------------------------------===
   // tlb instruction
   // ===--------------------------------------------------------------------------------------------------===
+  val tlbSlot = Mux(VecInit(TLB_WI, TLB_WR).contains(io.ins(0).operation), 0.U, 1.U)
   io.tlb.asid          := io.tlbCP0.entryHi.asid
   io.tlb.kseg0Uncached := false.B
 
-  io.tlb.instrReq.writeEn := (io.ins(cp0Slot).operation === TLB_WR || io.ins(cp0Slot).operation === TLB_WI) &&
-    !hasExcept(cp0Slot) && !io.mem1Except
+  io.tlb.instrReq.writeEn := (io.ins(tlbSlot).operation === TLB_WR || io.ins(tlbSlot).operation === TLB_WI) &&
+    !io.mem1Except
   io.tlb.instrReq.TLBIndex := Mux(
-    io.ins(cp0Slot).operation === TLB_WR,
+    io.ins(tlbSlot).operation === TLB_WR,
     io.tlbCP0.random.random,
     io.tlbCP0.index.index
   )

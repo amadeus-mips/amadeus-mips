@@ -93,7 +93,6 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
   instFIFO.reset        := reset.asBool() || hazard.io.flushAll || executeTop.io.branch.valid
-  instFIFO.io.flushTail := false.B
   instFIFO.io.enqueue   := fetch1Top.io.out
 
   decodeTop.io.ins <> instFIFO.io.dequeue
@@ -166,7 +165,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   cp0.io.pc          := memory1Top.io.pc
   cp0.io.badAddr     := memory1Top.io.badAddr
 
-  hilo.io.in := VecInit(mem0_mem1.io.out.map(_.hiloWrite))
+  hilo.io.in := memory1Top.io.hiloWrite
 
   hazard.io.except         := memory1Top.io.except
   hazard.io.exceptJumpAddr := memory1Top.io.exceptJumpAddr

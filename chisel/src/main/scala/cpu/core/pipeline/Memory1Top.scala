@@ -5,7 +5,7 @@ import chisel3.util.{Cat, MuxCase}
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.{Mem0Mem1Bundle, Mem1Mem2Bundle}
-import cpu.core.bundles.{CPBundle, TLBReadBundle}
+import cpu.core.bundles.{CPBundle, HILOValidBundle, TLBReadBundle}
 import cpu.core.components.ExceptionHandleBundle
 
 class Memory1Top(implicit conf: CPUConfig) extends Module {
@@ -17,6 +17,9 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
 
     val out      = Output(Vec(conf.decodeWidth, new Mem1Mem2Bundle))
     val stallReq = Output(Bool())
+
+    // hilo write
+    val hiloWrite   = Output(Vec(conf.decodeWidth, new HILOValidBundle))
 
     // cp0 write
     val cp0Write = Output(new CPBundle)
@@ -76,11 +79,17 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
   io.out(0).valid := !io.ins(0).except.reduce(_ || _)
   io.out(1).valid := !io.ins.map(_.except.reduce(_ || _)).reduce(_ || _)
 
+  io.hiloWrite := io.ins.map(_.hiloWrite)
+
   when(!io.out(0).valid) {
     io.out(0).pc := 0.U
+    io.hiloWrite(0).hi.valid := false.B
+    io.hiloWrite(0).lo.valid := false.B
   }
   when(!io.out(1).valid) {
     io.out(1).pc := 0.U
+    io.hiloWrite(1).hi.valid := false.B
+    io.hiloWrite(1).lo.valid := false.B
   }
 
   io.cp0Write := io.ins(c0Slot).cp0Write
