@@ -5,25 +5,33 @@ import chisel3._
 import cpu.CPUConfig
 import cpu.core.Constants._
 import cpu.core.bundles.stages.IdExeBundle
-import cpu.core.bundles.{CPBundle, InstructionFIFOEntry, WriteBundle}
+import cpu.core.bundles.{CPBundle, WriteBundle}
 import shared.ValidBundle
 
-class DecodeResult extends Bundle {
-  val operation = UInt(opLen.W)
-  val op1Type   = UInt(1.W)
-  val op2Type   = UInt(1.W)
-  val instType  = UInt(instTypeLen.W)
-  val write     = new WriteBundle
-  val cp0       = new CPBundle
-  val imm32     = UInt(dataLen.W)
-  val except    = Vec(exceptAmount, Bool())
+class IssueInputBundle(implicit conf: CPUConfig) extends Bundle {
+  val instType    = UInt(instTypeLen.W)
+  val operation   = UInt(opLen.W)
+  val op1Type     = UInt(1.W)
+  val op2Type     = UInt(1.W)
+  val write       = new WriteBundle
+  val cp0         = new CPBundle
+  val imm32       = UInt(dataLen.W)
+  val except      = Vec(exceptAmount, Bool())
+  val imm26       = UInt(26.W)
+  val rs          = UInt(regAddrLen.W)
+  val rt          = UInt(regAddrLen.W)
+  val pc          = UInt(addrLen.W)
+  val brPredict   = ValidBundle(addrLen)
+  val brPrHistory = UInt(conf.branchPredictorHistoryLen.W)
+  val instValid   = Bool()
+
+  override def cloneType: IssueInputBundle.this.type = new IssueInputBundle().asInstanceOf[this.type]
 }
 
 class Issue(implicit c: CPUConfig) extends Module {
   val n = c.decodeWidth
   val io = IO(new Bundle() {
-    val ins           = Vec(n, Flipped(Decoupled(new InstructionFIFOEntry())))
-    val decodeResults = Input(Vec(n, new DecodeResult))
+    val ins = Vec(n, Flipped(Decoupled(new IssueInputBundle)))
 
     val flush   = Input(Bool())
     val stalled = Input(Bool())
@@ -34,8 +42,8 @@ class Issue(implicit c: CPUConfig) extends Module {
     val operands = Vec(
       n + c.decodeBufferNum,
       new Bundle {
-        val rs  = Output(new ValidBundle(regAddrLen))
-        val rt  = Output(new ValidBundle(regAddrLen))
+        val rs  = Output(UInt(regAddrLen.W))
+        val rt  = Output(UInt(regAddrLen.W))
         val op1 = Input(new ValidBundle())
         val op2 = Input(new ValidBundle())
       }
@@ -44,9 +52,9 @@ class Issue(implicit c: CPUConfig) extends Module {
     val out      = Output(Vec(n, new IdExeBundle()))
     val stallReq = Output(Bool())
   })
+  val stalled = io.stalled || io.stallReq
 
-  val buffer      = RegInit(0.U.asTypeOf(new DecodeResult))
-  val bufferIn    = RegInit(0.U.asTypeOf(new InstructionFIFOEntry()))
+  val buffer      = RegInit(0.U.asTypeOf(new IssueInputBundle))
   val bufferValid = RegInit(false.B)
 
   /**
@@ -54,21 +62,22 @@ class Issue(implicit c: CPUConfig) extends Module {
     * choose first two valid
     */
   val current = VecInit(
-    Mux(bufferValid, buffer, io.decodeResults(0)),
-    Mux(bufferValid, io.decodeResults(0), io.decodeResults(1))
-  )
-  val currentIn = VecInit(
-    Mux(bufferValid, bufferIn, io.ins(0).bits),
+    Mux(bufferValid, buffer, io.ins(0).bits),
     Mux(bufferValid, io.ins(0).bits, io.ins(1).bits)
   )
-  val currentRs = VecInit(
-    Mux(bufferValid, io.operands(0).rs, io.operands(1).rs),
-    Mux(bufferValid, io.operands(1).rs, io.operands(2).rs)
+  val currentValid = VecInit(
+    bufferValid || io.ins(0).valid,
+    bufferValid && io.ins(0).valid || !bufferValid && io.ins(1).valid
   )
-  val currentRt = VecInit(
-    Mux(bufferValid, io.operands(0).rt, io.operands(1).rt),
-    Mux(bufferValid, io.operands(1).rt, io.operands(2).rt)
-  )
+  val (currentRs, currentRt) =
+    current
+      .zip(currentValid)
+      .map {
+        case (cur, valid) =>
+          (ValidBundle(valid && cur.op1Type === OPn_RF, cur.rs), ValidBundle(valid && cur.op2Type === OPn_RF, cur.rt))
+      }
+      .unzip
+
   val currentOp1 = VecInit(
     Mux(bufferValid, io.operands(0).op1, io.operands(1).op1),
     Mux(bufferValid, io.operands(1).op1, io.operands(2).op1)
@@ -77,10 +86,11 @@ class Issue(implicit c: CPUConfig) extends Module {
     Mux(bufferValid, io.operands(0).op2, io.operands(1).op2),
     Mux(bufferValid, io.operands(1).op2, io.operands(2).op2)
   )
-  val currentValid = VecInit(
-    bufferValid || io.ins(0).valid,
-    bufferValid && io.ins(0).valid || !bufferValid && io.ins(1).valid
-  )
+
+  //noinspection DuplicatedCode
+  val currentOp1Ready = currentRs.zip(currentOp1).map{case (rs, op1) => !rs.valid || op1.valid}
+  //noinspection DuplicatedCode
+  val currentOp2Ready = currentRt.zip(currentOp2).map{case (rt, op2) => !rt.valid || op2.valid}
 
   val isMem       = current.map(in => { INST_MEM === in.instType })
   val isBranch    = current.map(in => { INST_BR === in.instType })
@@ -109,28 +119,26 @@ class Issue(implicit c: CPUConfig) extends Module {
     *   <ul>have hazard(regFile or hilo)</ul>
     */
   val secondNotIssue = isMem.reduce(_ && _) || isBranch(1) || isEret.reduce(_ && _) || isHILOWrite.reduce(_ && _) ||
-    isC0Write(0) || (!currentOp1(1).valid || !currentOp2(1).valid) || regFileHazard || hiloHazard
+    isC0Write(0) || (!currentOp1Ready(1) || !currentOp2Ready(1)) || regFileHazard || hiloHazard
 
   //===---------------------------------------------------===
   // buffer controller
   //===---------------------------------------------------===
   assert(!(currentValid(1) && !currentValid(0)))
-  io.ins(0).ready := !io.stalled
-  io.ins(1).ready := !io.stalled && !(bufferValid && currentValid(1) && secondNotIssue)
-  when(!io.stalled) {
+  io.ins(0).ready := !stalled
+  io.ins(1).ready := !stalled && !(bufferValid && currentValid(1) && secondNotIssue)
+  when(!stalled) {
     when(currentValid(0)) {
       when(bufferValid) {
         // issue buffer
         when(currentValid(1)) {
           when(secondNotIssue) {
             // only issue buffer
-            buffer   := io.decodeResults(0)
-            bufferIn := io.ins(0).bits
+            buffer := io.ins(0).bits
           }.otherwise {
             // issue two instruction
             when(io.ins(1).valid) {
-              buffer   := io.decodeResults(1)
-              bufferIn := io.ins(1).bits
+              buffer := io.ins(1).bits
             }.otherwise {
               bufferValid := false.B
             }
@@ -144,8 +152,7 @@ class Issue(implicit c: CPUConfig) extends Module {
           when(secondNotIssue) {
             // only issue first in
             bufferValid := true.B
-            buffer      := io.decodeResults(1)
-            bufferIn    := io.ins(1).bits
+            buffer      := io.ins(1).bits
           }.otherwise {
             // issue two ins, don't need to enter buffer
           }
@@ -168,32 +175,29 @@ class Issue(implicit c: CPUConfig) extends Module {
       out.write       := current.write
       out.cp0         := current.cp0
       out.except      := current.except
-      out.imm26       := currentIn(i).inst(25, 0)
-      out.pc          := currentIn(i).pc
+      out.imm26       := current.imm26
+      out.pc          := current.pc
       out.inDelaySlot := (if (i == 0) false.B else isBranch(0))
-      out.brPredict   := currentIn(i).brPredict
-      out.brPrHistory := currentIn(i).brPrHistory
-      out.instValid   := currentIn(i).instValid
+      out.brPredict   := current.brPredict
+      out.brPrHistory := current.brPrHistory
+      out.instValid   := current.instValid
       out.pcValid     := currentValid(i)
   }
-  when(secondNotIssue) {
+  when(!currentValid(0)) {
+    io.out(0) := 0.U.asTypeOf(io.out(0))
+  }
+  when(secondNotIssue || !currentValid(1)) {
     io.out(1) := 0.U.asTypeOf(io.out(1))
   }
-  assert(io.ins(0).bits.instValid || !io.ins(0).bits.inst.orR())
-  assert(io.ins(1).bits.instValid || !io.ins(1).bits.inst.orR())
 
   io.operands
-    .zip(bufferIn +: io.ins.map(_.bits))
-    .zip(buffer +: io.decodeResults)
-    .zip(bufferValid +: io.ins.map(_.valid))
+    .zip(buffer +: io.ins.map(_.bits))
     .foreach {
-      case (((operands, entry), decodeResult), valid) =>
-        operands.rs.bits  := entry.inst(25, 21)
-        operands.rt.bits  := entry.inst(20, 16)
-        operands.rs.valid := decodeResult.op1Type === OPn_RF && valid
-        operands.rt.valid := decodeResult.op2Type === OPn_RF && valid
+      case (operands, entry) =>
+        operands.rs := entry.rs
+        operands.rt := entry.rt
     }
 
-  io.stallReq := !currentValid(0) || (!currentOp1(0).valid || !currentOp2(0).valid) ||
-    isBranch(0) && (!currentValid(1) || (!currentOp1(1).valid || !currentOp2(1).valid))
+  io.stallReq := !currentValid(0) || (!currentOp1Ready(0) || !currentOp2Ready(0)) ||
+    isBranch(0) && (!currentValid(1) || (!currentOp1Ready(1) || !currentOp2Ready(1)))
 }

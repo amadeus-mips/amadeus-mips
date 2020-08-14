@@ -62,11 +62,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   // stages
   val if_if1    = Module(new Stage(1, new IfIf1Bundle))
   val instFIFO  = Module(new InstructionFIFO(new InstructionFIFOEntry()))
-  val id_exe    = Module(new Stage(1, Vec(conf.decodeWidth, new IdExeBundle)))
-  val exe_mem   = Module(new Stage(2, Vec(conf.decodeWidth, new ExeMemBundle)))
-  val mem0_mem1 = Module(new Stage(3, Vec(conf.decodeWidth, new Mem0Mem1Bundle)))
-  val mem1_mem2 = Module(new Stage(4, Vec(conf.decodeWidth, new Mem1Mem2Bundle)))
-  val mem2_wb   = Module(new Stage(5, Vec(conf.decodeWidth, new Mem2WbBundle)))
+  val id_exe    = Module(new BackendStage(Vec(conf.decodeWidth, new IdExeBundle)))
+  val exe_mem   = Module(new BackendStage(Vec(conf.decodeWidth, new ExeMemBundle)))
+  val mem0_mem1 = Module(new BackendStage(Vec(conf.decodeWidth, new Mem0Mem1Bundle)))
+  val mem1_mem2 = Module(new BackendStage(Vec(conf.decodeWidth, new Mem1Mem2Bundle)))
+  val mem2_wb   = Module(new BackendStage(Vec(conf.decodeWidth, new Mem2WbBundle)))
 
   fetchTop.io.stall   := hazard.io.frontend.stall(0)
   fetchTop.io.flush   := hazard.io.flushAll
@@ -93,15 +93,15 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   fetch1Top.io.inst.bits  := io.rInst.data.bits
   fetch1Top.io.inst.valid := io.rInst.data.valid
 
-  instFIFO.reset        := reset.asBool() || hazard.io.flushAll || executeTop.io.branch.valid
-  instFIFO.io.enqueue   := fetch1Top.io.out
+  instFIFO.reset      := reset.asBool() || hazard.io.flushAll || executeTop.io.branch.valid
+  instFIFO.io.enqueue := fetch1Top.io.out
 
   decodeTop.io.ins <> instFIFO.io.dequeue
   when(hazard.io.flushAll || executeTop.io.branch.valid) {
     decodeTop.io.ins.foreach(_.valid := false.B)
   }
   decodeTop.io.flush   := hazard.io.flushAll || executeTop.io.branch.valid
-  decodeTop.io.stalled := hazard.io.backend.stall(0)
+  decodeTop.io.stalled := id_exe.io.stallForward
   decodeTop.io.forwards.zipWithIndex.foreach {
     case (forward, i) =>
       forward.exeWR  := executeTop.io.out(i).write
@@ -114,10 +114,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   regFile.io.write := VecInit(mem2_wb.io.out.map(_.write))
 
-  id_exe.io.in    := decodeTop.io.out
-  id_exe.io.stall := hazard.io.backend.stall
-  id_exe.io.flush := hazard.io.flushAll || executeTop.io.branch.valid && !(hazard.io.backend
-    .stall(1) && hazard.io.backend.stall(2))
+  id_exe.io.stallReq   := executeTop.io.stallReq || exe_mem.io.stallForward
+  id_exe.io.stallFLush := decodeTop.io.stallReq || executeTop.io.branch.valid
+  id_exe.io.flush      := hazard.io.flushAll
+  id_exe.io.inIsBubble := false.B
+  id_exe.io.in         := decodeTop.io.out
 
   executeTop.io.ins     := id_exe.io.out
   executeTop.io.flush   := hazard.io.flushAll
@@ -140,9 +141,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   executeTop.io.opForward(1).mem0Op := exe_mem.io.out(1).operation
   executeTop.io.opForward(1).mem1Op := mem0_mem1.io.out(1).op
 
-  exe_mem.io.in    := executeTop.io.out
-  exe_mem.io.stall := hazard.io.backend.stall
-  exe_mem.io.flush := hazard.io.flushAll
+  exe_mem.io.stallReq   := memory0Top.io.stallReq || mem0_mem1.io.stallForward
+  exe_mem.io.stallFLush := executeTop.io.stallReq
+  exe_mem.io.flush      := hazard.io.flushAll
+  exe_mem.io.inIsBubble := id_exe.io.outIsBubble
+  exe_mem.io.in         := executeTop.io.out
 
   memory0Top.io.ins          := exe_mem.io.out
   memory0Top.io.stalled      := exe_mem.io.stalled
@@ -174,31 +177,33 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
 
   hazard.io.frontend.stallReqFromIf0 := fetchTop.io.stallReq
   hazard.io.frontend.stallReqFromIf1 := fetch1Top.io.stallReq
-  hazard.io.backend.stallReqFromId   := decodeTop.io.stallReq
-  hazard.io.backend.stallReqFromExe  := executeTop.io.stallReq
-  hazard.io.backend.stallReqFromMem0 := memory0Top.io.stallReq
-  hazard.io.backend.stallReqFromMem1 := memory1Top.io.stallReq
 
-  mem0_mem1.io.in    := memory0Top.io.out
-  mem0_mem1.io.stall := hazard.io.backend.stall
-  mem0_mem1.io.flush := hazard.io.flushAll && !memory1Top.io.stallReq
+  mem0_mem1.io.stallReq   := memory1Top.io.stallReq || mem1_mem2.io.stallForward
+  mem0_mem1.io.stallFLush := memory0Top.io.stallReq
+  mem0_mem1.io.flush      := hazard.io.flushAll && !memory1Top.io.stallReq
+  mem0_mem1.io.inIsBubble := exe_mem.io.outIsBubble
+  mem0_mem1.io.in         := memory0Top.io.out
 
   memory1Top.io.ins            := mem0_mem1.io.out
   memory1Top.io.dcacheCommit  := io.memAccess.dcacheCommit
   memory1Top.io.uncacheCommit := io.memAccess.uncacheCommit
   memory1Top.io.exceptionCP0  := cp0.io.exceptionCP0
 
-  mem1_mem2.io.in    := memory1Top.io.out
-  mem1_mem2.io.stall := hazard.io.backend.stall
-  mem1_mem2.io.flush := false.B
+  mem1_mem2.io.stallReq   := false.B || mem2_wb.io.stallForward
+  mem1_mem2.io.stallFLush := memory1Top.io.stallReq
+  mem1_mem2.io.flush      := false.B
+  mem1_mem2.io.inIsBubble := mem0_mem1.io.outIsBubble
+  mem1_mem2.io.in         := memory1Top.io.out
 
   memory2Top.io.ins          := mem1_mem2.io.out
   memory2Top.io.cachedData   := io.memAccess.cachedData
   memory2Top.io.uncachedData := io.memAccess.uncachedData
 
-  mem2_wb.io.in    := memory2Top.io.out
-  mem2_wb.io.stall := hazard.io.backend.stall
-  mem2_wb.io.flush := false.B
+  mem2_wb.io.stallReq   := false.B
+  mem2_wb.io.stallFLush := false.B
+  mem2_wb.io.flush      := false.B
+  mem2_wb.io.inIsBubble := mem1_mem2.io.outIsBubble
+  mem2_wb.io.in         := memory2Top.io.out
 
   io.rInst.addr.bits  := fetchTop.io.out.pc
   io.rInst.addr.valid := fetchTop.io.pcValid

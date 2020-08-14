@@ -15,7 +15,7 @@ import firrtl.annotations.MemoryLoadFileType
 class DecodeTop(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle {
     val ins     = Vec(conf.decodeWidth, Flipped(Decoupled(new InstructionFIFOEntry())))
-    val flush = Input(Bool())
+    val flush   = Input(Bool())
     val stalled = Input(Bool())
 
     val forwards = Input(
@@ -37,7 +37,7 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     val stallReq = Output(Bool()) // to pipeLine control
   })
 
-  val ins = io.ins.map(in => Mux(in.valid, in.bits, 0.U.asTypeOf(in.bits)))
+  val ins = io.ins.map(_.bits)
 
   val hazards  = Seq.fill(conf.decodeWidth + conf.decodeBufferNum)(Module(new cpu.core.decode.Hazard(2 * 5)))
   val decodes  = Seq.fill(conf.decodeWidth)(Module(new cpu.core.decode.Decode))
@@ -46,13 +46,17 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
   val issue = Module(new Issue())
 
   hazards.zip(issue.io.operands).zip(io.operands).foreach {
-    case ((hazard, operand), inData) =>
-      hazard.io.ops(0).addr   := operand.rs.bits
-      hazard.io.ops(0).valid  := operand.rs.valid
-      hazard.io.ops(0).inData := inData.rsData
-      hazard.io.ops(1).addr   := operand.rt.bits
-      hazard.io.ops(1).valid  := operand.rt.valid
-      hazard.io.ops(1).inData := inData.rtData
+    case ((hazard, issue), outer) =>
+      hazard.io.ops(0).addr   := issue.rs
+      hazard.io.ops(0).inData := outer.rsData
+      hazard.io.ops(1).addr   := issue.rt
+      hazard.io.ops(1).inData := outer.rtData
+
+      outer.rs := issue.rs
+      outer.rt := issue.rt
+
+      issue.op1 := hazard.io.ops(0).outData
+      issue.op2 := hazard.io.ops(1).outData
 
       hazard.io.wrs(0) := io.forwards(1).exeWR
       hazard.io.wrs(1) := io.forwards(0).exeWR
@@ -66,11 +70,13 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
       hazard.io.wrs(9) := io.forwards(0).wbWR
   }
   for (i <- 0 until conf.decodeWidth) {
+    val rs    = ins(i).inst(25, 21)
     val rt    = ins(i).inst(20, 16)
     val rd    = ins(i).inst(15, 11)
     val sa    = ins(i).inst(10, 6)
     val sel   = ins(i).inst(2, 0)
     val imm16 = ins(i).inst(15, 0)
+    val imm26 = ins(i).inst(25, 0)
 
     decodes(i).io.inst := ins(i).inst
 
@@ -82,40 +88,36 @@ class DecodeTop(implicit conf: CPUConfig) extends Module {
     controls(i).io.signal     := decodes(i).io.out
     controls(i).io.inExcept   := ins(i).except
 
-    issue.io.ins(i).bits := ins(i)
     issue.io.ins(i).valid := io.ins(i).valid
+    io.ins(i).ready       := issue.io.ins(i).ready
 
-    issue.io.decodeResults(i).operation := decodes(i).io.out.operation
-    issue.io.decodeResults(i).op1Type   := decodes(i).io.out.op1Type
-    issue.io.decodeResults(i).op2Type   := decodes(i).io.out.op2Type
-    issue.io.decodeResults(i).instType  := decodes(i).io.out.instType
-    issue.io.decodeResults(i).write     := controls(i).io.write
-    issue.io.decodeResults(i).cp0       := controls(i).io.cp0
-    issue.io.decodeResults(i).imm32     := controls(i).io.imm32
-    issue.io.decodeResults(i).except    := controls(i).io.except
+    issue.io.ins(i).bits.instType    := decodes(i).io.out.instType
+    issue.io.ins(i).bits.operation   := decodes(i).io.out.operation
+    issue.io.ins(i).bits.op1Type     := decodes(i).io.out.op1Type
+    issue.io.ins(i).bits.op2Type     := decodes(i).io.out.op2Type
+    issue.io.ins(i).bits.write       := controls(i).io.write
+    issue.io.ins(i).bits.cp0         := controls(i).io.cp0
+    issue.io.ins(i).bits.imm32       := controls(i).io.imm32
+    issue.io.ins(i).bits.except      := controls(i).io.except
+    issue.io.ins(i).bits.imm26       := imm26
+    issue.io.ins(i).bits.rs          := rs
+    issue.io.ins(i).bits.rt          := rt
+    issue.io.ins(i).bits.pc          := ins(i).pc
+    issue.io.ins(i).bits.brPredict   := ins(i).brPredict
+    issue.io.ins(i).bits.brPrHistory := ins(i).brPrHistory
+    issue.io.ins(i).bits.instValid   := ins(i).instValid
   }
-  issue.io.flush := io.flush
+  issue.io.flush   := io.flush
   issue.io.stalled := io.stalled
 
   io.out := issue.io.out
 
-  io.operands.zip(issue.io.operands).foreach {
-    case (out, issue) =>
-      out.rs := issue.rs.bits
-      out.rt := issue.rt.bits
-  }
-  issue.io.operands.zip(hazards).foreach {
-    case (issue, hazard) =>
-      issue.op1 := hazard.io.ops(0).outData
-      issue.op2 := hazard.io.ops(1).outData
-  }
-
-  io.ins.zip(issue.io.ins).map {
-    case (in, issue) => in.ready := issue.ready
-  }
-
   io.stallReq := issue.io.stallReq
 
+
+  //===---------------------------------------------------------------------------===
+  // for simulation only
+  //===---------------------------------------------------------------------------===
   if (conf.compareRamDirectly) {
     val veriMem = Mem(BigInt("4FFFF", 16), UInt(32.W))
     loadMemoryFromFile(veriMem, conf.memoryFile, MemoryLoadFileType.Hex)

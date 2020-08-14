@@ -20,14 +20,6 @@ class Hazard extends Module {
       val stallReqFromIf1 = Input(Bool())
       val stall           = Output(UInt(cpuStallLen.W))
     }
-    val backend = new Bundle {
-      val stallReqFromId   = Input(Bool())
-      val stallReqFromExe  = Input(Bool())
-      val stallReqFromMem0 = Input(Bool())
-      val stallReqFromMem1 = Input(Bool())
-
-      val stall = Output(UInt(cpuStallLen.W))
-    }
   })
 
   val hasExcept = io.except.asUInt().orR()
@@ -40,16 +32,6 @@ class Hazard extends Module {
     Seq(
       io.frontend.stallReqFromIf1 -> "b111".U,
       io.frontend.stallReqFromIf0 -> "b11".U
-    )
-  )
-
-  io.backend.stall := MuxCase(
-    0.U,
-    Seq(
-      io.backend.stallReqFromMem1 -> "b11111".U,
-      io.backend.stallReqFromMem0 -> "b1111".U,
-      io.backend.stallReqFromExe  -> "b111".U,
-      io.backend.stallReqFromId   -> "b11".U
     )
   )
 
