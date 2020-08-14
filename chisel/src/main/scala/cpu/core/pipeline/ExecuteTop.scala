@@ -84,6 +84,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   writeOther.io.op1       := op1
   writeOther.io.op2       := op2
   writeOther.io.operation := io.in.operation
+  writeOther.io.inHILO    := forward.io.outHILO
   writeOther.io.flush     := io.flush
   writeOther.io.inCP0     := io.in.cp0
   writeOther.io.mult      <> mult.io

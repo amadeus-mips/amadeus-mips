@@ -49,6 +49,10 @@ class CP0IO(tlbSize: Int) extends Bundle {
   val tlbCP0        = Output(new TLBHandleBundle(tlbSize))
   val kseg0Uncached = Output(Bool())
 
+  val llSet = Input(Bool())
+  val llClear = Input(Bool())
+  val llGet = Output(Bool())
+
   override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
 }
 
@@ -205,6 +209,17 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     0.U,
     cp0Seq.map(e => e.index.U -> e.raw)
   )
+
+  val llbit = RegInit(false.B)
+
+  when(except && !io.except(EXCEPT_ERET)) {
+    llbit := false.B
+  }.elsewhen(io.llSet) {
+    llbit := true.B
+  }.elsewhen(io.llClear) {
+    llbit := false.B
+  }
+  io.llGet := llbit
 
   io.exceptionCP0.status := status.reg
   io.exceptionCP0.cause  := cause.reg

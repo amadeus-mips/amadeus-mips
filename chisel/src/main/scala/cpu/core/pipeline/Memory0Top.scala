@@ -21,6 +21,11 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
 
     val mem1Except = Input(Bool())
 
+    val llbit = Input(Bool())
+
+    val llSet = Output(Bool())
+    val llClear = Output(Bool())
+
     // with ram
     val request  = Decoupled(new MemReqBundle)
     val uncached = Input(Bool())
@@ -45,7 +50,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   control.io.inMemData := io.in.memData
   control.io.operation := io.in.operation
   control.io.addr      := io.in.memAddr
-  control.io.except    := hasExcept || io.mem1Except
+  control.io.except    := hasExcept || io.mem1Except || !io.llbit && io.in.operation === MEM_SC
 
   except.io.pc        := io.in.pc
   except.io.addr      := io.in.memAddr
@@ -62,7 +67,11 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.out.addrL2             := io.in.memAddr(1, 0)
   io.out.op                 := io.in.operation
   io.out.write              := io.in.write
-  io.out.write.enable       := io.in.write.enable && !hasExcept
+  io.out.write.enable       := !hasExcept && io.in.write.enable
+  when(io.in.operation === MEM_SC){
+    io.out.write.valid := true.B
+    io.out.write.data := io.llbit
+  }
   io.out.pc                 := io.in.pc
   io.out.uncached           := io.uncached
   io.out.inDelaySlot        := io.in.inDelaySlot
@@ -74,6 +83,9 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.out.hiloWrite          := io.in.hilo
   io.out.hiloWrite.lo.valid := io.in.hilo.lo.valid && !hasExcept
   io.out.hiloWrite.hi.valid := io.in.hilo.hi.valid && !hasExcept
+
+  io.llSet := io.in.operation === MEM_LL
+  io.llClear := io.in.operation === MEM_SC
 
   io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready) || (io.in.operation === EXC_WAIT && !hasExcept)
 

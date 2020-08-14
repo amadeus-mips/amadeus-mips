@@ -89,6 +89,10 @@ class Decode extends Module {
       MUL       -> List(Y , OPn_RF , OPn_RF,  INST_ALU, ALU_MUL , WR_Y  , WRA_T1 , IMM_N  ),
       MULT      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULT , WR_N  , WRA_X  , IMM_N  ),
       MULTU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULTU, WR_N  , WRA_X  , IMM_N  ),
+      MADD      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADD , WR_N  , WRA_X  , IMM_N  ),
+      MADDU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADDU, WR_N  , WRA_X  , IMM_N  ),
+      MSUB      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUB , WR_N  , WRA_X  , IMM_N  ),
+      MSUBU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUBU, WR_N  , WRA_X  , IMM_N  ),
       DIV       -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIV  , WR_N  , WRA_X  , IMM_N  ),
       DIVU      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIVU , WR_N  , WRA_X  , IMM_N  ),
       CLO       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLO , WR_Y  , WRA_T1 , IMM_N  ),
@@ -137,6 +141,9 @@ class Decode extends Module {
       LWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_LWR , WR_Y  , WRA_T2 , IMM_N  ),
       SWL       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWL , WR_N  , WRA_X  , IMM_N  ),
       SWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWR , WR_N  , WRA_X  , IMM_N  ),
+      LL        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LL  , WR_Y  , WRA_T2 , IMM_N  ),
+      SC        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_Y  , WRA_T2 , IMM_N  ),
+
 
       SYNC      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
       PREF      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),

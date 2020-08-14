@@ -144,6 +144,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   memory0Top.io.tlbCP0       := cp0.io.tlbCP0
   memory0Top.io.exceptionCP0 := cp0.io.exceptionCP0
   memory0Top.io.mem1Except   := mem0_mem1.io.out.except.asUInt().orR()
+  memory0Top.io.llbit := cp0.io.llGet
 
   cp0.io.intr        := io.intr
   cp0.io.addr        := id_exe.io.out.imm26(15, 11)
@@ -153,6 +154,9 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   cp0.io.inDelaySlot := mem0_mem1.io.out.inDelaySlot
   cp0.io.pc          := mem0_mem1.io.out.pc
   cp0.io.badAddr     := mem0_mem1.io.out.badAddr
+
+  cp0.io.llSet := memory0Top.io.llSet
+  cp0.io.llClear := memory0Top.io.llClear
 
   cp0.io.op  := mem0_mem1.io.out.op
   cp0.io.tlb := mem0_mem1.io.out.tlbWrite

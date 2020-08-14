@@ -49,6 +49,7 @@ class Memory2Top extends Module {
           MEM_LH  -> Mux(io.in.addrL2(1), Util.signedExtend(readData(31, 16)), Util.signedExtend(readData(15, 0))),
           MEM_LHU -> Mux(io.in.addrL2(1), Util.zeroExtend(readData(31, 16)), Util.zeroExtend(readData(15, 0))),
           MEM_LW  -> readData,
+          MEM_LL  -> readData,
           MEM_LWL -> MuxLookup(
             io.in.addrL2,
             io.in.write.data,

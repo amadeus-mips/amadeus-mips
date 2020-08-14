@@ -58,6 +58,7 @@ class Control extends Module {
       ),
       MEM_SH -> Mux(addrL2(1), "b1100".U, "b0011".U),
       MEM_SW -> "b1111".U,
+      MEM_SC -> "b1111".U,
       MEM_SWL -> MuxLookup(
         addrL2,
         0.U,
@@ -82,7 +83,7 @@ class Control extends Module {
   )
   io.request.bits.writeData := MuxLookup(
     io.operation,
-    io.inMemData, // default SW
+    io.inMemData, // default SW, SC
     Array(
       MEM_SB -> Fill(4, io.inMemData(7, 0)),
       MEM_SH -> Fill(2, io.inMemData(15, 0)),
