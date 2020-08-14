@@ -5,7 +5,7 @@ import chisel3.util.Cat
 import cpu.CPUConfig
 
 class MMU(implicit conf: CPUConfig) extends BaseMMU {
-  val tlb = Module(new FullTLB(numOfReadPorts = 2, TLBSize = conf.tlbSize))
+  val tlb = Module(if(conf.useMemTLB) new MemTLB(numOfReadPorts = 2, tlbSize = conf.tlbSize) else new FullTLB(numOfReadPorts = 2, tlbSize = conf.tlbSize))
 
   tlb.io.asid          := io.core.asid
   tlb.io.kseg0Uncached := io.core.kseg0Uncached

@@ -28,34 +28,38 @@ class ExceptionHandleBundle extends Bundle {
   val ebase  = new EBaseBundle
 }
 
-class CP0IO(tlbSize: Int) extends Bundle {
-  val intr        = Input(UInt(intrLen.W))
-  val cp0Write    = Input(new CPBundle)
-  val addr        = Input(UInt(regAddrLen.W))
-  val sel         = Input(UInt(3.W))
-  val inDelaySlot = Input(Bool())
-  val pc          = Input(UInt(addrLen.W))
-
-  val except  = Input(Vec(exceptAmount, Bool()))
-  val badAddr = Input(UInt(addrLen.W))
-
-  val op  = Input(UInt(opLen.W))
-  val tlb = Input(new TLBReadBundle)
-
-  val data = Output(UInt(dataLen.W))
-
-  val exceptionCP0 = Output(new ExceptionHandleBundle)
-
-  val tlbCP0        = Output(new TLBHandleBundle(tlbSize))
-  val kseg0Uncached = Output(Bool())
-
-  override def cloneType: CP0IO.this.type = new CP0IO(tlbSize).asInstanceOf[this.type]
-}
-
 @chiselName
 class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val tlbWidth = log2Ceil(tlbSize)
-  val io       = IO(new CP0IO(tlbSize))
+  val io = IO(new Bundle {
+    val intr = Input(UInt(intrLen.W))
+
+    // cp0 write
+    val cp0Write = Input(new CPBundle)
+    val op       = Input(UInt(opLen.W))
+    val tlb      = Input(new TLBReadBundle)
+
+    // exception handler
+    val except      = Input(Vec(exceptAmount, Bool()))
+    val inDelaySlot = Input(Bool())
+    val pc          = Input(UInt(addrLen.W))
+    val badAddr     = Input(UInt(addrLen.W))
+
+    // read port
+    val read = Vec(
+      conf.decodeWidth,
+      new Bundle {
+        val addr = Input(UInt(regAddrLen.W))
+        val sel  = Input(UInt(3.W))
+        val data = Output(UInt(dataLen.W))
+      }
+    )
+
+    val exceptionCP0 = Output(new ExceptionHandleBundle)
+
+    val tlbCP0        = Output(new TLBHandleBundle(tlbSize))
+    val kseg0Uncached = Output(Bool())
+  })
 
   val index    = new IndexCP0(tlbSize)
   val random   = new RandomCP0(tlbSize)
@@ -101,7 +105,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   val isKernelMode = !status.reg.um || status.reg.erl || status.reg.exl
 
   // soft write
-  when(io.cp0Write.enable) {
+  when(io.cp0Write.enable && io.cp0Write.valid) {
     val c = io.cp0Write
     cp0Seq.foreach(cp0 => {
       when(cp0.index.U === Cat(c.addr, c.sel)) {
@@ -117,7 +121,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
 
   def compareWriteCP0(p: BaseCP0): Bool = {
     val c = io.cp0Write
-    c.enable && c.addr === p.addr.U && c.sel === p.sel.U
+    c.enable && c.valid && c.addr === p.addr.U && c.sel === p.sel.U
   }
 
   val excCode =
@@ -197,11 +201,13 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     epc.reg := Mux(io.inDelaySlot, io.pc - 4.U, io.pc)
   }
 
-  io.data := MuxLookup(
-    Cat(io.addr, io.sel),
-    0.U,
-    cp0Seq.map(e => e.index.U -> e.raw)
-  )
+  io.read.foreach(r => {
+    r.data := MuxLookup(
+      Cat(r.addr, r.sel),
+      0.U,
+      cp0Seq.map(e => e.index.U -> e.raw)
+    )
+  })
 
   io.exceptionCP0.status := status.reg
   io.exceptionCP0.cause  := cause.reg

@@ -6,6 +6,7 @@ import chisel3._
 import chisel3.util.MuxCase
 import cpu.core.Constants._
 import cpu.core.bundles.WriteBundle
+import shared.ValidBundle
 
 /**
   * Handle hazard
@@ -16,26 +17,21 @@ class Hazard(n: Int) extends Module {
 
     val ops = Vec(2, new Bundle() {
       val addr    = Input(UInt(regAddrLen.W))
+      val valid   = Input(Bool())
       val inData  = Input(UInt(dataLen.W))
-      val typ     = Input(UInt(1.W))
-      val outData = Output(UInt(dataLen.W))
+      val outData = Output(new ValidBundle)
     })
-
-    val stallReq = Output(Bool())
   })
 
-  val stalls = Wire(Vec(2, Bool()))
-  io.stallReq := stalls.asUInt().orR()
-
-  for ((op, stall) <- io.ops.zip(stalls)) {
-    op.outData := MuxCase(
+  io.ops.foreach(op => {
+    op.outData.bits := MuxCase(
       op.inData,
       (!op.addr.orR() -> 0.U) +: io.wrs.map(wr => (wr.enable && wr.address === op.addr) -> wr.data)
     )
-    stall := op.typ === OPn_RF && MuxCase(
-      false.B,
-      (!op.addr.orR() -> 0.B) +: io.wrs.map(wr => (wr.enable && wr.address === op.addr) -> !wr.valid)
+    op.outData.valid := !op.valid || MuxCase(
+      true.B,
+      (!op.addr.orR() -> true.B) +: io.wrs.map(wr => (wr.enable && wr.address === op.addr) -> wr.valid)
     )
-  }
+  })
 
 }

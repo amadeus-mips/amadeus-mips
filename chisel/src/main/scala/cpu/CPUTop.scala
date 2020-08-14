@@ -25,7 +25,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
     /** hardware interrupt */
     val intr  = Input(UInt(6.W))
     val axi   = AXIIO.master()
-    val debug = Output(new DebugBundle)
+    val debug = Output(Vec(2, new DebugBundle))
 
     val performance = if (performanceMonitorEnable) Some(new CPUTopPerformanceIO) else None
   })
@@ -78,7 +78,7 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   io.axi <> arbiter.io.master
 
-  io.debug <> core.io_ls.debug
+  io.debug := core.io_ls.debug
 
 }
 

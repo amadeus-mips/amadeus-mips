@@ -13,7 +13,7 @@ import cpu.core.components.MultDivIO
   *
   * Will stall pipeline
   */
-class WriteOther extends Module {
+class MultDiv extends Module {
   val io = IO(new Bundle {
     val op1       = Input(UInt(dataLen.W))
     val op2       = Input(UInt(dataLen.W))
@@ -21,20 +21,12 @@ class WriteOther extends Module {
 
     val flush = Input(Bool())
 
-    val inCP0 = Input(new CPBundle)
-
-    val outCP0   = Output(new CPBundle)
     val outHILO  = Output(new HILOValidBundle)
     val stallReq = Output(Bool())
 
     val mult = Flipped(new MultDivIO)
     val div  = Flipped(new MultDivIO)
   })
-
-  io.outCP0       := io.inCP0
-  io.outCP0.data  := io.op2
-  io.outCP0.valid := true.B
-
   io.outHILO.hi.valid := io.operation === WO_MTHI
   io.outHILO.hi.bits  := io.op1
   io.outHILO.lo.valid := io.operation === WO_MTLO

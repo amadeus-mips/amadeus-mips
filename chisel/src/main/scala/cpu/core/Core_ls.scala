@@ -10,11 +10,15 @@ import shared.DebugBundle
 
 class Core_ls(implicit conf: CPUConfig) extends Core {
   val io_ls = IO(new Bundle {
-    val debug = Output(new DebugBundle)
+    val debug = Output(Vec(conf.decodeWidth, new DebugBundle))
   })
 
-  io_ls.debug.wbPC := mem2_wb.io.out.pc
-  io_ls.debug.wbRegFileWEn := Fill(4, mem2_wb.io.out.write.enable)
-  io_ls.debug.wbRegFileWNum := mem2_wb.io.out.write.address
-  io_ls.debug.wbRegFileWData := mem2_wb.io.out.write.data
+  io_ls.debug.zip(mem2_wb.io.out).foreach{
+    case (debug, writeBack) =>
+      debug.wbPC := writeBack.pc
+      debug.wbRegFileWEn := Fill(4, writeBack.write.enable)
+      debug.wbRegFileWNum := writeBack.write.address
+      debug.wbRegFileWData := writeBack.write.data
+  }
+
 }

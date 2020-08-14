@@ -44,7 +44,7 @@ class SocLiteTop(implicit
     val gp    = new GPIO
     val uart  = new ValidIO(UInt(8.W))
     val num   = Output(new NumMonitorBundle)
-    val debug = Output(new DebugBundle)
+    val debug = Output(Vec(2, new DebugBundle))
 
     val performance = if (socCfg.performanceMonitor) Some(new SocPerformanceIO) else None
     val branchPerf = Output(new Bundle {

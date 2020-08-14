@@ -12,7 +12,7 @@ import uart.MyUART
 class SocUpTop(implicit cfg: SocUpTopConfig) extends Module {
   val io = IO(new Bundle {
     val gp    = new GPIO
-    val debug = Output(new DebugBundle)
+    val debug = Output(Vec(2, new DebugBundle))
     val uart = new Bundle() {
       val in  = Flipped(Decoupled(UInt(8.W)))
       val out = Valid(UInt(8.W))
