@@ -75,7 +75,7 @@ class Memory0Top(implicit cfg: CPUConfig) extends Module {
   io.out.hiloWrite.lo.valid := io.in.hilo.lo.valid && !hasExcept
   io.out.hiloWrite.hi.valid := io.in.hilo.hi.valid && !hasExcept
 
-  io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready)
+  io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready) || (io.in.operation === EXC_WAIT && !hasExcept)
 
   io.request <> control.io.request
 

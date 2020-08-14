@@ -116,12 +116,13 @@ class Decode extends Module {
       TLBP      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_P   , WR_N  , WRA_X  , IMM_N  ),
       TLBR      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_R   , WR_N  , WRA_X  , IMM_N  ),
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WI  , WR_N  , WRA_X  , IMM_N  ),
-      TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
+      TLBWR     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
 
       // 例外指令
       SYSCALL   -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_SC  , WR_N  , WRA_X  , IMM_N  ),
       BREAK     -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_BR  , WR_N  , WRA_X  , IMM_N  ),
       ERET      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
+      WAIT      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_WAIT, WR_N  , WRA_X  , IMM_N  ),
 
       // 访存指令
       LB        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_N  ),

@@ -98,6 +98,7 @@ trait opConstants {
   val MEM_LWR   = 58.U(opLen.W)
   val MEM_SWL   = 59.U(opLen.W)
   val MEM_SWR   = 60.U(opLen.W)
+  val EXC_WAIT  = 61.U(opLen.W)
 
 
   val TRAP_EQ   = 0.U(opLen.W)

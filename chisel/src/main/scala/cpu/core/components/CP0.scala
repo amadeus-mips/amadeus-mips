@@ -189,12 +189,15 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
 
   when(except && !status.reg.exl) {
     cause.reg.bd := io.inDelaySlot
+    cause.reg.excCode := excCode
   }
   cause.reg.ipHard  := io.intr
-  cause.reg.excCode := excCode
 
   when(except && !io.except(EXCEPT_ERET) && !status.reg.exl) {
-    epc.reg := Mux(io.inDelaySlot, io.pc - 4.U, io.pc)
+    epc.reg := MuxCase(io.pc, Array(
+      io.inDelaySlot -> (io.pc - 4.U),
+      (io.op === EXC_WAIT) -> (io.pc + 4.U)
+    ))
   }
 
   io.data := MuxLookup(
