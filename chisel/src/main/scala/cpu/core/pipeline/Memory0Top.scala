@@ -21,6 +21,11 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
 
     val mem1Except = Input(Bool())
 
+    val llbit = Input(Bool())
+
+    val llSet = Output(Bool())
+    val llClear = Output(Bool())
+
     // with ram
     val request  = Decoupled(new MemReqBundle)
     val uncached = Input(Bool())
@@ -47,7 +52,7 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
   control.io.inMemData := io.ins(memSlot).memData
   control.io.operation := io.ins(memSlot).operation
   control.io.addr      := io.ins(memSlot).memAddr
-  control.io.except    := hasExcept(memSlot) || io.mem1Except
+  control.io.except    := hasExcept(memSlot) || io.mem1Except || !io.llbit && io.ins(memSlot).operation === MEM_SC
 
   excepts.zip(io.ins).foreach {
     case (except, in) =>
@@ -70,6 +75,10 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
       out.instType    := in.instType
       out.op          := in.operation
       out.write       := in.write
+      when(io.ins(memSlot).operation === MEM_SC){
+        out.write.valid := true.B
+        out.write.data := io.llbit
+      }
       out.pc          := in.pc
       out.uncached    := io.uncached
       out.inDelaySlot := in.inDelaySlot
@@ -82,6 +91,9 @@ class Memory0Top(implicit conf: CPUConfig) extends Module {
   io.stallReq := control.io.stallReq || (io.dCacheInvalidate.valid && !io.dCacheInvalidate.ready) || (io.iCacheInvalidate.valid && !io.iCacheInvalidate.ready)
 
   io.request <> control.io.request
+
+  io.llSet := io.ins(memSlot).operation === MEM_LL
+  io.llClear := io.ins(memSlot).operation === MEM_SC
 
   // ===--------------------------------------------------------------------------------------------------===
   // cache instruction

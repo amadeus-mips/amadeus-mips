@@ -29,7 +29,7 @@ trait opConstants {
   val INST_TLB    = 7.U(instTypeLen.W)    // TLB instruction
   val INST_TRAP   = 8.U(instTypeLen.W)
 
-  val opLen = 6
+  val opLen = 7
   val OP_N     = 0.U(opLen.W)   // 无操作
   // ALU 类型
   val ALU_OR    = 1.U(opLen.W)    // OR
@@ -98,6 +98,13 @@ trait opConstants {
   val MEM_LWR   = 58.U(opLen.W)
   val MEM_SWL   = 59.U(opLen.W)
   val MEM_SWR   = 60.U(opLen.W)
+  val EXC_WAIT  = 61.U(opLen.W)
+  val WO_MADD   = 62.U(opLen.W)
+  val WO_MADDU  = 63.U(opLen.W)
+  val WO_MSUB   = 64.U(opLen.W)
+  val WO_MSUBU  = 65.U(opLen.W)
+  val MEM_LL    = 66.U(opLen.W)
+  val MEM_SC    = 67.U(opLen.W)
 
   val TRAP_EQ   = 1.U(opLen.W)
   val TRAP_GE   = 2.U(opLen.W)
@@ -109,12 +116,12 @@ trait opConstants {
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    VecInit(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW, MEM_LWL, MEM_LWR).contains(op)
+    VecInit(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW, MEM_LWL, MEM_LWR, MEM_LL).contains(op)
   }
   /** judge whether op is to save data to memory */
   def opIsStore(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    VecInit(MEM_SB, MEM_SH, MEM_SW, MEM_SWL, MEM_SWR).contains(op)
+    VecInit(MEM_SB, MEM_SH, MEM_SW, MEM_SWL, MEM_SWR, MEM_SC).contains(op)
   }
   /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {

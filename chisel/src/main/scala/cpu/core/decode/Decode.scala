@@ -89,6 +89,10 @@ class Decode extends Module {
       MUL       -> List(Y , OPn_RF , OPn_RF,  INST_ALU, ALU_MUL , WR_Y  , WRA_T1 , IMM_N  ),
       MULT      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULT , WR_N  , WRA_X  , IMM_N  ),
       MULTU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULTU, WR_N  , WRA_X  , IMM_N  ),
+      MADD      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADD , WR_N  , WRA_X  , IMM_N  ),
+      MADDU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADDU, WR_N  , WRA_X  , IMM_N  ),
+      MSUB      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUB , WR_N  , WRA_X  , IMM_N  ),
+      MSUBU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUBU, WR_N  , WRA_X  , IMM_N  ),
       DIV       -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIV  , WR_N  , WRA_X  , IMM_N  ),
       DIVU      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIVU , WR_N  , WRA_X  , IMM_N  ),
       CLO       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLO , WR_Y  , WRA_T1 , IMM_N  ),
@@ -116,12 +120,13 @@ class Decode extends Module {
       TLBP      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_P   , WR_N  , WRA_X  , IMM_N  ),
       TLBR      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_R   , WR_N  , WRA_X  , IMM_N  ),
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WI  , WR_N  , WRA_X  , IMM_N  ),
-      TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
+      TLBWR     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
 
       // 例外指令
       SYSCALL   -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_SC  , WR_N  , WRA_X  , IMM_N  ),
       BREAK     -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_BR  , WR_N  , WRA_X  , IMM_N  ),
       ERET      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
+      WAIT      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_WAIT, WR_N  , WRA_X  , IMM_N  ),
 
       // 访存指令
       LB        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_N  ),
@@ -136,6 +141,9 @@ class Decode extends Module {
       LWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_LWR , WR_Y  , WRA_T2 , IMM_N  ),
       SWL       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWL , WR_N  , WRA_X  , IMM_N  ),
       SWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWR , WR_N  , WRA_X  , IMM_N  ),
+      LL        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LL  , WR_Y  , WRA_T2 , IMM_N  ),
+      SC        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SC  , WR_Y  , WRA_T2 , IMM_N  ),
+
 
       SYNC      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
       PREF      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),

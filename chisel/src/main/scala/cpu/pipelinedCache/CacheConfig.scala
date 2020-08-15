@@ -4,7 +4,7 @@ import chisel3.util._
 
 case class CacheConfig(
   numOfSets:  Int = 64,
-  numOfWays:  Int = 4,
+  numOfWays:  Int = 2,
   numOfBanks: Int = 8,
   bankWidth:  Int = 4 // bytes per bank
 ) {

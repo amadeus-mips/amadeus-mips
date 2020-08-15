@@ -117,6 +117,7 @@ class Memory2Top(implicit conf: CPUConfig) extends Module {
             Util.zeroExtend(readData(15, 0))
           ),
           MEM_LW -> readData,
+          MEM_LL -> readData,
           MEM_LWL -> MuxLookup(
             io.ins(memSlot).addrL2,
             io.ins(memSlot).write.data,

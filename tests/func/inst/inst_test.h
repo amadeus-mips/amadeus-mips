@@ -1388,7 +1388,76 @@
     nop
 
 
+/* 100 */
+#define TEST_MADD(in_hi, in_lo, in_a, in_b, ref_hi, ref_lo) \
+    li t0, in_hi; \
+    li t1, in_lo; \
+    mthi t0; \
+    mtlo t1; \
+    li t0, in_a; \
+    li t1, in_b; \
+    madd t0, t1; \
+    mflo s5; \
+    mfhi s6; \
+    li v0, ref_lo; \
+    li v1, ref_hi; \
+    bne v0, s5, inst_error; \
+    nop; \
+    bne v1, s6, inst_error; \
+    nop
 
+/* 101 */
+#define TEST_MADDU(in_hi, in_lo, in_a, in_b, ref_hi, ref_lo) \
+    li t0, in_hi; \
+    li t1, in_lo; \
+    mthi t0; \
+    mtlo t1; \
+    li t0, in_a; \
+    li t1, in_b; \
+    maddu t0, t1; \
+    mflo s5; \
+    mfhi s6; \
+    li v0, ref_lo; \
+    li v1, ref_hi; \
+    bne v0, s5, inst_error; \
+    nop; \
+    bne v1, s6, inst_error; \
+    nop
 
+/* 102 */
+#define TEST_MSUB(in_hi, in_lo, in_a, in_b, ref_hi, ref_lo) \
+    li t0, in_hi; \
+    li t1, in_lo; \
+    mthi t0; \
+    mtlo t1; \
+    li t0, in_a; \
+    li t1, in_b; \
+    msub t0, t1; \
+    mflo s5; \
+    mfhi s6; \
+    li v0, ref_lo; \
+    li v1, ref_hi; \
+    bne v0, s5, inst_error; \
+    nop; \
+    bne v1, s6, inst_error; \
+    nop
+
+/* 103 */
+#define TEST_MSUBU(in_hi, in_lo, in_a, in_b, ref_hi, ref_lo) \
+    li t0, in_hi; \
+    li t1, in_lo; \
+    mthi t0; \
+    mtlo t1; \
+    li t0, in_a; \
+    li t1, in_b; \
+    msubu t0, t1; \
+    mflo s5; \
+    mfhi s6; \
+    li v0, ref_lo; \
+    li v1, ref_hi; \
+    bne v0, s5, inst_error; \
+    nop; \
+    bne v1, s6, inst_error; \
+    nop
 
 
