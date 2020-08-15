@@ -59,8 +59,8 @@ class WriteOther extends Module {
   val loReg = RegNext(io.mult.result.lo.bits, 0.U(32.W))
   val res = Mux(
     io.operation === WO_MADD || io.operation === WO_MADDU,
-    Cat(hiReg, loReg) + Cat(io.inHILO.hi, io.inHILO.lo),
-    Cat(hiReg, loReg) - Cat(io.inHILO.hi, io.inHILO.lo)
+    Cat(io.inHILO.hi, io.inHILO.lo) + Cat(hiReg, loReg),
+    Cat(io.inHILO.hi, io.inHILO.lo) - Cat(hiReg, loReg)
   )
   when(io.operation === WO_MULT || io.operation === WO_MULTU || io.operation === ALU_MUL) {
     io.mult.enable := !io.mult.result.hi.valid
