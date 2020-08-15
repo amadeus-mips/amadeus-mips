@@ -142,7 +142,7 @@ class Decode extends Module {
       SWL       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWL , WR_N  , WRA_X  , IMM_N  ),
       SWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWR , WR_N  , WRA_X  , IMM_N  ),
       LL        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LL  , WR_Y  , WRA_T2 , IMM_N  ),
-      SC        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_Y  , WRA_T2 , IMM_N  ),
+      SC        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SC  , WR_Y  , WRA_T2 , IMM_N  ),
 
 
       SYNC      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
