@@ -44,6 +44,7 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     val inDelaySlot = Input(Bool())
     val pc          = Input(UInt(addrLen.W))
     val badAddr     = Input(UInt(addrLen.W))
+    val isWait      = Input(Bool())
 
     // read port
     val read = Vec(
@@ -60,9 +61,9 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
     val tlbCP0        = Output(new TLBHandleBundle(tlbSize))
     val kseg0Uncached = Output(Bool())
 
-    val llSet = Input(Bool())
+    val llSet   = Input(Bool())
     val llClear = Input(Bool())
-    val llGet = Output(Bool())
+    val llGet   = Output(Bool())
   })
 
   val index    = new IndexCP0(tlbSize)
@@ -196,16 +197,19 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   }
 
   when(except && !status.reg.exl) {
-    cause.reg.bd := io.inDelaySlot
+    cause.reg.bd      := io.inDelaySlot
     cause.reg.excCode := excCode
   }
-  cause.reg.ipHard  := io.intr
+  cause.reg.ipHard := io.intr
 
   when(except && !io.except(EXCEPT_ERET) && !status.reg.exl) {
-    epc.reg := MuxCase(io.pc, Array(
-      io.inDelaySlot -> (io.pc - 4.U),
-      (io.op === EXC_WAIT) -> (io.pc + 4.U)
-    ))
+    epc.reg := MuxCase(
+      io.pc,
+      Array(
+        io.inDelaySlot -> (io.pc - 4.U),
+        io.isWait      -> (io.pc + 4.U)
+      )
+    )
   }
 
   io.read.foreach(r => {
@@ -221,10 +225,11 @@ class CP0(tlbSize: Int = 32)(implicit conf: CPUConfig) extends Module {
   when(except && !io.except(EXCEPT_ERET)) {
     llbit := false.B
   }.elsewhen(io.llSet) {
-    llbit := true.B
-  }.elsewhen(io.llClear) {
-    llbit := false.B
-  }
+      llbit := true.B
+    }
+    .elsewhen(io.llClear) {
+      llbit := false.B
+    }
   io.llGet := llbit
 
   io.exceptionCP0.status := status.reg

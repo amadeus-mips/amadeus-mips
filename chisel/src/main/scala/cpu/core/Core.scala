@@ -172,6 +172,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   cp0.io.inDelaySlot := memory1Top.io.inDelaySlot
   cp0.io.pc          := memory1Top.io.pc
   cp0.io.badAddr     := memory1Top.io.badAddr
+  cp0.io.isWait      := memory1Top.io.isWait
 
   hilo.io.in := memory1Top.io.hiloWrite
 

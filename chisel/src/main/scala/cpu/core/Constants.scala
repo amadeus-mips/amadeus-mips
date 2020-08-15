@@ -131,7 +131,7 @@ trait opConstants {
 
   def opIsHILOWrite(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    VecInit(WO_MULT, WO_MULTU, WO_DIV, WO_DIVU, ALU_MUL, WO_MTHI, WO_MTLO).contains(op)
+    VecInit(WO_MULT, WO_MULTU, WO_DIV, WO_DIVU, ALU_MUL, WO_MTHI, WO_MTLO, WO_MADD, WO_MADDU, WO_MSUB, WO_MSUBU).contains(op)
   }
 
   def opIsC0Write(op: UInt): Bool = {

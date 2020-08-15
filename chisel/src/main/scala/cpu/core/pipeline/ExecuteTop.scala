@@ -150,6 +150,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
   multDivController.io.op1       := io.ins(hiloSlot).op1
   multDivController.io.op2       := io.ins(hiloSlot).op2
   multDivController.io.operation := io.ins(hiloSlot).operation
+  multDivController.io.inHILO    := forward.io.outHILO
   multDivController.io.flush     := io.flush
   multDivController.io.mult      <> mult.io
   multDivController.io.div       <> div.io

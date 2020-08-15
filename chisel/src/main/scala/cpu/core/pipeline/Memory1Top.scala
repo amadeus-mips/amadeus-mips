@@ -32,6 +32,7 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
     val inDelaySlot = Output(Bool())
     val pc          = Output(UInt(addrLen.W))
     val badAddr     = Output(UInt(addrLen.W))
+    val isWait      = Output(Bool())
 
     val exceptJumpAddr = Output(UInt(addrLen.W))
   })
@@ -105,6 +106,7 @@ class Memory1Top(implicit conf: CPUConfig) extends Module {
   io.inDelaySlot := io.ins(exceptSlot).inDelaySlot
   io.pc          := io.ins(exceptSlot).pc
   io.badAddr     := io.ins(exceptSlot).badAddr
+  io.isWait      := io.ins.map(_.op === EXC_WAIT).reduce(_ || _)
 
   val memSlot = Mux(io.ins(0).instType === INST_MEM, 0.U, 1.U)
 

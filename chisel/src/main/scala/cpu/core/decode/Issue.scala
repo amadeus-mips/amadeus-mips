@@ -88,10 +88,11 @@ class Issue(implicit c: CPUConfig) extends Module {
   )
 
   //noinspection DuplicatedCode
-  val currentOp1Ready = currentRs.zip(currentOp1).map{case (rs, op1) => !rs.valid || op1.valid}
+  val currentOp1Ready = currentRs.zip(currentOp1).map { case (rs, op1) => !rs.valid || op1.valid }
   //noinspection DuplicatedCode
-  val currentOp2Ready = currentRt.zip(currentOp2).map{case (rt, op2) => !rt.valid || op2.valid}
+  val currentOp2Ready = currentRt.zip(currentOp2).map { case (rt, op2) => !rt.valid || op2.valid }
 
+  val isWait      = current.map(_.operation === EXC_WAIT)
   val isMem       = current.map(in => { INST_MEM === in.instType })
   val isBranch    = current.map(in => { INST_BR === in.instType })
   val isEret      = current.map(in => { EXC_ER === in.operation })
@@ -99,10 +100,7 @@ class Issue(implicit c: CPUConfig) extends Module {
   val isC0Write   = current.map(in => { opIsC0Write(in.operation) })
 
   val hiloHazard =
-    current(0).operation === WO_MTHI && current(1).operation === MV_MFHI ||
-      current(0).operation === WO_MTLO && current(1).operation === MV_MFLO ||
-      VecInit(WO_DIV, WO_DIVU, WO_MULT, ALU_MUL, WO_MULTU).contains(current(0).operation) &&
-        VecInit(MV_MFHI, MV_MFLO).contains(current(1).operation)
+    isHILOWrite(0) && VecInit(MV_MFHI, MV_MFLO).contains(current(1).operation)
 
   val regFileHazard = current(0).write.enable &&
     (currentRs(1).valid && currentRs(1).bits === current(0).write.address ||
@@ -119,7 +117,7 @@ class Issue(implicit c: CPUConfig) extends Module {
     *   <ul>have hazard(regFile or hilo)</ul>
     */
   val secondNotIssue = isMem.reduce(_ && _) || isBranch(1) || isEret.reduce(_ && _) || isHILOWrite.reduce(_ && _) ||
-    isC0Write(0) || (!currentOp1Ready(1) || !currentOp2Ready(1)) || regFileHazard || hiloHazard
+    isC0Write(0) || isWait(0) || (!currentOp1Ready(1) || !currentOp2Ready(1)) || regFileHazard || hiloHazard
 
   //===---------------------------------------------------===
   // buffer controller

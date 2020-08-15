@@ -5,7 +5,7 @@ package cpu
 import axi.{AXIIO, AXIOutstandingReadArbiter, AXIOutstandingWriteArbiter}
 import chisel3._
 import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
-import cpu.cache.{UnCachedUnit, UncachedQueue}
+import cpu.cache.UncachedQueue
 import cpu.core.Core_ls
 import cpu.mmu.{FakeMMU, MMU}
 import cpu.pipelinedCache.{DataCache, InstrCache}
@@ -30,8 +30,8 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   val readArbiter  = Module(new AXIOutstandingReadArbiter)
   val writeArbiter = Module(new AXIOutstandingWriteArbiter)
 
-  val iCache   = Module(new InstrCache(conf.iCacheConf))
-  val dCache   = Module(new DataCache(conf.iCacheConf))
+  val iCache = Module(new InstrCache(conf.iCacheConf))
+  val dCache = Module(new DataCache(conf.iCacheConf))
 //  val unCached = Module(new UnCachedUnit)
   val unCached = Module(new UncachedQueue())
 
@@ -56,16 +56,16 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
 
   when(!mmu.io.dataUncached) {
     core.io.memAccess.request.ready := dCache.io.request.ready
-    dCache.io.request.valid   := core.io.memAccess.request.valid
-    dCache.io.request.bits    := mmu.io.out.memReq
-    unCached.io.request       := DontCare
-    unCached.io.request.valid := false.B
+    dCache.io.request.valid         := core.io.memAccess.request.valid
+    dCache.io.request.bits          := mmu.io.out.memReq
+    unCached.io.request             := DontCare
+    unCached.io.request.valid       := false.B
   }.otherwise {
     core.io.memAccess.request.ready := unCached.io.request.ready
-    unCached.io.request.valid := core.io.memAccess.request.valid
-    unCached.io.request.bits  := mmu.io.out.memReq
-    dCache.io.request         := DontCare
-    dCache.io.request.valid   := false.B
+    unCached.io.request.valid       := core.io.memAccess.request.valid
+    unCached.io.request.bits        := mmu.io.out.memReq
+    dCache.io.request               := DontCare
+    dCache.io.request.valid         := false.B
   }
   core.io.memAccess.dcacheCommit  := dCache.io.commit
   core.io.memAccess.uncacheCommit := unCached.io.commit
