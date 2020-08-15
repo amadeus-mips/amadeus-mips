@@ -55,17 +55,18 @@ class CPUTop(performanceMonitorEnable: Boolean = false)(implicit conf: CPUConfig
   dCache.io.cacheInstruction <> core.io.dCacheInvalidate
 
   when(!mmu.io.dataUncached) {
-    dCache.io.request.valid   := core.io.memAccess.request.valid && unCached.io.request.ready
+    core.io.memAccess.request.ready := dCache.io.request.ready
+    dCache.io.request.valid   := core.io.memAccess.request.valid
     dCache.io.request.bits    := mmu.io.out.memReq
     unCached.io.request       := DontCare
     unCached.io.request.valid := false.B
   }.otherwise {
-    unCached.io.request.valid := core.io.memAccess.request.valid && dCache.io.request.ready
+    core.io.memAccess.request.ready := unCached.io.request.ready
+    unCached.io.request.valid := core.io.memAccess.request.valid
     unCached.io.request.bits  := mmu.io.out.memReq
     dCache.io.request         := DontCare
     dCache.io.request.valid   := false.B
   }
-  core.io.memAccess.request.ready := dCache.io.request.ready && unCached.io.request.ready
   core.io.memAccess.dcacheCommit  := dCache.io.commit
   core.io.memAccess.uncacheCommit := unCached.io.commit
   core.io.memAccess.cachedData    := dCache.io.readData

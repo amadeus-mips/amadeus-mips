@@ -41,7 +41,7 @@ class Control extends Module {
     Cat(io.addr(11, 2), 0.U(2.W)),
     io.addr(11, 0)
   )
-  io.request.valid := !io.except && (opIsLoad(io.operation) || opIsStore(io.operation)) && (!io.stalled || !handShaken)
+  io.request.valid := !io.except && (opIsLoad(io.operation) || opIsStore(io.operation)) && !handShaken
   io.request.bits.writeMask := MuxLookup(
     io.operation,
     0.U,

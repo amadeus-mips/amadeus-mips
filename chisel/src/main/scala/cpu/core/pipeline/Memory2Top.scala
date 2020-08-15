@@ -10,12 +10,15 @@ import shared.Util
 class Memory2Top(implicit conf: CPUConfig) extends Module {
   val io = IO(new Bundle() {
     val ins          = Input(Vec(conf.decodeWidth, new Mem1Mem2Bundle))
+    // this commit sync with data
+    val uncachedCommit = Input(Bool())
+    val cachedCommit = Input(Bool())
     val uncachedData = Input(UInt(dataLen.W))
     val cachedData   = Input(UInt(dataLen.W))
     val out          = Output(Vec(conf.decodeWidth, new Mem2WbBundle))
   })
   val memSlot  = Mux(opIsLoad(io.ins(0).op), 0.U, 1.U)
-  val readData = Mux(io.ins(memSlot).uncached, io.uncachedData, io.cachedData)
+  val readData = WireInit(Mux(io.ins(memSlot).uncached, io.uncachedData, io.cachedData))
 
   io.out.zip(io.ins).foreach {
     case (out, in) =>
@@ -27,6 +30,53 @@ class Memory2Top(implicit conf: CPUConfig) extends Module {
         out.write.enable := false.B
         out.pc           := 0.U
       }
+  }
+
+  val uncachedCommitBuffer = RegInit(false.B)
+  val cachedCommitBuffer = RegInit(false.B)
+  val uncachedDataBuffer = RegInit(0.U(32.W))
+  val cachedDataBuffer = RegInit(0.U(32.W))
+
+  when(!opIsLoad(io.ins(memSlot).op)) {
+    when(io.uncachedCommit) {
+      uncachedCommitBuffer := true.B
+      uncachedDataBuffer := io.uncachedData
+    }
+    when(io.cachedCommit) {
+      cachedCommitBuffer := true.B
+      cachedDataBuffer := io.cachedData
+    }
+  }.elsewhen(!io.ins(memSlot).valid){
+    uncachedCommitBuffer := false.B
+    cachedCommitBuffer := false.B
+  }.otherwise{
+    when(io.ins(memSlot).uncached) {
+      when(io.cachedCommit) {
+        cachedCommitBuffer := true.B
+        cachedDataBuffer := io.cachedData
+      }
+      when(io.uncachedCommit){
+        assert(!uncachedCommitBuffer)
+        readData := io.uncachedData
+      }.otherwise {
+        assert(uncachedCommitBuffer)
+        readData := uncachedDataBuffer
+        uncachedCommitBuffer := false.B
+      }
+    }.otherwise{
+      when(io.uncachedCommit){
+        uncachedCommitBuffer := true.B
+        uncachedDataBuffer := io.uncachedData
+      }
+      when(io.cachedCommit) {
+        assert(!cachedCommitBuffer)
+        readData := io.cachedData
+      }.otherwise{
+        assert(cachedCommitBuffer)
+        readData := cachedDataBuffer
+        cachedCommitBuffer := false.B
+      }
+    }
   }
 
   when(io.ins(memSlot).valid) {

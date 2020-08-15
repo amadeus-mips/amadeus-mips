@@ -148,7 +148,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   exe_mem.io.in         := executeTop.io.out
 
   memory0Top.io.ins          := exe_mem.io.out
-  memory0Top.io.stalled      := exe_mem.io.stalled
+  memory0Top.io.stalled      := mem0_mem1.io.stallForward
   memory0Top.io.uncached     := io.memAccess.uncached
   memory0Top.io.tlbCP0       := cp0.io.tlbCP0
   memory0Top.io.exceptionCP0 := cp0.io.exceptionCP0
@@ -184,7 +184,7 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   mem0_mem1.io.inIsBubble := exe_mem.io.outIsBubble
   mem0_mem1.io.in         := memory0Top.io.out
 
-  memory1Top.io.ins            := mem0_mem1.io.out
+  memory1Top.io.ins           := mem0_mem1.io.out
   memory1Top.io.dcacheCommit  := io.memAccess.dcacheCommit
   memory1Top.io.uncacheCommit := io.memAccess.uncacheCommit
   memory1Top.io.exceptionCP0  := cp0.io.exceptionCP0
@@ -195,9 +195,11 @@ class Core(implicit conf: CPUConfig) extends MultiIOModule {
   mem1_mem2.io.inIsBubble := mem0_mem1.io.outIsBubble
   mem1_mem2.io.in         := memory1Top.io.out
 
-  memory2Top.io.ins          := mem1_mem2.io.out
-  memory2Top.io.cachedData   := io.memAccess.cachedData
-  memory2Top.io.uncachedData := io.memAccess.uncachedData
+  memory2Top.io.ins            := mem1_mem2.io.out
+  memory2Top.io.cachedCommit   := RegNext(io.memAccess.dcacheCommit, false.B)
+  memory2Top.io.uncachedCommit := RegNext(io.memAccess.uncacheCommit, false.B)
+  memory2Top.io.cachedData     := io.memAccess.cachedData
+  memory2Top.io.uncachedData   := io.memAccess.uncachedData
 
   mem2_wb.io.stallReq   := false.B
   mem2_wb.io.stallFLush := false.B
