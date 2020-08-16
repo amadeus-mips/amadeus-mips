@@ -67,8 +67,8 @@ class UncachedQueue(capacity: Int = 64) extends Module {
   io.axi.ar.bits.addr  := readQueue.io.deq.bits
   io.axi.ar.bits.len   := 0.U(4.W)
   io.axi.ar.bits.size  := MuxCase("b010".U(3.W), Array(
-    (readQueue.io.deq.bits(0) === 1.U) -> "b001".U(3.W),
-    (readQueue.io.deq.bits(1) === 1.U) -> "b000".U(3.W)
+    (readQueue.io.deq.bits(0) === 1.U) -> "b000".U(3.W),
+    (readQueue.io.deq.bits(1) === 1.U) -> "b001".U(3.W)
   ))
   io.axi.ar.bits.burst := "b01".U(2.W) // Incrementing-request burst
   io.axi.ar.bits.lock  := 0.U
