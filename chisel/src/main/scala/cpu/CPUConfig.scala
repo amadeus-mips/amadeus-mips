@@ -11,7 +11,7 @@ case class CPUConfig(
   tlbSize:                   Int         = 16,
   fetchAmount:               Int         = 2,
   compareRamDirectly:        Boolean     = false,
-  iCacheConf:                CacheConfig = CacheConfig(),
+  iCacheConf:                CacheConfig = CacheConfig(numOfSets = 64, numOfWays = 4),
   dCacheConf:                CacheConfig = CacheConfig(numOfSets = 128, numOfWays = 2),
   branchPredictorAddrLen:    Int         = 10,
   branchPredictorHistoryLen: Int         = 2,
