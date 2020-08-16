@@ -115,6 +115,14 @@ class Decode extends Module {
       BGEZAL    -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZAL, WR_Y  , WRA_T3 , IMM_N  ),
       BLTZ      -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZ  , WR_N  , WRA_X  , IMM_N  ),
       BLTZAL    -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZAL, WR_Y  , WRA_T3 , IMM_N  ),
+      BEQL      -> List(Y , OPn_RF , OPn_RF , INST_BR , BR_EQ   , WR_N  , WRA_X  , IMM_N  ),
+      BNEL      -> List(Y , OPn_RF , OPn_RF , INST_BR , BR_NE   , WR_N  , WRA_X  , IMM_N  ),
+      BGTZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GTZ  , WR_N  , WRA_X  , IMM_N  ),
+      BLEZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LEZ  , WR_N  , WRA_X  , IMM_N  ),
+      BGEZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZ  , WR_N  , WRA_X  , IMM_N  ),
+      BGEZALL   -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZAL, WR_Y  , WRA_T3 , IMM_N  ),
+      BLTZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZ  , WR_N  , WRA_X  , IMM_N  ),
+      BLTZALL   -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZAL, WR_Y  , WRA_T3 , IMM_N  ),
 
       // TLB
       TLBP      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_P   , WR_N  , WRA_X  , IMM_N  ),
