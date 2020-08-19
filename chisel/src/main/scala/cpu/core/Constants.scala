@@ -105,6 +105,7 @@ trait opConstants {
   val WO_MSUBU  = 65.U(opLen.W)
   val MEM_LL    = 66.U(opLen.W)
   val MEM_SC    = 67.U(opLen.W)
+  val ALU_LSA   = 68.U(opLen.W)
 
   val TRAP_EQ   = 1.U(opLen.W)
   val TRAP_GE   = 2.U(opLen.W)

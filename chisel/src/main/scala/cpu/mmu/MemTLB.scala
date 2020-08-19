@@ -32,7 +32,7 @@ class MemTLB(numOfReadPorts: Int, tlbSize: Int) extends BaseTLB(numOfReadPorts, 
 
   val probeWire = VecInit((0 until tlbSize).map(i => {
     val entry = physicalTLB.read(i.U).asTypeOf(new TLBEntry)
-    valid(i) && entry.vpn2 === io.probeReq && (entry.global || entry.asid === io.instrReq.writeData.asid)
+    valid(i) && entry.vpn2 === io.probeReq && (entry.global || entry.asid === io.asid)
   }))
   io.probeResp := Cat(
     !probeWire.reduce(_ || _),

@@ -82,6 +82,7 @@ class ExecuteTop(implicit conf: CPUConfig) extends Module {
     alu(i).io.op1       := op1
     alu(i).io.op2       := op2
     alu(i).io.operation := operation
+    alu(i).io.sa        := io.ins(i).imm26(7, 6)
     alu(i).io.lo        := multDivController.io.outHILO.lo.bits
 
     move(i).io.op1         := op1

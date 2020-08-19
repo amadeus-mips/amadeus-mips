@@ -10,6 +10,7 @@ class ALU extends Module {
   val io = IO(new Bundle {
     val op1       = Input(UInt(dataLen.W))
     val op2       = Input(UInt(dataLen.W))
+    val sa        = Input(UInt(2.W))
     val operation = Input(UInt(opLen.W))
     val result    = Output(UInt(dataLen.W))
     val overflow  = Output(Bool())
@@ -66,6 +67,7 @@ class ALU extends Module {
       ALU_MUL  -> io.lo,
       ALU_CLO  -> clo,
       ALU_CLZ  -> clz,
+      ALU_LSA  -> (io.op1 << (io.sa + 1.U) + io.op2)
       // @formatter:on
     )
   )
