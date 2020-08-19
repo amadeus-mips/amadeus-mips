@@ -67,7 +67,7 @@ class ALU extends Module {
       ALU_MUL  -> io.lo,
       ALU_CLO  -> clo,
       ALU_CLZ  -> clz,
-      ALU_LSA  -> (io.op1 << (io.sa + 1.U) + io.op2)
+      ALU_LSA  -> ((io.op1 << (Cat(false.B, io.sa) + 1.U(3.W))).asUInt() + io.op2)
       // @formatter:on
     )
   )
