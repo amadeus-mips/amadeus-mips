@@ -63,10 +63,10 @@ class SocLiteTopUnitTester(
   var lastDebugInfo: String = ""
 
   var lastNum: BigInt = peek(c.io.num.data)
-  var pc:      BigInt = peek(c.io.debug.wbPC)
-  var wen:     BigInt = peek(c.io.debug.wbRegFileWEn)
-  var wnum:    BigInt = peek(c.io.debug.wbRegFileWNum)
-  var wdata:   BigInt = peek(c.io.debug.wbRegFileWData)
+  var pc:      BigInt = peek(c.io.debug(0).wbPC)
+  var wen:     BigInt = peek(c.io.debug(0).wbRegFileWEn)
+  var wnum:    BigInt = peek(c.io.debug(0).wbRegFileWNum)
+  var wdata:   BigInt = peek(c.io.debug(0).wbRegFileWData)
 
   val pcEnd = BigInt("bfc00100", 16)
 
@@ -116,33 +116,33 @@ class SocLiteTopUnitTester(
     lastNum  = peek(c.io.num.data)
     errCount = 0
 
-    pc    = peek(c.io.debug.wbPC)
-    wen   = peek(c.io.debug.wbRegFileWEn)
-    wnum  = peek(c.io.debug.wbRegFileWNum)
-    wdata = peek(c.io.debug.wbRegFileWData)
+    updateDebug(0)
   }
 
   def run(): Boolean = {
     while (pc != pcEnd) {
       val current = System.currentTimeMillis()
-      if (pc != 0) {
-        if ((!tcfg.tlbTest && pc < BigInt("9fc00000", 16)) || (isPerf && pc == BigInt("bfc00384", 16))) {
-          err(lastDebugInfo)
-          err("Exit-wrong pc")
-          return false
+      for(i <- 0 until 2) {
+        if (pc != 0) {
+          if ((!tcfg.tlbTest && pc < BigInt("9fc00000", 16)) || (isPerf && pc == BigInt("bfc00384", 16))) {
+            err(lastDebugInfo)
+            err("Exit-wrong pc")
+            return false
+          }
+          iCount = if(i == 0) iCount + 1 else iCount
+          lastDebugInfo = debugInfo
+          if (current - lastTime > 5000) {
+            log(s"running: $lastDebugInfo")
+            lastTime = current
+          }
+          if (tcfg.trace) {
+            if (!traceCompare()) return false
+          }
+          if (tcfg.writeTrace) {
+            writeTrace()
+          }
         }
-        iCount        = iCount + 1
-        lastDebugInfo = debugInfo
-        if (current - lastTime > 5000) {
-          log(s"running: $lastDebugInfo")
-          lastTime = current
-        }
-        if (tcfg.trace) {
-          if (!traceCompare()) return false
-        }
-        if (tcfg.writeTrace) {
-          writeTrace()
-        }
+        updateDebug(1)
       }
       if (!(current - lastTime < 6000)) {
         err(lastDebugInfo)
@@ -164,13 +164,6 @@ class SocLiteTopUnitTester(
       }
       printPerfLog()
       branchPerformanceMonitor()
-    }
-    if (tcfg.performanceMonitorEnable) {
-      log(
-        s"there are ${peek(c.io.performance.get.cpu.cache.hitCycles)} cycles of hit, " +
-          s"and ${peek(c.io.performance.get.cpu.cache.missCycles)} of misses, " +
-          s"and ${peek(c.io.performance.get.cpu.cache.idleCycles)} of idle cycles"
-      )
     }
   }
 
@@ -251,13 +244,18 @@ class SocLiteTopUnitTester(
 
   def update(n: Int): Unit = {
     cCount = cCount + 1
-    pc     = peek(c.io.debug.wbPC)
-    wen    = peek(c.io.debug.wbRegFileWEn)
-    wnum   = peek(c.io.debug.wbRegFileWNum)
-    wdata  = peek(c.io.debug.wbRegFileWData)
     uartSimu()
     if (!isPerf) numSimu()
     step(n)
+    updateDebug(0)
+  }
+
+  def updateDebug(n: Int): Unit = {
+    require(n == 0 || n == 1)
+    pc     = peek(c.io.debug(n).wbPC)
+    wen    = peek(c.io.debug(n).wbRegFileWEn)
+    wnum   = peek(c.io.debug(n).wbRegFileWNum)
+    wdata  = peek(c.io.debug(n).wbRegFileWData)
   }
 
   def uartSimu(): Unit = {

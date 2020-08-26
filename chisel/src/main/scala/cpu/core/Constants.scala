@@ -15,10 +15,10 @@ trait opConstants {
   // Operand
   val OPn_RF    = 0.U(1.W)    // regfile
   val OPn_IMM   = 1.U(1.W)    // 立即数
-  val OPn_X     = 0.U(1.W)    // Dont care
+  val OPn_X     = 1.U(1.W)    // Dont care
 
   // 指令类型（判断执行阶段写入寄存器结果的来源 ALU, CP0...）
-  val instTypeLen = 3
+  val instTypeLen = 4
   val INST_N      = 0.U(instTypeLen.W)
   val INST_ALU    = 1.U(instTypeLen.W)    // 普通ALU,
   val INST_MV     = 2.U(instTypeLen.W)    // Move（包括hilo, cp0)
@@ -27,8 +27,9 @@ trait opConstants {
   val INST_BR     = 5.U(instTypeLen.W)    // 跳转指令
   val INST_EXC    = 6.U(instTypeLen.W)    // 例外指令
   val INST_TLB    = 7.U(instTypeLen.W)    // TLB instruction
+  val INST_TRAP   = 8.U(instTypeLen.W)
 
-  val opLen = 6
+  val opLen = 7
   val OP_N     = 0.U(opLen.W)   // 无操作
   // ALU 类型
   val ALU_OR    = 1.U(opLen.W)    // OR
@@ -91,21 +92,56 @@ trait opConstants {
   val MV_MOVN   = 52.U(opLen.W)
   val MV_MOVZ   = 53.U(opLen.W)
   val MEM_CAC   = 54.U(opLen.W)
+  val ALU_CLO   = 55.U(opLen.W)
+  val ALU_CLZ   = 56.U(opLen.W)
+  val MEM_LWL   = 57.U(opLen.W)
+  val MEM_LWR   = 58.U(opLen.W)
+  val MEM_SWL   = 59.U(opLen.W)
+  val MEM_SWR   = 60.U(opLen.W)
+  val EXC_WAIT  = 61.U(opLen.W)
+  val WO_MADD   = 62.U(opLen.W)
+  val WO_MADDU  = 63.U(opLen.W)
+  val WO_MSUB   = 64.U(opLen.W)
+  val WO_MSUBU  = 65.U(opLen.W)
+  val MEM_LL    = 66.U(opLen.W)
+  val MEM_SC    = 67.U(opLen.W)
+
+  val TRAP_EQ   = 1.U(opLen.W)
+  val TRAP_GE   = 2.U(opLen.W)
+  val TRAP_GEU  = 3.U(opLen.W)
+  val TRAP_LT   = 4.U(opLen.W)
+  val TRAP_LTU  = 5.U(opLen.W)
+  val TRAP_NE   = 6.U(opLen.W)
 
   /** judge whether op is to load data from memory */
   def opIsLoad(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    Util.listHasElement(List(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW), op)
+    VecInit(MEM_LB, MEM_LBU, MEM_LH, MEM_LHU, MEM_LW, MEM_LWL, MEM_LWR, MEM_LL).contains(op)
   }
   /** judge whether op is to save data to memory */
   def opIsStore(op: UInt): Bool = {
     require(op.getWidth == opLen)
-    VecInit(Seq(MEM_SB, MEM_SH, MEM_SW)).contains(op)
+    VecInit(MEM_SB, MEM_SH, MEM_SW, MEM_SWL, MEM_SWR, MEM_SC).contains(op)
   }
   /** judge whether op is branch. */
   def opIsBBranch(op: UInt): Bool = {
     require(op.getWidth == opLen)
     Util.listHasElement(List(BR_EQ, BR_NE, BR_GTZ, BR_GEZ, BR_GEZAL, BR_LTZ, BR_LTZAL, BR_LEZ), op)
+  }
+
+  def opIsHILOWrite(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(WO_MULT, WO_MULTU, WO_DIV, WO_DIVU, ALU_MUL, WO_MTHI, WO_MTLO, WO_MADD, WO_MADDU, WO_MSUB, WO_MSUBU).contains(op)
+  }
+
+  def opIsC0Write(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(TLB_P, TLB_R, WO_MTC0, MEM_CAC).contains(op)
+  }
+
+  def opIsC0Read(op: UInt): Bool = {
+    require(op.getWidth == opLen)
+    VecInit(TLB_WI, TLB_WR, MV_MFC0, MEM_CAC).contains(op)
   }
 
 
@@ -153,7 +189,7 @@ trait valueConstants {
 }
 
 trait exceptConstants {
-  val exceptAmount = 16
+  val exceptAmount = 17
 
   val EXCEPT_FETCH        = 0
   val EXCEPT_ERET         = 1
@@ -175,6 +211,8 @@ trait exceptConstants {
   val EXCEPT_DATA_TLB_W_REFILL   = 13
   val EXCEPT_DATA_TLB_W_INVALID  = 14
   val EXCEPT_DATA_TLB_W_MODIFIED = 15
+
+  val EXCEPT_TRAP = 16
 
   def isTLBExcept(exc: Vec[Bool]): Bool = {
     require(exc.length == exceptAmount)

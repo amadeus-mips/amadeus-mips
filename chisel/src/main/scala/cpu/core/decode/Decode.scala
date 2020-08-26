@@ -67,6 +67,20 @@ class Decode extends Module {
       SLTI      -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_SLT , WR_Y  , WRA_T2 , IMM_LSE),
       SLTIU     -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_SLTU, WR_Y  , WRA_T2 , IMM_LSE),
 
+      // Trap
+      TEQ       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_EQ, WR_N  , WRA_X  , IMM_N  ),
+      TEQI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_EQ, WR_N  , WRA_X  , IMM_LSE),
+      TGE       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_GE, WR_N  , WRA_X  , IMM_N  ),
+      TGEI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_GE, WR_N  , WRA_X  , IMM_LSE),
+      TGEIU     -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_GEU, WR_N , WRA_X  , IMM_LSE),
+      TGEU      -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_GEU, WR_N , WRA_X  , IMM_N  ),
+      TLT       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_LT, WR_N  , WRA_X  , IMM_N  ),
+      TLTI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_LT, WR_N  , WRA_X  , IMM_LSE),
+      TLTIU     -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_LTU, WR_N , WRA_X  , IMM_LSE),
+      TLTU      -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_LTU, WR_N , WRA_X  , IMM_N  ),
+      TNE       -> List(Y , OPn_RF , OPn_RF , INST_TRAP, TRAP_NE, WR_N  , WRA_X  , IMM_N  ),
+      TNEI      -> List(Y , OPn_RF , OPn_IMM, INST_TRAP, TRAP_NE, WR_N  , WRA_X  , IMM_LSE),
+
       // 算术指令
       ADD       -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_ADD , WR_Y  , WRA_T1 , IMM_N  ),
       ADDU      -> List(Y , OPn_RF , OPn_RF , INST_ALU, ALU_ADDU, WR_Y  , WRA_T1 , IMM_N  ),
@@ -75,11 +89,18 @@ class Decode extends Module {
       MUL       -> List(Y , OPn_RF , OPn_RF,  INST_ALU, ALU_MUL , WR_Y  , WRA_T1 , IMM_N  ),
       MULT      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULT , WR_N  , WRA_X  , IMM_N  ),
       MULTU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MULTU, WR_N  , WRA_X  , IMM_N  ),
+      MADD      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADD , WR_N  , WRA_X  , IMM_N  ),
+      MADDU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MADDU, WR_N  , WRA_X  , IMM_N  ),
+      MSUB      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUB , WR_N  , WRA_X  , IMM_N  ),
+      MSUBU     -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_MSUBU, WR_N  , WRA_X  , IMM_N  ),
       DIV       -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIV  , WR_N  , WRA_X  , IMM_N  ),
       DIVU      -> List(Y , OPn_RF , OPn_RF , INST_WO , WO_DIVU , WR_N  , WRA_X  , IMM_N  ),
+      CLO       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLO , WR_Y  , WRA_T1 , IMM_N  ),
+      CLZ       -> List(Y , OPn_RF , OPn_X  , INST_ALU, ALU_CLZ , WR_Y  , WRA_T1 , IMM_N  ),
       // 立即数
       ADDI      -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_ADD , WR_Y  , WRA_T2 , IMM_LSE),
       ADDIU     -> List(Y , OPn_RF , OPn_IMM, INST_ALU, ALU_ADDU, WR_Y  , WRA_T2 , IMM_LSE),
+
 
       // 跳转指令
       J         -> List(Y , OPn_X  , OPn_X  , INST_BR , BR_J    , WR_N  , WRA_X  , IMM_N  ),
@@ -94,17 +115,26 @@ class Decode extends Module {
       BGEZAL    -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZAL, WR_Y  , WRA_T3 , IMM_N  ),
       BLTZ      -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZ  , WR_N  , WRA_X  , IMM_N  ),
       BLTZAL    -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZAL, WR_Y  , WRA_T3 , IMM_N  ),
+      BEQL      -> List(Y , OPn_RF , OPn_RF , INST_BR , BR_EQ   , WR_N  , WRA_X  , IMM_N  ),
+      BNEL      -> List(Y , OPn_RF , OPn_RF , INST_BR , BR_NE   , WR_N  , WRA_X  , IMM_N  ),
+      BGTZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GTZ  , WR_N  , WRA_X  , IMM_N  ),
+      BLEZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LEZ  , WR_N  , WRA_X  , IMM_N  ),
+      BGEZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZ  , WR_N  , WRA_X  , IMM_N  ),
+      BGEZALL   -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_GEZAL, WR_Y  , WRA_T3 , IMM_N  ),
+      BLTZL     -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZ  , WR_N  , WRA_X  , IMM_N  ),
+      BLTZALL   -> List(Y , OPn_RF , OPn_X  , INST_BR , BR_LTZAL, WR_Y  , WRA_T3 , IMM_N  ),
 
       // TLB
       TLBP      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_P   , WR_N  , WRA_X  , IMM_N  ),
       TLBR      -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_R   , WR_N  , WRA_X  , IMM_N  ),
       TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WI  , WR_N  , WRA_X  , IMM_N  ),
-      TLBWI     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
+      TLBWR     -> List(Y , OPn_X  , OPn_X  , INST_TLB, TLB_WR  , WR_N  , WRA_X  , IMM_N  ),
 
       // 例外指令
       SYSCALL   -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_SC  , WR_N  , WRA_X  , IMM_N  ),
       BREAK     -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_BR  , WR_N  , WRA_X  , IMM_N  ),
       ERET      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_ER  , WR_N  , WRA_X  , IMM_N  ),
+      WAIT      -> List(Y , OPn_X  , OPn_X  , INST_EXC, EXC_WAIT, WR_N  , WRA_X  , IMM_N  ),
 
       // 访存指令
       LB        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LB  , WR_Y  , WRA_T2 , IMM_N  ),
@@ -115,8 +145,17 @@ class Decode extends Module {
       SB        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SB  , WR_N  , WRA_X  , IMM_N  ),
       SH        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SH  , WR_N  , WRA_X  , IMM_N  ),
       SW        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SW  , WR_N  , WRA_X  , IMM_N  ),
+      LWL       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_LWL , WR_Y  , WRA_T2 , IMM_N  ),
+      LWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_LWR , WR_Y  , WRA_T2 , IMM_N  ),
+      SWL       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWL , WR_N  , WRA_X  , IMM_N  ),
+      SWR       -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SWR , WR_N  , WRA_X  , IMM_N  ),
+      LL        -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_LL  , WR_Y  , WRA_T2 , IMM_N  ),
+      SC        -> List(Y , OPn_RF , OPn_RF , INST_MEM, MEM_SC  , WR_Y  , WRA_T2 , IMM_N  ),
+
 
       SYNC      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
+      PREF      -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
+      PREFX     -> List(Y , OPn_X  , OPn_X  , INST_N  , OP_N    , WR_N  , WRA_X  , IMM_N  ),
 
       // Cache
       CACHE     -> List(Y , OPn_RF , OPn_X  , INST_MEM, MEM_CAC , WR_N  , WRA_X  , IMM_N  ),

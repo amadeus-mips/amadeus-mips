@@ -41,8 +41,8 @@ class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) e
 
   val mem = Mem(math.ceil(size.toDouble / 4).toInt, UInt(32.W))
   memFile match {
-    case Some(file) => loadMemoryFromFile(mem, file, if(bin) MemoryLoadFileType.Binary else MemoryLoadFileType.Hex)
-    case None =>
+    case Some(file) => loadMemoryFromFile(mem, file, if (bin) MemoryLoadFileType.Binary else MemoryLoadFileType.Hex)
+    case None       =>
   }
 
   val wrapMap = Seq(
@@ -88,6 +88,7 @@ class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) e
 
   val rID      = RegInit(0.U(4.W))
   val rBurst   = RegInit(0.U(2.W))
+  val rSize    = RegInit(0.U(3.W))
   val rLen     = RegInit(0.U(4.W))
   val rWrapSel = RegInit(0.U(3.W))
   val rRamAddr = RegInit(0.U(32.W))
@@ -96,6 +97,7 @@ class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) e
     rLen     := a.len
     rBurst   := a.burst
     rRamAddr := a.addr
+    rSize    := a.size
     rWrapSel := MuxLookup(a.len, 0.U, wrapMap)
   }
 
@@ -131,9 +133,30 @@ class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) e
   dataRQ.io.enq.bits  := ar.bits
   dataRQ.io.deq.ready := rState === sRIdle && dataRQ.io.deq.valid && currentID === Constants.DATA_ID
 
-  ar.ready    := instRQ.io.enq.ready && dataRQ.io.enq.ready
-  r.bits.id   := rID
-  r.bits.data := mem.read(rRamAddr(addrLen-1, 2))
+  val _readData = mem.read(rRamAddr(addrLen - 1, 2))
+
+  ar.ready  := instRQ.io.enq.ready && dataRQ.io.enq.ready
+  r.bits.id := rID
+  r.bits.data := MuxCase(
+    _readData,
+    Seq(
+      (rSize === "b000".U(3.W)) -> MuxLookup(
+        rRamAddr(1, 0),
+        0.U,
+        Seq(
+          "b00".U -> Util.zeroExtend(_readData(7, 0)),
+          "b01".U -> Util.zeroExtend(_readData(15, 8)),
+          "b10".U -> Util.zeroExtend(_readData(23, 16)),
+          "b11".U -> Util.zeroExtend(_readData(31, 24))
+        )
+      ),
+      (rSize === "b001".U(3.W)) -> Mux(
+        rRamAddr(1),
+        Util.zeroExtend(_readData(15, 0)),
+        Util.zeroExtend(_readData(31, 16))
+      )
+    )
+  )
   r.bits.resp := 0.U // fixed OKAY
   r.bits.last := rLen === 0.U
   r.valid     := rState === sRBurst
@@ -180,7 +203,7 @@ class AXIRam(memFile: Option[String], bin: Boolean = false, addrLen: Int = 20) e
   }
 
   when(w.valid && wState === sWBurst) {
-    val addr         = wRamAddr(addrLen-1, 2)
+    val addr         = wRamAddr(addrLen - 1, 2)
     val internalData = mem.read(addr)
     val writeData =
       Cat((3 to 0 by -1).map(i => Mux(w.bits.strb(i), w.bits.data(7 + 8 * i, 8 * i), internalData(7 + 8 * i, 8 * i))))

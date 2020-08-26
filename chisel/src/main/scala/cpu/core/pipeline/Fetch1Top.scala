@@ -69,7 +69,7 @@ class Fetch1Top(implicit conf: CPUConfig) extends Module {
         out.bits.brPredict.bits := target
         out.bits.brPredict.valid := (if (i == 0) branchVec(i)
                                      else !branchVec.slice(0, i).reduce(_ || _) && branchVec(i))
-        out.bits.valid := (if (i == 0) !io.in.except.asUInt().orR() && valid else valid)
+        out.bits.instValid := (if (i == 0) !io.in.except.asUInt().orR() && valid else valid)
         out.valid :=
           (if (i == 0) valid && (io.in.except.asUInt().orR() || io.inst.valid)
            else valid && io.inst.valid) && !io.flushFIFO

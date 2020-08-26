@@ -467,5 +467,5 @@ class CompareCP0 extends BaseCP0 {
 class PRIDCP0 extends BaseCP0 {
   override val addr: Int = 15
 
-  override val reg = RegInit("hffffffff".U)
+  override val reg = RegInit("h00018000".U)
 }

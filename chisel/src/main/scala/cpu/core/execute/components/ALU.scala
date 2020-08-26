@@ -13,6 +13,7 @@ class ALU extends Module {
     val operation = Input(UInt(opLen.W))
     val result    = Output(UInt(dataLen.W))
     val overflow  = Output(Bool())
+    val trap = Output(Bool())
 
     val lo = Input(UInt(dataLen.W))
   })
@@ -29,6 +30,20 @@ class ALU extends Module {
     )
   )
 
+  val clo = WireInit(32.U)
+  val clz = WireInit(32.U)
+  for(i <- 0 until 32) {
+    when(!io.op1(i)) {
+      clo := (31 - i).U
+    }.otherwise {
+      clz := (31 - i).U
+    }
+  }
+
+  val lt  = io.op1.asSInt() < io.op2.asSInt()
+  val ltu = io.op1 < io.op2
+  val eq  = io.op1 === io.op2
+
   io.result := MuxLookup(
     io.operation,
     0.U,
@@ -42,15 +57,29 @@ class ALU extends Module {
       ALU_SLL  -> (io.op2 << io.op1(4, 0)),
       ALU_SRL  -> (io.op2 >> io.op1(4, 0)),
       ALU_SRA  -> (io.op2.asSInt >> io.op1(4, 0)).asUInt,
-      ALU_SLT  -> (io.op1.asSInt < io.op2.asSInt).asUInt,
-      ALU_SLTU -> (io.op1 < io.op2),
+      ALU_SLT  -> lt,
+      ALU_SLTU -> ltu,
       ALU_ADD  -> add_result,
       ALU_ADDU -> add_result,
       ALU_SUB  -> sub_result,
       ALU_SUBU -> sub_result,
-      ALU_MUL  -> io.lo
+      ALU_MUL  -> io.lo,
+      ALU_CLO  -> clo,
+      ALU_CLZ  -> clz,
       // @formatter:on
     )
   )
-//  io.result.valid := io.operation =/= ALU_N
+
+  io.trap := MuxLookup(
+    io.operation,
+    false.B,
+    Seq(
+      TRAP_EQ  -> eq,
+      TRAP_GE  -> !lt,
+      TRAP_GEU -> !ltu,
+      TRAP_LT  -> lt,
+      TRAP_LTU -> ltu,
+      TRAP_NE  -> !eq
+    )
+  )
 }

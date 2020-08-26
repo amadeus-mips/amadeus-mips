@@ -23,10 +23,6 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
   }
 
   val io = IO(new Bundle {
-
-    /** this will flush everything but the entry in head pointer */
-    val flushTail = Input(Bool())
-
     /** enqueue data structure */
     val enqueue         = Vec(CPUConfig.fetchAmount, Flipped(Valid(genType)))
     val readyForEnqueue = Output(Bool())
@@ -66,11 +62,16 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
 
   /** calculate how many elements are de-queued in the handshake
     * this value *has been handshaked* */
-  val numOfDequeueElements = Wire(UInt((log2Ceil(capacity) + 1).W))
-  numOfDequeueElements := dequeueResponseValidArray
-    .zip((0 until CPUConfig.decodeWidth).map { i: Int => io.dequeue(i).ready })
+  val dequeueHandShake = dequeueResponseValidArray
+    .zip(io.dequeue.map(_.ready))
     .map { case (ready: Bool, valid: Bool) => ready && valid }
-    .foldLeft(0.U((log2Ceil(capacity) + 1).W))((a: UInt, b: Bool) => a + b.asUInt)
+
+  val numOfDequeueElements = WireInit(CPUConfig.decodeWidth.U((log2Ceil(CPUConfig.decodeWidth) + 1).W))
+  for(i <- CPUConfig.decodeWidth-1 to 0 by -1){
+    when(!dequeueHandShake(i)){
+      numOfDequeueElements := i.U
+    }
+  }
 
   // IO section
   io.readyForEnqueue := enqueueReady
@@ -112,15 +113,6 @@ class InstructionFIFO[T <: Data](gen: T)(implicit CPUConfig: CPUConfig) extends 
     size - numOfDequeueElements + numOfEnqueueRequests,
     size - numOfDequeueElements
   )
-
-  when(io.flushTail) {
-    headPTR             := tailPTR - 1.U
-    size                := 1.U
-    validArray          := 0.U.asTypeOf(validArray)
-    validArray(tailPTR) := true.B && !io.dequeue.head.ready
-  }
-
-  assert(!io.flushTail || (io.flushTail && size =/= 0.U))
 }
 
 object InstructionFIFOElaborate extends App {

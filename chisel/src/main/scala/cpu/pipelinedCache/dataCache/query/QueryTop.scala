@@ -212,10 +212,10 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   io.writeBack.bits.tagValid.valid := true.B
   io.writeBack.bits.data           := refillBuffer.io.allData
 
-  io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough && io.fetchQuery.writeMask === 0.U) || (!io.fetchQuery.valid && io.fetchQuery.invalidate && qState === qWaitToDrain && writeQueue.io.size === 0.U)
+  io.hit   := (((hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && !passThrough && io.fetchQuery.writeMask === 0.U)
   io.ready := (passThrough || (hitInBank && resourceFree) || hitInRefillBuffer || hitInWriteQueue) && qState =/= qInvalidating && qState =/= qWaitToDrain
 
-  io.dirtyWay := Mux(qState === qInvalidating, invalidateCounter,lruWayReg)
+  io.dirtyWay := Mux(qStateNext === qInvalidating, RegNext(invalidateCounter),lruWayReg)
 
   /** when there is nothing in the write queue and state is idle and there is no pending request */
   io.readyForInvalidate := RegNext(writeQueue.io.size === 0.U && qState === qIdle && !io.fetchQuery.valid)
@@ -257,9 +257,9 @@ class QueryTop(implicit cacheConfig: CacheConfig, CPUConfig: CPUConfig) extends 
   // starting from the second cycle of invalidating, ending in the first cycle during waiting to drain
   when(qStateNext === qInvalidating ) {
     // when entry is dirty and valid
-    writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid)
+    writeQueue.io.enqueue.valid := RegNext(dirtyBanks(invalidateCounter)(io.fetchQuery.index) && io.fetchQuery.tagValid(invalidateCounter).valid, false.B)
     writeQueue.io.enqueue.bits.addr.tag := RegNext(io.fetchQuery.tagValid(invalidateCounter).tag)
-    writeQueue.io.enqueue.bits.addr.index := RegNext(io.fetchQuery.index)
+    writeQueue.io.enqueue.bits.addr.index := io.fetchQuery.index
     writeQueue.io.enqueue.bits.data := io.dirtyData
   }
   writeQueue.io.query.addr := Cat(io.fetchQuery.phyTag, io.fetchQuery.index, io.fetchQuery.bankIndex)

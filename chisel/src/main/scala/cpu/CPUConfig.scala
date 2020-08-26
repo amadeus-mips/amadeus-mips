@@ -6,18 +6,20 @@ import cpu.pipelinedCache.CacheConfig
 case class CPUConfig(
   build:                     Boolean,
   memoryFile:                String      = "",
-  enableTLB:                 Boolean     = false,
+  enableTLB:                 Boolean     = true,
+  useMemTLB:                 Boolean     = true,
   tlbSize:                   Int         = 16,
   fetchAmount:               Int         = 2,
   compareRamDirectly:        Boolean     = false,
-  iCacheConf:                CacheConfig = CacheConfig(),
-  dCacheConf:                CacheConfig = CacheConfig(),
+  iCacheConf:                CacheConfig = CacheConfig(numOfSets = 64, numOfWays = 4),
+  dCacheConf:                CacheConfig = CacheConfig(numOfSets = 128, numOfWays = 2),
   branchPredictorAddrLen:    Int         = 10,
   branchPredictorHistoryLen: Int         = 2,
   instructionFIFOLength:     Int         = 4,
-  decodeWidth:               Int         = 1,
+  decodeWidth:               Int         = 2,
   verification:              Boolean     = false
 ) {
+  val decodeBufferNum = 1
   require(isPow2(instructionFIFOLength))
 }
 

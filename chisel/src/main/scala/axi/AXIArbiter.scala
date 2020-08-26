@@ -5,8 +5,10 @@ import chisel3.util._
 
 /**
   * separated read and write transaction
+ *
   * @param sCount the number of slave interface
   */
+//noinspection DuplicatedCode
 class AXIArbiter(sCount: Int = 3) extends Module {
   val io = IO(new Bundle() {
     val slaves = Vec(sCount, AXIIO.slave())
