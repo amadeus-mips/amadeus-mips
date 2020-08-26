@@ -5,6 +5,7 @@ package cpu.cache
 import chisel3._
 import chisel3.util._
 
+@deprecated
 class SinglePortBank(depth: Int, width: Int, syncRead: Boolean = true, dataC: Boolean = false) extends Module {
   require(isPow2(depth))
   val addrLen = log2Ceil(depth)

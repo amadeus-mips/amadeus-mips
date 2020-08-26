@@ -6,7 +6,6 @@ import chisel3._
 import cpu.common.NiseSramWriteIO
 import shared.CircularShifterInt
 import shared.LRU.PLRUMRUNM
-//import chisel3.util.{log2Ceil, Cat}
 import axi.AXIIO
 import chisel3.util._
 import cpu.common.DefaultConfig._
@@ -28,6 +27,7 @@ import shared.Constants._
   * @param bankAmount how many banks there are in the d-cache
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
+@deprecated
 class newDCache(
   setAmount:                Int     = 64,
   wayAmount:                Int     = 4,

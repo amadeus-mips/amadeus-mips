@@ -24,6 +24,7 @@ import shared.Constants._
   * @param bankAmount how many banks there are in the i-cache
   * @param performanceMonitorEnable whether to enable the performance metrics
   */
+@deprecated
 class ICache(
   setAmount:                Int = 64,
   wayAmount:                Int = 4,

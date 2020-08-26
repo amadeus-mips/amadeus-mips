@@ -29,7 +29,6 @@ import chisel3.util.ValidIO
 import chisel3.util.experimental.BoringUtils
 import confreg.{Confreg, NumMonitorBundle}
 import cpu.core.pipeline.BrPrPerfBundle
-import cpu.performance.SocPerformanceIO
 import cpu.{CPUConfig, CPUTop}
 import ram.AXIRamRandomWrap
 import shared.{DebugBundle, GPIO}

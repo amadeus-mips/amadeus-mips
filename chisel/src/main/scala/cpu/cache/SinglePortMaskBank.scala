@@ -12,6 +12,7 @@ import chisel3.util._
   * @param maskWidth how many minimum width there are in this bank, which is how long the write mask should be
   * @param syncRead is it asynchronous or sync
   */
+@deprecated
 class SinglePortMaskBank(numberOfSet: Int, minWidth: Int = 8, maskWidth: Int = 4, syncRead: Boolean = true) extends Module {
   val io = IO(new Bundle {
     val addr = Input(UInt(log2Ceil(numberOfSet).W))
